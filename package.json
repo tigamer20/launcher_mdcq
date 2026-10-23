@@ -1,0 +1,25 @@
+{
+  "name": "moddedqc-launcher",
+  "productName": "ModdedQC Launcher",
+  "version": "1.0.0",
+  "description": "Launcher officiel du serveur Minecraft ModdedQC",
+  "main": "src/main/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "manifest": "node tools/build-manifest.js server-example",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "ca.moddedqc.launcher",
+    "productName": "ModdedQC Launcher",
+    "files": ["src/**/*", "launcher.config.json"],
+    "win": { "target": "nsis" },
+    "mac": { "target": "dmg" },
+    "linux": { "target": "AppImage" }
+  },
+  "devDependencies": {
+    "electron": "44.6.0",
+    "electron-builder": "26.17.0"
+  }
+}

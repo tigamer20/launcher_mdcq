@@ -1,0 +1,17 @@
+{
+  "name": "ModdedQC",
+  "version": "1.0.0",
+  "versionId": "1.20.1-forge-47.3.0",
+  "server": { "host": "play.moddedqc.ca", "port": 25565 },
+  "autoConnect": true,
+  "syncDirs": ["mods"],
+  "keepPlayerChanges": ["options.txt"],
+  "news": [
+    {
+      "title": "Bienvenue sur ModdedQC!",
+      "date": "2026-10-23",
+      "body": "Le nouveau launcher est en ligne. Clique sur JOUER: les mods se mettent à jour tout seuls.",
+      "url": "https://moddedqc.ca"
+    }
+  ]
+}
