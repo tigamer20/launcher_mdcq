@@ -7,6 +7,7 @@ const auth = require('./auth');
 const files = require('./sync');
 const { pingServer } = require('./status');
 const minecraft = require('./minecraft');
+const updater = require('./updater');
 
 const config = require('../../launcher.config.json');
 // MODDEDQC_SERVER_URL lets you test against a local admin panel without editing the config.
@@ -64,7 +65,24 @@ ipcMain.handle('init', () => {
     account: account && { name: account.name, uuid: account.uuid },
     settings: loadSettings(),
     maxRamMb: Math.floor(os.totalmem() / 1024 / 1024),
+    version: app.getVersion(),
   };
+});
+
+// Called once at startup: installs a newer launcher from GitHub if there is one.
+// Returns false when there is nothing to do (or GitHub can't be reached), so the launcher just continues.
+ipcMain.handle('self-update', async () => {
+  let update;
+  try {
+    update = await updater.findUpdate(config.updateRepo);
+  } catch (err) {
+    console.warn(`Vérification de mise à jour impossible: ${err.message}`);
+    return false;
+  }
+  if (!update) return false;
+  win.webContents.send('self-update', { version: update.version, progress: null });
+  await updater.installUpdate(update, (progress) => win.webContents.send('self-update', { version: update.version, progress }));
+  return true;
 });
 
 // Called at startup and every 30 seconds so changes made on the admin website show up quickly.

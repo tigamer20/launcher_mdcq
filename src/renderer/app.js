@@ -109,6 +109,7 @@ async function loadPack() {
 
 async function init() {
   const data = await window.launcher.init();
+  $('app-version').textContent = `v${data.version}`;
   state.settings = data.settings;
   showAccount(data.account);
   await loadPack();
@@ -120,6 +121,14 @@ async function init() {
   $('hide-on-launch').checked = state.settings.hideOnLaunch;
   updateRamLabel();
   refreshButtons();
+
+  // A newer launcher on GitHub? It downloads, installs and restarts by itself.
+  window.launcher.selfUpdate().catch((err) => {
+    $('self-update').hidden = true;
+    state.busy = false;
+    refreshButtons();
+    showError(`Mise à jour du launcher impossible: ${cleanError(err)}`);
+  });
 }
 
 function updateRamLabel() {
@@ -177,6 +186,16 @@ $('btn-settings-close').onclick = async () => {
 };
 
 window.launcher.onStatus(({ text, progress }) => setStatus(text, progress));
+
+window.launcher.onSelfUpdate(({ version, progress }) => {
+  state.busy = true;
+  refreshButtons();
+  $('self-update').hidden = false;
+  $('self-update-text').textContent =
+    progress == null ? `Version ${version} trouvée...` : `Téléchargement de la version ${version} : ${Math.round(progress * 100)} %`;
+  $('self-update-bar').classList.toggle('indeterminate', progress == null);
+  $('self-update-bar').style.width = progress == null ? '' : `${Math.round(progress * 100)}%`;
+});
 
 window.launcher.onGameStarted(() => setStatus('Bon jeu! Minecraft est lancé.', 1));
 

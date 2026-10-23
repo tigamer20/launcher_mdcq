@@ -8,11 +8,14 @@ const { pipeline } = require('stream/promises');
 const PARALLEL = 8;
 const RETRIES = 3;
 
-async function sha1File(file) {
-  const hash = crypto.createHash('sha1');
+async function hashFile(file, algorithm) {
+  const hash = crypto.createHash(algorithm);
   await pipeline(fs.createReadStream(file), hash);
   return hash.digest('hex');
 }
+
+const sha1File = (file) => hashFile(file, 'sha1');
+const sha256File = (file) => hashFile(file, 'sha256');
 
 // True when the file exists and matches the expected size/hash (when known).
 async function isValid(file, { sha1, size } = {}) {
@@ -90,4 +93,4 @@ async function downloadAll(tasks, onProgress = () => {}) {
   return needed.length;
 }
 
-module.exports = { downloadAll, fetchJson, isValid, sha1File };
+module.exports = { downloadAll, fetchJson, isValid, sha1File, sha256File };
