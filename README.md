@@ -73,9 +73,9 @@ Every push to `main` that changes the website redeploys it automatically.
 | Environment        | `NODE_VERSION` = `22`, `DATA_DIR` = `/var/data`, `TRUST_PROXY` = `1`, plus `ADMIN_PASSWORD`, `AGENT_SECRET`, `AGENT_URL` |
 | Disk               | mount path `/var/data`, 1 GB |
 
-### 3. Install the agent on the Paper PC/VPS
+### 3. Install the agent on the Paper machine (Mac, Windows or Linux)
 
-1. Install **Node.js 22 LTS** from <https://nodejs.org>.
+1. Install **Node.js 22 LTS** from <https://nodejs.org> (on a Mac, take the **macOS Installer (.pkg)**).
 2. Copy the `paper-agent/` folder from this repository to that machine (for example next to your Paper folder).
 3. In Paper's `server.properties`:
    ```properties
@@ -85,6 +85,12 @@ Every push to `main` that changes the website redeploys it automatically.
    ```
    Restart Paper. **Don't** open the RCON port (25575) on your router: only the agent uses it, locally.
 4. Start the agent:
+   - **Mac:** in the `paper-agent` folder, duplicate `start-agent.example.command` and rename the copy `start-agent.command`. Open it with TextEdit and fill in the 3 values (`PAPER_DIR` is the folder containing `server.jar` and `plugins/`; drag that folder into a Terminal window to see its path). Then double-click `start-agent.command`.
+     - The first time, macOS may refuse to open it: **right-click** → **Open** → **Open**.
+     - If macOS asks "Do you want the application node to accept incoming network connections?", click **Allow**.
+     - Keep the Terminal window open. The script keeps the Mac awake while it runs.
+     - To start it automatically: **System Settings** → **General** → **Login Items** → **+** → choose `start-agent.command`.
+     - Also set **System Settings** → **Energy** (or **Battery** → **Options**) → **Prevent automatic sleeping when the display is off**, so Paper keeps running too.
    - **Windows:** copy `start-agent.example.bat` to `start-agent.bat`, fill in the 3 values, double-click it. Keep the window open.
    - **Linux:**
      ```bash
@@ -92,7 +98,7 @@ Every push to `main` that changes the website redeploys it automatically.
      ```
      (to start it automatically, create a systemd service with these `Environment=` lines.)
 5. Make the agent reachable from Render, like you did for Minecraft's port 25565:
-   - **Router:** forward TCP port **8765** to this PC, and allow it in the Windows firewall. Then `AGENT_URL` is `http://YOUR-PUBLIC-IP:8765/`.
+   - **Router:** forward TCP port **8765** to this machine (same as you did for 25565). On a Mac, its local IP is in **System Settings** → **Network** → **Wi-Fi** or **Ethernet** → **Details**. On Windows, also allow the port in the firewall. Then `AGENT_URL` is `http://YOUR-PUBLIC-IP:8765/` (your public IP: <https://ifconfig.me>).
    - **Or Cloudflare Tunnel** (free, no router changes, encrypted with HTTPS) if you have a domain on Cloudflare: point a tunnel at `http://localhost:8765` and use `https://agent.your-domain.com/` as `AGENT_URL`.
 6. Put that address in `AGENT_URL` on Render (**Environment** tab). The **Plugins** and **Console** tabs appear on the website.
 
