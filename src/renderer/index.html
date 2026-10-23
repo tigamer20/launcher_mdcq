@@ -67,6 +67,8 @@
         <div class="progress"><div id="progress-bar" class="progress-bar"></div></div>
       </div>
 
+      <!-- Hidden developer section: Ctrl+Shift+D shows/hides it -->
+      <button id="btn-dev" class="icon-button dev-button" title="Développeur" hidden>DEV</button>
       <button id="btn-settings" class="icon-button" title="Paramètres">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="3" />
@@ -95,13 +97,34 @@
       </div>
     </dialog>
 
-    <!-- Shown while the launcher updates itself from GitHub -->
-    <div id="self-update" class="self-update" hidden>
-      <img src="logo.svg" alt="" />
-      <h2>Mise à jour du launcher</h2>
-      <p id="self-update-text"></p>
-      <div class="progress"><div id="self-update-bar" class="progress-bar indeterminate"></div></div>
-    </div>
+    <!-- Developer section: beta updates -->
+    <dialog id="dev">
+      <h2>Développeur</h2>
+      <p class="muted-text">Version du launcher : <strong id="dev-version"></strong></p>
+      <section class="dev-section">
+        <h3>Mises à jour bêta</h3>
+        <p class="muted-text">
+          Avec une clé bêta, le launcher te propose les versions de test dès leur sortie.
+          Tu peux toujours choisir de rester sur la version publique.
+        </p>
+        <label class="field">
+          <span>Clé bêta</span>
+          <div class="row">
+            <input id="beta-key" type="password" placeholder="Colle ta clé ici" autocomplete="off" />
+            <button id="btn-beta-check" class="secondary">Valider</button>
+          </div>
+        </label>
+        <p id="beta-key-status" class="muted-text"></p>
+        <label class="check">
+          <input type="checkbox" id="beta-enabled" disabled />
+          Activer les mises à jour bêta
+        </label>
+      </section>
+      <div class="dialog-buttons">
+        <button id="btn-check-updates" class="secondary">Vérifier les mises à jour</button>
+        <button id="btn-dev-close" class="primary">Fermer</button>
+      </div>
+    </dialog>
 
     <div id="toast" class="toast" hidden></div>
 

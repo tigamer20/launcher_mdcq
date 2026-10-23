@@ -3,7 +3,7 @@
   "productName": "ModdedQC Launcher",
   "version": "1.0.0",
   "description": "Launcher officiel du serveur Minecraft ModdedQC",
-  "main": "src/main/main.js",
+  "main": "src/bootstrap.js",
   "private": true,
   "scripts": {
     "start": "electron .",

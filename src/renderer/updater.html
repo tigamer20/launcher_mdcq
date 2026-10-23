@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'" />
+    <title>ModdedQC</title>
+    <link rel="stylesheet" href="updater.css" />
+  </head>
+  <body>
+    <img src="logo.svg" alt="" class="logo" id="logo" />
+    <h1 id="title">Recherche de mises à jour</h1>
+    <p id="subtitle" class="subtitle"></p>
+
+    <div id="progress-box" class="progress-box" hidden>
+      <div class="progress"><div id="bar" class="bar"></div></div>
+      <div class="stats">
+        <span id="bytes"></span>
+        <span id="percent"></span>
+      </div>
+      <div class="stats muted">
+        <span id="speed"></span>
+        <span id="eta"></span>
+      </div>
+      <p id="files" class="muted small"></p>
+    </div>
+
+    <!-- Beta available: install it or stay on the public version -->
+    <div id="beta-choice" class="choice" hidden>
+      <button id="btn-beta" class="primary">Installer la bêta</button>
+      <button id="btn-public" class="ghost">Rester sur la version publique</button>
+    </div>
+
+    <p id="footer" class="footer muted small"></p>
+    <script src="updater-ui.js"></script>
+  </body>
+</html>

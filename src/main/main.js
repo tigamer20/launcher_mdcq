@@ -10,6 +10,8 @@ const minecraft = require('./minecraft');
 const updater = require('./updater');
 
 const config = require('../../launcher.config.json');
+// Version of the files actually running (they can come from an update, see src/bootstrap.js).
+const VERSION = require('../../package.json').version;
 // MODDEDQC_SERVER_URL lets you test against a local admin panel without editing the config.
 const SERVER_URL = process.env.MODDEDQC_SERVER_URL || config.serverUrl;
 const GAME_DIR = path.join(app.getPath('appData'), '.moddedqc');
@@ -19,7 +21,7 @@ let win;
 let playing = false;
 
 function loadSettings() {
-  const defaults = { ramMb: 4096, hideOnLaunch: false };
+  const defaults = { ramMb: 4096, hideOnLaunch: false, devTab: false, beta: { enabled: false, key: '' }, declinedBeta: null };
   try {
     return { ...defaults, ...JSON.parse(fs.readFileSync(settingsFile(), 'utf8')) };
   } catch {
@@ -44,7 +46,10 @@ function createWindow() {
     },
   });
   win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
-  win.once('ready-to-show', () => win.show());
+  win.once('ready-to-show', () => {
+    win.show();
+    updater.confirmCurrentVersion(VERSION); // this version starts fine: keep it
+  });
 
   // Links in the news open in the normal web browser.
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -65,44 +70,45 @@ ipcMain.handle('init', () => {
     account: account && { name: account.name, uuid: account.uuid },
     settings: loadSettings(),
     maxRamMb: Math.floor(os.totalmem() / 1024 / 1024),
-    version: app.getVersion(),
+    version: VERSION,
   };
 });
 
-// Called once at startup: installs a newer launcher from GitHub if there is one.
-// Returns false when there is nothing to do (or GitHub can't be reached), so the launcher just continues.
-ipcMain.handle('self-update', async () => {
-  let update;
+// ---------------------------------------------------------------------------
+// Beta updates (hidden dev section, Ctrl+Shift+D)
+// ---------------------------------------------------------------------------
+
+// The beta key is set by the admins on the website; the website says if a key is right.
+async function checkBetaKey(key) {
+  const res = await fetch(new URL('api/beta/check', SERVER_URL), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
+  return Boolean(data.valid);
+}
+
+ipcMain.handle('beta-check-key', async (_event, key) => {
   try {
-    update = await updater.findUpdate(config.updateRepo);
+    return { valid: await checkBetaKey(String(key || '').trim()) };
   } catch (err) {
-    console.warn(`Vérification de mise à jour impossible: ${err.message}`);
-    return false;
+    return { valid: false, error: `Vérification impossible: ${err.message}` };
   }
-  if (!update) return false;
-  win.webContents.send('self-update', { version: update.version, progress: null });
-  await updater.installUpdate(update, (progress) => win.webContents.send('self-update', { version: update.version, progress }));
-  return true;
 });
 
-// Called at startup and every 30 seconds so changes made on the admin website show up quickly.
-ipcMain.handle('pack', async () => {
-  try {
-    const pack = await files.fetchManifest(SERVER_URL);
-    const server = pack.server?.host ? await pingServer(pack.server.host, pack.server.port) : null;
-    return {
-      name: pack.name,
-      subtitle: pack.subtitle,
-      version: pack.version,
-      news: pack.news || [],
-      server: pack.server,
-      minecraft: pack.versionId,
-      serverStatus: server,
-      maintenance: pack.maintenance?.enabled ? pack.maintenance : null,
-    };
-  } catch (err) {
-    return { error: `Serveur de fichiers injoignable (${err.message})` };
-  }
+ipcMain.handle('beta-set', (_event, beta) => {
+  const settings = loadSettings();
+  settings.beta = { enabled: Boolean(beta.enabled), key: String(beta.key || '').trim() };
+  if (settings.beta.enabled) settings.declinedBeta = null; // ask again for the current beta
+  saveSettings(settings);
+});
+
+// "Vérifier les mises à jour": restart through the update window.
+ipcMain.handle('check-updates-now', () => {
+  app.relaunch();
+  app.exit(0);
 });
 
 ipcMain.handle('login', async () => {
@@ -112,9 +118,11 @@ ipcMain.handle('login', async () => {
 
 ipcMain.handle('logout', () => auth.logout());
 
-ipcMain.handle('save-settings', (_event, settings) => {
+function saveSettings(settings) {
   fs.writeFileSync(settingsFile(), JSON.stringify({ ...loadSettings(), ...settings }));
-});
+}
+
+ipcMain.handle('save-settings', (_event, settings) => saveSettings(settings));
 
 ipcMain.handle('open-folder', () => {
   fs.mkdirSync(GAME_DIR, { recursive: true });
@@ -171,5 +179,76 @@ ipcMain.on('window', (_event, action) => {
 
 // ---------------------------------------------------------------------------
 
-app.whenReady().then(createWindow);
-app.on('window-all-closed', () => app.quit());
+// ---------------------------------------------------------------------------
+// Startup update window (like Discord): check GitHub, update, then open the launcher
+// ---------------------------------------------------------------------------
+
+function createUpdateWindow() {
+  const splash = new BrowserWindow({
+    width: 380,
+    height: 440,
+    frame: false,
+    resizable: false,
+    backgroundColor: '#0f1117',
+    show: false,
+    webPreferences: { preload: path.join(__dirname, '..', 'updater-preload.js'), contextIsolation: true, sandbox: true },
+  });
+  splash.loadFile(path.join(__dirname, '..', 'renderer', 'updater.html'));
+  splash.once('ready-to-show', () => splash.show());
+  return splash;
+}
+
+const withTimeout = (promise, ms) =>
+  Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error('GitHub ne répond pas')), ms))]);
+
+/** Returns true when the launcher is restarting (or the installer took over). */
+async function startupUpdate() {
+  if (!app.isPackaged && !process.env.MODDEDQC_FORCE_UPDATER) return false; // "npm start": no updates
+  const splash = createUpdateWindow();
+  await new Promise((resolve) => splash.webContents.once('did-finish-load', resolve));
+  const send = (state) => !splash.isDestroyed() && splash.webContents.send('updater-state', { current: VERSION, ...state });
+  send({ phase: 'checking' });
+
+  try {
+    const settings = loadSettings();
+    let beta = settings.beta.enabled && Boolean(settings.beta.key);
+    if (beta) beta = await checkBetaKey(settings.beta.key).catch(() => true); // website down: keep the player's choice
+
+    const found = await withTimeout(updater.checkForUpdates({ repo: config.updateRepo, current: VERSION, beta }), 10_000);
+    let target = null;
+    if (found.beta && updater.versionOf(found.beta) !== settings.declinedBeta) {
+      send({ phase: 'beta-available', version: updater.versionOf(found.beta) });
+      const choice = await new Promise((resolve) => ipcMain.once('updater-choice', (_event, value) => resolve(value)));
+      if (choice === 'beta') target = found.beta;
+      else saveSettings({ declinedBeta: updater.versionOf(found.beta) });
+    }
+    if (!target) target = found.official;
+    if (!target) {
+      splash.close();
+      return false;
+    }
+
+    const result = await updater.installUpdate(target, send);
+    send({ phase: 'restarting', version: updater.versionOf(target) });
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    if (result === 'restart') app.relaunch();
+    app.exit(0);
+    return true;
+  } catch (err) {
+    console.warn(`Mise à jour impossible: ${err.message}`);
+    send({ phase: 'error', message: err.message });
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    if (!splash.isDestroyed()) splash.close();
+    return false;
+  }
+}
+
+let startingUp = true; // the update window closes before the launcher window opens: don't quit then
+app.whenReady().then(async () => {
+  if (await startupUpdate()) return;
+  createWindow();
+  startingUp = false;
+});
+app.on('window-all-closed', () => {
+  if (!startingUp) app.quit();
+});

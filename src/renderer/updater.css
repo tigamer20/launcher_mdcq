@@ -1,0 +1,159 @@
+:root {
+  --bg: #0f1117;
+  --panel: #171b26;
+  --border: rgba(255, 255, 255, 0.08);
+  --text: #e8ebf2;
+  --muted: #8a93a8;
+  --accent: #3b82f6;
+  --accent-2: #22d3ee;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+body {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 28px;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: var(--text);
+  background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.25), transparent 60%), var(--bg);
+  user-select: none;
+  -webkit-app-region: drag;
+  text-align: center;
+}
+
+.logo {
+  width: 84px;
+  margin-bottom: 8px;
+  animation: float 2.4s ease-in-out infinite;
+}
+
+.logo.spin {
+  animation: spin 1.6s linear infinite;
+}
+
+@keyframes float {
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+h1 {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.progress-box {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.progress {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.bar {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 0.2s;
+}
+
+.bar.indeterminate {
+  width: 35%;
+  animation: slide 1.1s ease-in-out infinite;
+}
+
+@keyframes slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
+.stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 12px;
+}
+
+.choice {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-top: 8px;
+  -webkit-app-region: no-drag;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  border: none;
+  cursor: pointer;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.primary {
+  background: var(--accent);
+}
+
+.primary:hover {
+  background: #2563eb;
+}
+
+.ghost {
+  background: var(--panel);
+  border: 1px solid var(--border);
+}
+
+.ghost:hover {
+  border-color: var(--accent);
+}
+
+.footer {
+  position: fixed;
+  bottom: 14px;
+}

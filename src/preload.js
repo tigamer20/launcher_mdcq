@@ -4,7 +4,9 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('launcher', {
   init: () => ipcRenderer.invoke('init'),
   pack: () => ipcRenderer.invoke('pack'),
-  selfUpdate: () => ipcRenderer.invoke('self-update'),
+  betaCheckKey: (key) => ipcRenderer.invoke('beta-check-key', key),
+  betaSet: (beta) => ipcRenderer.invoke('beta-set', beta),
+  checkUpdatesNow: () => ipcRenderer.invoke('check-updates-now'),
   login: () => ipcRenderer.invoke('login'),
   logout: () => ipcRenderer.invoke('logout'),
   play: () => ipcRenderer.invoke('play'),
@@ -14,6 +16,5 @@ contextBridge.exposeInMainWorld('launcher', {
   close: () => ipcRenderer.send('window', 'close'),
   onStatus: (fn) => ipcRenderer.on('status', (_e, data) => fn(data)),
   onGameStarted: (fn) => ipcRenderer.on('game-started', () => fn()),
-  onSelfUpdate: (fn) => ipcRenderer.on('self-update', (_e, data) => fn(data)),
   onGameClosed: (fn) => ipcRenderer.on('game-closed', (_e, error) => fn(error)),
 });
