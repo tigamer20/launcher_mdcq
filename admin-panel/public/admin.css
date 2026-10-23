@@ -554,3 +554,9 @@ code {
 .files td:last-child {
   white-space: nowrap;
 }
+
+.agent-error {
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.5);
+  font-size: 14px;
+}

@@ -8,15 +8,42 @@
   "scripts": {
     "start": "electron .",
     "manifest": "node tools/build-manifest.js server-example",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win --publish never"
   },
   "build": {
     "appId": "ca.moddedqc.launcher",
     "productName": "ModdedQC Launcher",
-    "files": ["src/**/*", "launcher.config.json"],
-    "win": { "target": "nsis" },
-    "mac": { "target": "dmg" },
-    "linux": { "target": "AppImage" }
+    "files": [
+      "src/**/*",
+      "launcher.config.json"
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "ModdedQC",
+      "runAfterFinish": true,
+      "artifactName": "ModdedQC-Setup.${ext}"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "build/icon.png"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "build/icon.png"
+    }
   },
   "devDependencies": {
     "electron": "44.6.0",

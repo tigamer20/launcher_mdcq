@@ -41,6 +41,7 @@
         <!-- Dashboard -->
         <section class="tab" id="tab-dashboard">
           <h1>Tableau de bord</h1>
+          <p class="card agent-error" id="agent-error" hidden></p>
           <div class="stats">
             <div class="card stat">
               <span class="muted">Statut</span>
@@ -112,8 +113,8 @@
         <section class="tab" id="tab-plugins" hidden>
           <h1>Plugins</h1>
           <p class="card muted" id="plugins-off">
-            Pour gérer les plugins ici, lance le site avec <code>PAPER_DIR=/chemin/vers/paper</code>
-            (le dossier qui contient <code>plugins/</code>).
+            Pour gérer les plugins, installe l'agent ModdedQC sur le PC du serveur Paper et ajoute
+            <code>AGENT_URL</code> et <code>AGENT_SECRET</code> sur Render (voir le README).
           </p>
           <div id="plugins-on">
             <div class="card upload">
@@ -140,7 +141,7 @@
           <h1>Console</h1>
           <p class="card muted" id="console-off">
             Pour utiliser la console, active RCON dans <code>server.properties</code> (<code>enable-rcon=true</code>)
-            et lance le site avec <code>RCON_PASSWORD=...</code>
+            et lance l'agent ModdedQC avec <code>RCON_PASSWORD=...</code> (voir le README).
           </p>
           <div id="console-on" class="card console-card">
             <div class="row wrap">

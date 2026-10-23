@@ -67,6 +67,8 @@ function render() {
   renderPlugins();
   renderNews();
   renderFiles();
+  $('agent-error').hidden = !features.error;
+  $('agent-error').textContent = features.error ? `Agent du serveur Paper : ${features.error}` : '';
   $('console-off').hidden = features.rcon;
   $('console-on').hidden = !features.rcon;
   $('maintenance-rcon').hidden = !features.rcon;

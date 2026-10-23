@@ -3,10 +3,9 @@
 //
 //   ADMIN_PASSWORD=secret node admin-panel/server.js
 //
-// Optional, to control the Paper server from the website:
-//   PAPER_DIR=/path/to/paper      -> manage plugins (the plugins/ folder)
-//   RCON_PASSWORD=...             -> console + maintenance closes the server (whitelist)
-//   RCON_HOST=127.0.0.1  RCON_PORT=25575
+// Optional, to control the Paper server (plugins, console, whitelist) through paper-agent/:
+//   AGENT_URL=http://my-pc:8765/   AGENT_SECRET=same-as-the-agent
+// Behind a proxy like Render, also set TRUST_PROXY=1 (real visitor IPs for the login protection).
 //
 // The launcher reads:  /manifest.json  and  /files/...
 // Admins go to:        /admin/
@@ -17,7 +16,7 @@ const crypto = require('crypto');
 const { pipeline } = require('stream/promises');
 const { buildManifest } = require('../tools/build-manifest');
 const { pingServer } = require('../src/main/status');
-const { rcon } = require('./rcon');
+const { signHeaders } = require('../paper-agent/signing');
 
 const PORT = Number(process.env.PORT) || 8080;
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(__dirname, 'data'));
@@ -25,10 +24,10 @@ const FILES_DIR = path.join(DATA_DIR, 'files');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const PASSWORD = process.env.ADMIN_PASSWORD;
 const SESSION_HOURS = 12;
-const PLUGINS_DIR = process.env.PAPER_DIR ? path.resolve(process.env.PAPER_DIR, 'plugins') : null;
-const RCON = process.env.RCON_PASSWORD
-  ? { host: process.env.RCON_HOST || '127.0.0.1', port: Number(process.env.RCON_PORT) || 25575, password: process.env.RCON_PASSWORD }
-  : null;
+const AGENT_URL = process.env.AGENT_URL && process.env.AGENT_URL.replace(/\/?$/, '');
+const AGENT_SECRET = process.env.AGENT_SECRET;
+const TRUST_PROXY = process.env.TRUST_PROXY === '1';
+const MAX_UPLOAD = 200 * 1024 * 1024;
 
 if (!PASSWORD || PASSWORD.length < 8) {
   console.error('Définis un mot de passe admin d\'au moins 8 caractères: ADMIN_PASSWORD=... node admin-panel/server.js');
@@ -96,28 +95,49 @@ function listFiles(dir = FILES_DIR) {
   });
 }
 
-// Plugins live on the Paper server: plugins/Name.jar (enabled) or plugins/Name.jar.disabled
-function pluginPath(name) {
-  if (!PLUGINS_DIR) throw httpError(400, 'PAPER_DIR n\'est pas configuré');
-  if (!/^[\w .+()-]+\.jar(\.disabled)?$/.test(String(name))) throw httpError(400, 'Nom de plugin invalide (fichier .jar)');
-  return path.join(PLUGINS_DIR, name);
+// ---------------------------------------------------------------------------
+// Paper agent (runs on the Minecraft machine, see paper-agent/)
+// ---------------------------------------------------------------------------
+
+async function agent(method, pathWithQuery, body) {
+  if (!AGENT_URL || !AGENT_SECRET) throw httpError(400, 'Agent non configuré (AGENT_URL et AGENT_SECRET)');
+  const data = body === undefined ? Buffer.alloc(0) : Buffer.isBuffer(body) ? body : Buffer.from(JSON.stringify(body));
+  let res;
+  try {
+    res = await fetch(AGENT_URL + pathWithQuery, {
+      method,
+      headers: { 'Content-Type': 'application/octet-stream', ...signHeaders(AGENT_SECRET, method, pathWithQuery, data) },
+      body: data.length ? data : undefined,
+      signal: AbortSignal.timeout(60_000),
+    });
+  } catch {
+    throw httpError(502, 'Agent injoignable: vérifie qu\'il tourne sur le PC du serveur et que le port est ouvert');
+  }
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw httpError(502, json.error || `Erreur de l'agent (${res.status})`);
+  return json;
 }
 
-function listPlugins() {
-  if (!PLUGINS_DIR || !fs.existsSync(PLUGINS_DIR)) return [];
-  return fs
-    .readdirSync(PLUGINS_DIR, { withFileTypes: true })
-    .filter((e) => e.isFile() && /\.jar(\.disabled)?$/.test(e.name))
-    .map((e) => ({
-      name: e.name,
-      enabled: e.name.endsWith('.jar'),
-      size: fs.statSync(path.join(PLUGINS_DIR, e.name)).size,
-    }));
+// What the agent can do. Never throws: an unreachable agent just disables the tabs.
+async function agentFeatures() {
+  if (!AGENT_URL) return { plugins: false, rcon: false, error: null };
+  try {
+    const info = await agent('GET', '/info');
+    return { plugins: Boolean(info.plugins), rcon: Boolean(info.rcon), error: null };
+  } catch (err) {
+    return { plugins: false, rcon: false, error: err.message };
+  }
 }
 
-function requireRcon() {
-  if (!RCON) throw httpError(400, 'RCON n\'est pas configuré (RCON_PASSWORD)');
-  return RCON;
+async function readBuffer(req, limit) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > limit) throw httpError(413, 'Fichier trop gros');
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks);
 }
 
 // ---------------------------------------------------------------------------
@@ -191,12 +211,11 @@ function sendFile(res, file, cache = 'no-cache') {
 // ---------------------------------------------------------------------------
 
 const api = {
-  'GET /api/state': () => ({
-    pack: readPack(),
-    files: listFiles(),
-    plugins: listPlugins(),
-    features: { plugins: Boolean(PLUGINS_DIR), rcon: Boolean(RCON) },
-  }),
+  'GET /api/state': async () => {
+    const features = await agentFeatures();
+    const plugins = features.plugins ? (await agent('GET', '/plugins')).plugins : [];
+    return { pack: readPack(), files: listFiles(), plugins, features };
+  },
 
   // Live status of the Minecraft server (players, version...)
   'GET /api/status': async () => {
@@ -207,43 +226,19 @@ const api = {
   'POST /api/console': async (req) => {
     const { command } = await readJson(req);
     if (!command || typeof command !== 'string') throw httpError(400, 'Commande vide');
-    try {
-      return { output: await rcon(requireRcon(), command.replace(/^\//, '')) };
-    } catch (err) {
-      throw err.status ? err : httpError(502, err.message);
-    }
+    return agent('POST', '/rcon', { command });
   },
 
-  // Upload a plugin: the .jar is the request body. Paper loads it at the next restart.
+  // Plugins: the website forwards everything to the agent. Paper loads changes at the next restart.
   'PUT /api/plugins': async (req, url) => {
-    const dest = pluginPath(url.searchParams.get('name'));
-    fs.mkdirSync(PLUGINS_DIR, { recursive: true });
-    const tmp = `${dest}.${crypto.randomBytes(4).toString('hex')}.upload`;
-    try {
-      await pipeline(req, fs.createWriteStream(tmp));
-      fs.rmSync(`${dest}.disabled`, { force: true });
-      fs.renameSync(tmp, dest);
-    } finally {
-      fs.rmSync(tmp, { force: true });
-    }
-    return { plugins: listPlugins() };
+    const name = encodeURIComponent(url.searchParams.get('name') || '');
+    return agent('PUT', `/plugins?name=${name}`, await readBuffer(req, MAX_UPLOAD));
   },
 
-  'DELETE /api/plugins': async (req, url) => {
-    fs.rmSync(pluginPath(url.searchParams.get('name')), { force: true });
-    return { plugins: listPlugins() };
-  },
+  'DELETE /api/plugins': (req, url) => agent('DELETE', `/plugins?name=${encodeURIComponent(url.searchParams.get('name') || '')}`),
 
-  // Enable/disable = rename Name.jar <-> Name.jar.disabled (Paper ignores .disabled files)
-  'POST /api/plugins/toggle': async (req) => {
-    const { name } = await readJson(req);
-    const from = pluginPath(name);
-    const to = name.endsWith('.disabled') ? from.slice(0, -'.disabled'.length) : `${from}.disabled`;
-    fs.renameSync(from, to);
-    return { plugins: listPlugins() };
-  },
+  'POST /api/plugins/toggle': async (req) => agent('POST', '/plugins/toggle', { name: (await readJson(req)).name }),
 
-  // Server info: name, subtitle, Minecraft version, address...
   'PUT /api/pack': async (req) => {
     const body = await readJson(req);
     const pack = readPack();
@@ -277,8 +272,8 @@ const api = {
     // Also close the Paper server itself, so players using another launcher can't join either.
     // Staff on the whitelist can still connect. With enforce-whitelist=true, others online get kicked.
     let warning = null;
-    if (RCON) {
-      await rcon(RCON, pack.maintenance.enabled ? 'whitelist on' : 'whitelist off').catch((err) => {
+    if (AGENT_URL) {
+      await agent('POST', '/rcon', { command: pack.maintenance.enabled ? 'whitelist on' : 'whitelist off' }).catch((err) => {
         warning = pack.maintenance.enabled
           ? `Launchers bloqués, mais la whitelist n'a pas pu être activée: ${err.message}`
           : `Launchers débloqués, mais la whitelist n'a pas pu être désactivée: ${err.message}`;
@@ -319,7 +314,8 @@ const api = {
 };
 
 async function handleApi(req, res, url) {
-  const ip = req.socket.remoteAddress;
+  // Behind Render's proxy every request comes from the proxy: use the visitor IP it forwards.
+  const ip = (TRUST_PROXY && String(req.headers['x-forwarded-for'] || '').split(',')[0].trim()) || req.socket.remoteAddress;
 
   if (req.method === 'POST' && url.pathname === '/api/login') {
     const fail = failures.get(ip);
@@ -362,6 +358,8 @@ async function handleApi(req, res, url) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   try {
+    if (url.pathname === '/healthz') return sendJson(res, 200, { ok: true });
+
     // Launcher endpoints (public)
     if (req.method === 'GET' && url.pathname === '/manifest.json') {
       return sendFile(res, path.join(DATA_DIR, 'manifest.json'), 'no-store');
