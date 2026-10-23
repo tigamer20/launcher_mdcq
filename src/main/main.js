@@ -4,10 +4,13 @@ const os = require('os');
 const path = require('path');
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const auth = require('./auth');
-const modpack = require('./modpack');
+const files = require('./sync');
+const { pingServer } = require('./status');
 const minecraft = require('./minecraft');
 
 const config = require('../../launcher.config.json');
+// MODDEDQC_SERVER_URL lets you test against a local admin panel without editing the config.
+const SERVER_URL = process.env.MODDEDQC_SERVER_URL || config.serverUrl;
 const GAME_DIR = path.join(app.getPath('appData'), '.moddedqc');
 const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
 
@@ -55,22 +58,33 @@ const status = (text, progress) => win?.webContents.send('status', { text, progr
 // IPC handlers (called from src/preload.js)
 // ---------------------------------------------------------------------------
 
-ipcMain.handle('init', async () => {
+ipcMain.handle('init', () => {
   const account = auth.loadAccount();
-  let pack = null;
-  let packError = null;
-  try {
-    pack = await modpack.fetchManifest(config.serverUrl);
-  } catch (err) {
-    packError = `Serveur de fichiers injoignable (${err.message})`;
-  }
   return {
     account: account && { name: account.name, uuid: account.uuid },
     settings: loadSettings(),
     maxRamMb: Math.floor(os.totalmem() / 1024 / 1024),
-    pack: pack && { name: pack.name, version: pack.version, news: pack.news || [], server: pack.server },
-    packError,
   };
+});
+
+// Called at startup and every 30 seconds so changes made on the admin website show up quickly.
+ipcMain.handle('pack', async () => {
+  try {
+    const pack = await files.fetchManifest(SERVER_URL);
+    const server = pack.server?.host ? await pingServer(pack.server.host, pack.server.port) : null;
+    return {
+      name: pack.name,
+      subtitle: pack.subtitle,
+      version: pack.version,
+      news: pack.news || [],
+      server: pack.server,
+      minecraft: pack.versionId,
+      serverStatus: server,
+      maintenance: pack.maintenance?.enabled ? pack.maintenance : null,
+    };
+  } catch (err) {
+    return { error: `Serveur de fichiers injoignable (${err.message})` };
+  }
 });
 
 ipcMain.handle('login', async () => {
@@ -96,12 +110,13 @@ ipcMain.handle('play', async () => {
     const settings = loadSettings();
     fs.mkdirSync(GAME_DIR, { recursive: true });
 
+    status('Recherche de mises à jour...', null);
+    const pack = await files.fetchManifest(SERVER_URL);
+    if (pack.maintenance?.enabled) throw new Error(pack.maintenance.message || 'Le serveur est en maintenance.');
+    await files.sync(GAME_DIR, SERVER_URL, pack, status);
+
     status('Connexion au compte...', null);
     const account = await auth.refresh(config.azureClientId);
-
-    status('Recherche de mises à jour...', null);
-    const pack = await modpack.fetchManifest(config.serverUrl);
-    await modpack.sync(GAME_DIR, config.serverUrl, pack, status);
 
     const installed = await minecraft.install(GAME_DIR, pack.versionId, status);
 

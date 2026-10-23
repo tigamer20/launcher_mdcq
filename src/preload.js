@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('launcher', {
   init: () => ipcRenderer.invoke('init'),
+  pack: () => ipcRenderer.invoke('pack'),
   login: () => ipcRenderer.invoke('login'),
   logout: () => ipcRenderer.invoke('logout'),
   play: () => ipcRenderer.invoke('play'),

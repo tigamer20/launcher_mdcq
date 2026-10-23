@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="fr" translate="no">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="google" content="notranslate" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'" />
+    <title>ModdedQC Admin</title>
+    <link rel="icon" href="logo.svg" />
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body>
+    <!-- Login -->
+    <section id="login-view" class="login-view" hidden>
+      <form id="login-form" class="card login-card">
+        <img src="logo.svg" alt="" class="login-logo" />
+        <h1>ModdedQC Admin</h1>
+        <p class="muted">Gère le launcher et le serveur Paper</p>
+        <input type="password" id="password" placeholder="Mot de passe" autocomplete="current-password" required />
+        <button class="primary" type="submit">Se connecter</button>
+        <p id="login-error" class="error" hidden></p>
+      </form>
+    </section>
+
+    <!-- Admin app -->
+    <div id="app-view" class="app" hidden>
+      <aside class="sidebar">
+        <div class="brand"><img src="logo.svg" alt="" /> ModdedQC <span>Admin</span></div>
+        <nav>
+          <button class="nav active" data-tab="dashboard">Tableau de bord</button>
+          <button class="nav" data-tab="server">Serveur</button>
+          <button class="nav" data-tab="plugins">Plugins</button>
+          <button class="nav" data-tab="console">Console</button>
+          <button class="nav" data-tab="news">Nouvelles</button>
+          <button class="nav" data-tab="files">Fichiers joueurs</button>
+        </nav>
+        <button id="btn-logout" class="ghost">Déconnexion</button>
+      </aside>
+
+      <main>
+        <!-- Dashboard -->
+        <section class="tab" id="tab-dashboard">
+          <h1>Tableau de bord</h1>
+          <div class="stats">
+            <div class="card stat">
+              <span class="muted">Statut</span>
+              <strong id="stat-status"></strong>
+            </div>
+            <div class="card stat">
+              <span class="muted">Joueurs</span>
+              <strong id="stat-players">-</strong>
+            </div>
+            <div class="card stat">
+              <span class="muted">Version du serveur</span>
+              <strong id="stat-version">-</strong>
+            </div>
+            <div class="card stat">
+              <span class="muted">Plugins actifs</span>
+              <strong id="stat-plugins">-</strong>
+            </div>
+          </div>
+          <div class="card" id="players-card" hidden>
+            <span class="muted">En ligne maintenant</span>
+            <div id="players-list" class="chips"></div>
+          </div>
+
+          <div class="card maintenance-card" id="maintenance-card">
+            <div class="row between">
+              <div>
+                <h2>Mode maintenance</h2>
+                <p class="muted">Bloque le bouton JOUER dans les launchers<span id="maintenance-rcon"> et active la whitelist du serveur Paper</span>.</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="maintenance-enabled" />
+                <span></span>
+              </label>
+            </div>
+            <label class="field">
+              <span>Message affiché aux joueurs</span>
+              <input id="maintenance-message" placeholder="Ex.: Redémarrage du serveur, retour vers 20h!" />
+            </label>
+            <div class="row end">
+              <button id="btn-maintenance" class="primary">Appliquer</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Server settings -->
+        <section class="tab" id="tab-server" hidden>
+          <h1>Serveur</h1>
+          <form id="server-form" class="card form-grid">
+            <label class="field"><span>Nom affiché</span><input name="packName" required /></label>
+            <label class="field"><span>Sous-titre</span><input name="subtitle" /></label>
+            <label class="field"><span>Adresse du serveur</span><input name="host" placeholder="play.moddedqc.ca" /></label>
+            <label class="field"><span>Port</span><input name="port" type="number" min="1" max="65535" /></label>
+            <label class="field">
+              <span>Version de Minecraft</span>
+              <input name="versionId" placeholder="1.21.4" required />
+              <small class="muted">La même version que ton serveur Paper.</small>
+            </label>
+            <label class="field">
+              <span>Version des fichiers</span>
+              <input name="version" required />
+              <small class="muted">Monte toute seule quand tu changes les fichiers joueurs.</small>
+            </label>
+            <label class="check full"><input type="checkbox" name="autoConnect" /> Connecter les joueurs au serveur automatiquement</label>
+            <div class="row end full"><button class="primary" type="submit">Enregistrer</button></div>
+          </form>
+        </section>
+
+        <!-- Plugins (Paper server) -->
+        <section class="tab" id="tab-plugins" hidden>
+          <h1>Plugins</h1>
+          <p class="card muted" id="plugins-off">
+            Pour gérer les plugins ici, lance le site avec <code>PAPER_DIR=/chemin/vers/paper</code>
+            (le dossier qui contient <code>plugins/</code>).
+          </p>
+          <div id="plugins-on">
+            <div class="card upload">
+              <label id="plugin-drop" class="drop-zone">
+                <input type="file" id="plugin-input" accept=".jar" multiple hidden />
+                <strong>Glisse un plugin (.jar) ici</strong>
+                <span class="muted">ou clique pour choisir · un plugin existant est remplacé (mise à jour)</span>
+              </label>
+            </div>
+            <div class="card">
+              <p class="notice">Les changements de plugins s'appliquent au prochain redémarrage du serveur Paper.</p>
+              <table class="files">
+                <thead>
+                  <tr><th>Plugin</th><th>Taille</th><th>État</th><th></th></tr>
+                </thead>
+                <tbody id="plugin-list"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Console (RCON) -->
+        <section class="tab" id="tab-console" hidden>
+          <h1>Console</h1>
+          <p class="card muted" id="console-off">
+            Pour utiliser la console, active RCON dans <code>server.properties</code> (<code>enable-rcon=true</code>)
+            et lance le site avec <code>RCON_PASSWORD=...</code>
+          </p>
+          <div id="console-on" class="card console-card">
+            <div class="row wrap">
+              <button class="ghost quick" data-cmd="list">Joueurs en ligne</button>
+              <button class="ghost quick" data-cmd="plugins">Liste des plugins</button>
+              <button class="ghost quick" data-cmd="tps">TPS</button>
+              <button class="ghost quick" data-cmd="save-all">Sauvegarder le monde</button>
+            </div>
+            <pre id="console-output" class="console-output"></pre>
+            <form id="console-form" class="row">
+              <input id="console-input" placeholder="Commande, ex.: say Redémarrage dans 5 minutes!" autocomplete="off" />
+              <button class="primary" type="submit">Envoyer</button>
+            </form>
+          </div>
+        </section>
+
+        <!-- News -->
+        <section class="tab" id="tab-news" hidden>
+          <div class="row between">
+            <h1>Nouvelles</h1>
+            <div class="row">
+              <button id="btn-add-news" class="ghost">+ Ajouter</button>
+              <button id="btn-save-news" class="primary">Publier</button>
+            </div>
+          </div>
+          <div id="news-editor" class="news-editor"></div>
+        </section>
+
+        <!-- Files -->
+        <section class="tab" id="tab-files" hidden>
+          <h1>Fichiers joueurs</h1>
+          <p class="muted">
+            Fichiers copiés dans le dossier Minecraft de chaque joueur au lancement : resource packs, shaders,
+            <code>options.txt</code>, <code>servers.dat</code>... (pas les plugins, eux restent sur le serveur).
+          </p>
+          <div class="card upload">
+            <label class="field">
+              <span>Dossier de destination</span>
+              <input id="upload-dir" value="resourcepacks" />
+            </label>
+            <label id="drop-zone" class="drop-zone">
+              <input type="file" id="file-input" multiple hidden />
+              <strong>Glisse tes fichiers ici</strong>
+              <span class="muted">ou clique pour choisir</span>
+            </label>
+            <div id="upload-progress" class="muted" hidden></div>
+          </div>
+          <div class="card">
+            <div class="row between">
+              <input id="file-filter" placeholder="Rechercher un fichier..." />
+              <span id="file-summary" class="muted"></span>
+            </div>
+            <table class="files">
+              <thead>
+                <tr><th>Fichier</th><th>Taille</th><th></th></tr>
+              </thead>
+              <tbody id="file-list"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast" hidden></div>
+    <script src="admin.js"></script>
+  </body>
+</html>

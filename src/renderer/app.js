@@ -1,7 +1,7 @@
 // UI logic. Talks to the launcher through window.launcher (see src/preload.js).
 const $ = (id) => document.getElementById(id);
 
-const state = { account: null, packReady: false, busy: false, settings: {} };
+const state = { account: null, packReady: false, maintenance: false, busy: false, settings: {} };
 
 // ---------- Helpers ----------
 
@@ -31,8 +31,8 @@ function resetStatus(text = 'Prêt à jouer') {
 }
 
 function refreshButtons() {
-  $('btn-play').disabled = state.busy || !state.account || !state.packReady;
-  $('btn-play').textContent = state.busy ? '...' : 'JOUER';
+  $('btn-play').disabled = state.busy || !state.account || !state.packReady || state.maintenance;
+  $('btn-play').textContent = state.busy ? '...' : state.maintenance ? 'MAINTENANCE' : 'JOUER';
   $('btn-login').disabled = state.busy;
 }
 
@@ -77,26 +77,41 @@ function renderNews(news) {
 
 // ---------- Startup ----------
 
+// Shows the server info from manifest.json (name, news, maintenance...).
+async function loadPack() {
+  const pack = await window.launcher.pack();
+  if (pack.error) {
+    state.packReady = false;
+    $('pack-version').textContent = 'Hors ligne';
+    if (!state.busy) resetStatus('Impossible de joindre le serveur de fichiers');
+    refreshButtons();
+    return;
+  }
+
+  state.packReady = true;
+  state.maintenance = Boolean(pack.maintenance);
+  $('pack-name').textContent = pack.name || 'ModdedQC';
+  $('pack-subtitle').textContent = pack.subtitle || '';
+  $('pack-version').textContent = `Minecraft ${pack.minecraft}`;
+  $('server-address').textContent = pack.server?.host || '';
+  $('server-line').hidden = !pack.server?.host;
+  const status = pack.serverStatus;
+  $('server-line').classList.toggle('offline', !status?.online);
+  $('server-players').textContent = status?.online
+    ? `En ligne · ${status.players.online}/${status.players.max} joueurs`
+    : 'Hors ligne';
+  $('maintenance').hidden = !pack.maintenance;
+  $('maintenance-message').textContent = pack.maintenance?.message || '';
+  renderNews(pack.news);
+  if (!state.busy) resetStatus(state.maintenance ? 'Le serveur est en maintenance' : 'Prêt à jouer');
+  refreshButtons();
+}
+
 async function init() {
   const data = await window.launcher.init();
   state.settings = data.settings;
   showAccount(data.account);
-
-  if (data.pack) {
-    state.packReady = true;
-    $('pack-name').textContent = data.pack.name || 'ModdedQC';
-    $('pack-version').textContent = `Modpack v${data.pack.version}`;
-    if (data.pack.server?.host) {
-      $('server-address').textContent = data.pack.server.host;
-      $('server-line').hidden = false;
-    }
-    renderNews(data.pack.news);
-  } else {
-    $('pack-version').textContent = 'Hors ligne';
-    renderNews([]);
-    showError(data.packError);
-    resetStatus('Impossible de joindre le serveur de fichiers');
-  }
+  await loadPack();
 
   // Settings dialog values
   const ram = $('ram');
@@ -170,6 +185,11 @@ window.launcher.onGameClosed((error) => {
   refreshButtons();
   resetStatus();
   if (error) showError(error);
+  loadPack();
 });
+
+// Check the server for changes (news, maintenance...) every 15 seconds and when the window gets focus.
+setInterval(loadPack, 15000);
+window.addEventListener('focus', loadPack);
 
 init().catch((err) => showError(cleanError(err)));

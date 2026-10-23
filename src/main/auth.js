@@ -11,13 +11,14 @@ const SCOPE = 'XboxLive.signin offline_access';
 const accountFile = () => path.join(app.getPath('userData'), 'account.json');
 
 // ---------------------------------------------------------------------------
-// Saved account (the refresh token is encrypted with the OS keychain)
+// Saved account (the refresh token is encrypted with the OS keychain when one is available;
+// on Linux without a keyring it is stored in a file only the current user can read)
 // ---------------------------------------------------------------------------
 
 function loadAccount() {
   try {
     const saved = JSON.parse(fs.readFileSync(accountFile(), 'utf8'));
-    saved.refreshToken = safeStorage.decryptString(Buffer.from(saved.refreshToken, 'base64'));
+    if (!saved.plain) saved.refreshToken = safeStorage.decryptString(Buffer.from(saved.refreshToken, 'base64'));
     return saved;
   } catch {
     return null;
@@ -25,8 +26,10 @@ function loadAccount() {
 }
 
 function saveAccount({ name, uuid, refreshToken }) {
-  const encrypted = safeStorage.encryptString(refreshToken).toString('base64');
-  fs.writeFileSync(accountFile(), JSON.stringify({ name, uuid, refreshToken: encrypted }));
+  const data = safeStorage.isEncryptionAvailable()
+    ? { name, uuid, refreshToken: safeStorage.encryptString(refreshToken).toString('base64') }
+    : { name, uuid, refreshToken, plain: true };
+  fs.writeFileSync(accountFile(), JSON.stringify(data), { mode: 0o600 });
 }
 
 function logout() {

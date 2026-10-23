@@ -1,4 +1,4 @@
-// Keeps the player's files (mods, configs, mod loader...) identical to the ones on the ModdedQC file server.
+// Keeps the player's extra files (resource packs, options, servers list...) identical to the ones on the file server.
 const fs = require('fs');
 const path = require('path');
 const { downloadAll, fetchJson } = require('./download');
@@ -26,7 +26,7 @@ function listFiles(dir) {
 
 /**
  * Downloads new/changed files and deletes files the server removed
- * (only inside the folders listed in "syncDirs", e.g. "mods").
+ * (only inside the folders listed in "syncDirs", e.g. "resourcepacks").
  */
 async function sync(root, serverUrl, manifest, onStatus) {
   const base = baseUrl(serverUrl);
@@ -42,9 +42,9 @@ async function sync(root, serverUrl, manifest, onStatus) {
   }
 
   onStatus('Vérification des fichiers du serveur...', null);
-  await downloadAll(tasks, ({ done, total }) => onStatus('Mise à jour du modpack...', total ? done / total : null));
+  await downloadAll(tasks, ({ done, total }) => onStatus('Mise à jour des fichiers...', total ? done / total : null));
 
-  for (const dir of manifest.syncDirs || ['mods']) {
+  for (const dir of manifest.syncDirs || []) {
     for (const file of listFiles(safeJoin(root, dir))) {
       if (!expected.has(file)) fs.rmSync(file);
     }

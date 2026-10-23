@@ -22,15 +22,22 @@
       </div>
     </header>
 
+    <!-- Shown when maintenance mode is turned on from the admin website -->
+    <div id="maintenance" class="maintenance" hidden>
+      <strong>Maintenance en cours</strong>
+      <span id="maintenance-message"></span>
+    </div>
+
     <main>
       <!-- Left: server presentation -->
       <section class="hero">
         <span class="chip" id="pack-version">Chargement...</span>
         <h1 id="pack-name">ModdedQC</h1>
-        <p class="subtitle">Le serveur moddé du Québec</p>
+        <p class="subtitle" id="pack-subtitle">Serveur Minecraft du Québec</p>
         <div class="server-line" id="server-line" hidden>
           <span class="dot"></span>
           <span id="server-address"></span>
+          <span class="players" id="server-players"></span>
         </div>
       </section>
 
