@@ -1,0 +1,18 @@
+on damage of player by player:
+    set {inbattle::%victim%} to true
+    set {inbattle::%attacker%} to true
+    set {inbattletime::%attacker%} to now
+    set {inbattletime::%victim%} to now
+    
+
+
+on command "/lobby":
+    if player is in "anarchie":
+        if difference between {inbattletime::%player%} and now is less than 15 seconds:
+            set {battletimeleft::%player%} to difference between now and {inbattletime::%player%}
+            execute console command "/mvtp %player% anarchie"
+            send "&4vous êtes en combat! vous ne pouvez pas retourner au lobby lorsque vous êtes en combat depuis moin de 15 secondes. %{battletimeleft::%player%}% restantes" to player
+
+command /testtimer:
+    trigger:
+        send "%{battletimeleft::%player%}% fac bat toi!" to player
