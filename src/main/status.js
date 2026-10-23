@@ -1,6 +1,7 @@
 // Asks a Minecraft server (Paper, Spigot, vanilla...) for its status: players online, version, MOTD.
 // Uses the standard "Server List Ping", the same thing the multiplayer menu does.
 const net = require('net');
+const dns = require('dns').promises;
 
 function varInt(value) {
   const bytes = [];
@@ -36,8 +37,26 @@ function text(component) {
   return (component.text || '') + (component.extra || []).map(text).join('');
 }
 
+// Like Minecraft: an address without a custom port can point to the real host/port with a DNS "SRV" record
+// (_minecraft._tcp.<address>). playit.gg addresses (xxx.joinmc.link) work this way.
+async function resolveAddress(host, port) {
+  if (port !== 25565 || net.isIP(host)) return { host, port };
+  try {
+    const [record] = await dns.resolveSrv(`_minecraft._tcp.${host}`);
+    if (record) return { host: record.name, port: record.port };
+  } catch {
+    // no SRV record: use the address as typed
+  }
+  return { host, port };
+}
+
 /** Returns { online, players: { online, max, list }, version, motd } (online: false if unreachable). */
-function pingServer(host, port = 25565, timeoutMs = 3000) {
+async function pingServer(host, port = 25565, timeoutMs = 3000) {
+  const target = await resolveAddress(host, Number(port) || 25565);
+  return pingAddress(target.host, target.port, timeoutMs);
+}
+
+function pingAddress(host, port, timeoutMs) {
   return new Promise((resolve) => {
     const socket = net.connect({ host, port });
     let data = Buffer.alloc(0);
