@@ -62,19 +62,32 @@ const REASONS = {
   invalid: "quelque chose répond sur ce port, mais ce n'est pas un serveur Minecraft",
 };
 
+// Protocol numbers sent by the real Minecraft client. Some anti-bot plugins and proxies cut
+// connections that announce "any version" (-1), so the ping says which version it is, like the game.
+const PROTOCOLS = {
+  '1.20.1': 763, '1.20.2': 764, '1.20.3': 765, '1.20.4': 765, '1.20.5': 766, '1.20.6': 766,
+  '1.21': 767, '1.21.1': 767, '1.21.2': 768, '1.21.3': 768, '1.21.4': 769, '1.21.5': 770,
+  '1.21.6': 771, '1.21.7': 772, '1.21.8': 772,
+};
+const protocolFor = (minecraftVersion) => PROTOCOLS[minecraftVersion] || 769;
+
 /**
  * Returns { online, players: { online, max, list }, version, motd, tried }.
  * When offline: { online: false, reason, tried } where tried is the "host:port" actually contacted.
+ * options: { minecraftVersion: '1.21.4', timeoutMs: 3000 }
  */
-async function pingServer(host, port = 25565, timeoutMs = 3000) {
-  const target = await resolveAddress(host, Number(port) || 25565);
+async function pingServer(host, port = 25565, { minecraftVersion, timeoutMs = 3000 } = {}) {
+  port = Number(port) || 25565;
+  const target = await resolveAddress(host, port);
   const tried = `${target.host}:${target.port}${target.srv ? ' (via SRV)' : ''}`;
-  const result = await pingAddress(target.host, target.port, timeoutMs);
+  // Like the game's server list: connect to the SRV target, but announce the address as the player typed it.
+  const handshake = { host, port, protocol: protocolFor(minecraftVersion) };
+  const result = await pingAddress(target.host, target.port, timeoutMs, handshake);
   if (!result.online) result.reason = REASONS[result.code] || `erreur ${result.code}`;
   return { ...result, tried };
 }
 
-function pingAddress(host, port, timeoutMs) {
+function pingAddress(host, port, timeoutMs, handshake) {
   return new Promise((resolve) => {
     const socket = net.connect({ host, port });
     let data = Buffer.alloc(0);
@@ -86,12 +99,16 @@ function pingAddress(host, port, timeoutMs) {
     socket.on('error', (err) => done({ online: false, code: err.code || 'unknown' }));
 
     socket.on('connect', () => {
-      const address = Buffer.from(host, 'utf8');
+      const address = Buffer.from(handshake.host, 'utf8');
       const portBuf = Buffer.alloc(2);
-      portBuf.writeUInt16BE(port);
-      // Handshake (protocol -1 = "any version", next state 1 = status) then status request.
-      socket.write(packet(0x00, varInt(-1 >>> 0), varInt(address.length), address, portBuf, varInt(1)));
-      socket.write(packet(0x00));
+      portBuf.writeUInt16BE(handshake.port);
+      // Handshake (next state 1 = status) then status request, sent together like the game does.
+      socket.write(
+        Buffer.concat([
+          packet(0x00, varInt(handshake.protocol), varInt(address.length), address, portBuf, varInt(1)),
+          packet(0x00),
+        ]),
+      );
     });
 
     socket.on('data', (chunk) => {
