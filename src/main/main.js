@@ -74,6 +74,26 @@ ipcMain.handle('init', () => {
   };
 });
 
+// Called at startup and every 15 seconds so changes made on the admin website show up quickly.
+ipcMain.handle('pack', async () => {
+  try {
+    const pack = await files.fetchManifest(SERVER_URL);
+    const server = pack.server?.host ? await pingServer(pack.server.host, pack.server.port) : null;
+    return {
+      name: pack.name,
+      subtitle: pack.subtitle,
+      version: pack.version,
+      news: pack.news || [],
+      server: pack.server,
+      minecraft: pack.versionId,
+      serverStatus: server,
+      maintenance: pack.maintenance?.enabled ? pack.maintenance : null,
+    };
+  } catch (err) {
+    return { error: `Serveur de fichiers injoignable (${err.message})` };
+  }
+});
+
 // ---------------------------------------------------------------------------
 // Beta updates (hidden dev section, Ctrl+Shift+D)
 // ---------------------------------------------------------------------------
