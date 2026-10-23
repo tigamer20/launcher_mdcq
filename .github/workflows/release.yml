@@ -1,18 +1,28 @@
-# Builds the Windows installer (ModdedQC-Setup.exe).
-# - Push a tag like v1.0.1 -> builds it and publishes it on the Releases page.
-# - Or run it by hand (Actions tab > "Build Windows installer" > Run workflow) -> download it from the run's artifacts.
-name: Build Windows installer
+# Publishes a new launcher version (ModdedQC-Setup.exe) on the Releases page.
+# Installed launchers find it at startup, download it and update themselves.
+#
+# How to trigger it: push to main with a commit message like
+#   [off_update] [1.2.0] Nouveau fond d'écran et correction du bouton JOUER
+# or run it by hand: Actions tab > "Release launcher" > Run workflow > type the version.
+name: Release launcher
 
 on:
   push:
-    tags: ['v*']
+    branches: [main]
   workflow_dispatch:
+    inputs:
+      version:
+        description: Version (ex. 1.2.0)
+        required: true
 
 permissions:
   contents: write
 
+concurrency: release
+
 jobs:
-  windows:
+  release:
+    if: github.event_name == 'workflow_dispatch' || contains(toJSON(github.event.commits.*.message), '[off_update]')
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,6 +32,17 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Read the version from "[off_update] [x.y.z]"
+        id: version
+        shell: bash
+        env:
+          COMMITS_JSON: ${{ toJSON(github.event.commits) }}
+          MANUAL_VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          export LATEST_TAG="$(gh release view --json tagName --jq .tagName 2> /dev/null || true)"
+          node tools/release-version.js
+
       - run: npm ci
 
       - name: Configure the launcher
@@ -29,26 +50,23 @@ jobs:
         env:
           SERVER_URL: ${{ vars.SERVER_URL }}
           AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
 
       - name: Build installer
         run: npx electron-builder --win --x64 --publish never
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ModdedQC-Setup
-          path: dist/ModdedQC-Setup.exe
+      - name: Checksum (launchers verify the download with it)
+        shell: bash
+        run: |
+          node -e "const c=require('crypto'),f=require('fs');f.writeFileSync('dist/ModdedQC-Setup.exe.sha256',c.createHash('sha256').update(f.readFileSync('dist/ModdedQC-Setup.exe')).digest('hex')+'  ModdedQC-Setup.exe\n')"
 
       - name: Publish release
-        if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        # Works both when you push a tag and when you create the release on GitHub's website.
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" dist/ModdedQC-Setup.exe --clobber
-          else
-            gh release create "$GITHUB_REF_NAME" dist/ModdedQC-Setup.exe \
-              --title "ModdedQC Launcher $GITHUB_REF_NAME" \
-              --notes "Télécharge **ModdedQC-Setup.exe** ci-dessous, ouvre-le et suis l'installation."
-          fi
+          gh release create "v$VERSION" dist/ModdedQC-Setup.exe dist/ModdedQC-Setup.exe.sha256 \
+            --target "$GITHUB_SHA" \
+            --title "ModdedQC Launcher $VERSION" \
+            --notes-file "$RUNNER_TEMP/release-notes.md"

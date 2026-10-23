@@ -22,7 +22,7 @@ Plugins stay on the Paper server: players run normal (vanilla) Minecraft, matchi
 
 **<https://github.com/tigamer20/launcher_mdcq/releases/latest/download/ModdedQC-Setup.exe>**
 
-Open the file and follow the installer. It creates a **ModdedQC** shortcut on the desktop and in the Start menu.
+Open the file and follow the installer. It creates a **ModdedQC** shortcut on the desktop and in the Start menu. After that, the launcher updates itself.
 
 > Windows may show "Windows protected your PC" because the installer isn't signed with a paid certificate. Click **More info** → **Run anyway**.
 
@@ -95,17 +95,38 @@ Every request from the website is signed with the secret, expires after 60 secon
 | `AGENT_PORT`     | no       | Default `8765`.                                            |
 | `RCON_HOST/PORT` | no       | Default `127.0.0.1` / `25575`.                             |
 
-### 4. Build the Windows installer (.exe)
+### 4. Publish the launcher (and its updates)
 
-The installer is built by GitHub (on a Windows machine) with `.github/workflows/release.yml`:
+The installer is built by GitHub (on a Windows machine) with `.github/workflows/release.yml`.
 
-1. In the GitHub repository: **Settings** → **Secrets and variables** → **Actions** → **Variables** tab → add:
-   - `SERVER_URL` = your Render URL, e.g. `https://moddedqc-admin.onrender.com/`
-   - `AZURE_CLIENT_ID` = the ID from step 1
-2. **Releases** → **Draft a new release** → **Choose a tag** → type `v1.0.0` → **Publish release**.
-3. About 5 minutes later, `ModdedQC-Setup.exe` is attached to the release, and the download link above works.
+**Once:** in the GitHub repository, **Settings** → **Secrets and variables** → **Actions** → **Variables** tab → add:
+- `SERVER_URL` = your Render URL, e.g. `https://moddedqc-admin.onrender.com/`
+- `AZURE_CLIENT_ID` = the ID from step 1
 
-For an update, publish a new release with a higher number (`v1.0.1`...). The download link always points to the newest one. You can also build without publishing: **Actions** → **Build Windows installer** → **Run workflow**, then download it from the run's **Artifacts**.
+**Every time you want to release a version**, push to `main` with a commit message that contains:
+
+```
+[off_update] [1.2.0] Short description of what changed
+```
+
+```bash
+git commit -m "[off_update] [1.2.0] Nouveau bouton Paramètres"
+git push origin main
+```
+
+(On github.com, type the same thing in the **Commit message** box when you edit a file or merge a pull request.)
+
+What happens next, automatically:
+1. GitHub builds `ModdedQC-Setup.exe` with version **1.2.0** (about 5 minutes; follow it in the **Actions** tab).
+2. It publishes release **v1.2.0** on the Releases page, with the rest of your commit message as release notes.
+3. Every installed launcher checks GitHub when it opens, sees 1.2.0 is newer, downloads it, checks it isn't corrupted, installs it silently and reopens. The version is shown next to the logo (`v1.2.0`).
+
+Rules:
+- The version must be higher than the last one (`1.2.0` → `1.2.1`, `1.3.0` or `2.0.0`). Otherwise the build stops with an explanation.
+- Commits without `[off_update]` don't create a release (website and code changes are still pushed normally).
+- `[off_update] 1.2.0` without the second brackets and `[off_update] [v1.2.0]` also work.
+
+You can also release by hand: **Actions** → **Release launcher** → **Run workflow** → type the version.
 
 ---
 
@@ -133,11 +154,11 @@ MODDEDQC_SERVER_URL=http://localhost:8080/ npm start            # launcher point
 Game files are stored in `%APPDATA%\.moddedqc` (Windows), `~/Library/Application Support/.moddedqc` (macOS) or `~/.config/.moddedqc` (Linux). The game output is written to `logs/launcher-latest.log` there.
 
 ```
-src/main/            launcher: window, Microsoft login, file sync, Minecraft install/launch, server status
+src/main/            launcher: window, Microsoft login, file sync, Minecraft install/launch, server status, self-update
 src/renderer/        launcher UI
 admin-panel/         admin website (no dependencies)
 paper-agent/         agent for the Paper machine (no dependencies)
-tools/               manifest builder + CI helper
+tools/               manifest builder + release helpers
 build/icon.png       app icon
 render.yaml          Render Blueprint
 .github/workflows/   builds ModdedQC-Setup.exe
