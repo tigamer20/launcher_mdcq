@@ -78,7 +78,7 @@ ipcMain.handle('init', () => {
 ipcMain.handle('pack', async () => {
   try {
     const pack = await files.fetchManifest(SERVER_URL);
-    const server = pack.server?.host ? await pingServer(pack.server.host, pack.server.port) : null;
+    const server = pack.server?.host ? await pingServer(pack.server.host, pack.server.port, { minecraftVersion: pack.versionId }) : null;
     return {
       name: pack.name,
       subtitle: pack.subtitle,

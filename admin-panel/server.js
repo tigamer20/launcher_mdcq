@@ -241,8 +241,8 @@ const api = {
 
   // Live status of the Minecraft server (players, version...)
   'GET /api/status': async () => {
-    const { server } = readPack();
-    return server?.host ? pingServer(server.host, server.port) : { online: false };
+    const { server, versionId } = readPack();
+    return server?.host ? pingServer(server.host, server.port, { minecraftVersion: versionId }) : { online: false };
   },
 
   'POST /api/console': async (req) => {
