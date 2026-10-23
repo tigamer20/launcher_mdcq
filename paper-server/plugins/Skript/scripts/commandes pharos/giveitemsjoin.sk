@@ -1,0 +1,222 @@
+on join:
+    clear player's inventory
+    wait 1.5 seconds
+    set {profileitem::%player%} to player's head named "&6Profile" with lore "&6cliquez pour afficher votre profile"
+    set slot 5 of player's inventory to {profileitem::%player%}
+    set {amisitem::%player%} to totem of undying named "&1Amis" with lore "&2cliquez pour afficher vos amis"
+    set slot 4 of player's inventory to {amisitem::%player%}
+    set {settingsitem::%player%} to redstone comparator named "&eSettings" with lore "&2cliquez pour afficher les réglages"
+    set slot 3 of player's inventory to {settingsitem::%player%}
+    set {lessitem::%player%} to stone button named "&8cacher les options" with lore "&8cacher les options de votre inventaire"
+    set slot 8 of player's inventory to {lessitem::%player%}
+on right click:
+    if item is player's skull:
+        if name of tool of player is "&6Profile":
+            cancel event
+            execute console command "profil %player%"
+        
+    else if item is compass:
+        if name of tool of player is "&2Games":
+            cancel event
+            execute player command "/play"
+
+    else if item is stone button:
+        if name of tool of player is "&8cacher les options":
+            cancel event
+            clear player's inventory
+            wait 1 tick
+            send "&8les options sont désormais cachées" to player
+            set {moreitems::%player%} to oak button named "&6Plus d'options" with lore "&6montrer les options"
+            set slot 8 of player's inventory to {moreitems::%player%}
+
+    else if item is oak button:
+        if name of tool of player is "&6Plus d'options":
+            cancel event
+            clear player's inventory
+            wait 1 tick
+            set slot 5 of player's inventory to {profileitem::%player%}
+            set slot 4 of player's inventory to {amisitem::%player%}
+            set slot 3 of player's inventory to {settingsitem::%player%}
+            set slot 8 of player's inventory to {lessitem::%player%}
+            send "&6les options sont désormais affichées" to player
+
+    else if item is totem of undying:
+        if name of tool of player is "&1Amis":
+            cancel event
+            execute player command "/friend"
+
+    else if item is redstone comparator:
+        if name of tool of player is "&esettings":
+            cancel event
+            execute player command "/setting"
+on drop:
+    if player is in world "lobby_jeux1":
+        cancel event
+        wait 1 second
+    if player is in world "dropper":
+        cancel event
+        wait 1 second
+    if player is in world "findthebutton":
+        cancel event
+        wait 1 second
+    if player is in world "coursedebateau":
+        cancel event
+        wait 1 second
+            
+on inventory click:
+    if item is player's skull:
+        if player is in world "lobby_jeux1":
+            cancel event
+            execute player command "/profil"
+        
+    else if item is compass:
+        if player is in world "lobby_jeux1":
+            cancel event
+            execute player command "/play"
+
+    else if item is stone button:
+        if player is in world "lobby_jeux1":
+            cancel event
+            close player's inventory
+            clear player's inventory
+            wait 1 tick
+            send "&8les option sont désormais cachées" to player
+            set {moreitems::%player%} to oak button named "&6Plus d'options" with lore "&6montrer les options"
+            set slot 8 of player's inventory to {moreitems::%player%}
+
+    else if item is oak button:
+        if player is in world "lobby_jeux1":
+            cancel event
+            close player's inventory
+            clear player's inventory
+            wait 1 tick
+            set slot 5 of player's inventory to {profileitem::%player%}
+            set slot 4 of player's inventory to {gameitem::%player%}
+            set slot 3 of player's inventory to {amisitem::%player%}
+            set slot 2 of player's inventory to {settingsitem::%player%}
+            set slot 8 of player's inventory to {lessitem::%player%}
+            send "&6les option sont désormais affichées" to player
+
+    else if item is totem of undying:
+        if player is in world "lobby_jeux1":
+            cancel event
+            execute player command "/friend"
+
+    else if item is redstone comparator:
+        if name of tool of player is "&esettings":
+            cancel event
+            execute player command "/setting"
+            
+command /menuitems:
+    permission: op
+    trigger:
+        clear player's inventory
+        wait 1.5 seconds
+        set {profileitem::%player%} to player's head named "&6Profile" with lore "&6cliquez pour afficher votre profile"
+        set slot 5 of player's inventory to {profileitem::%player%}
+        set {amisitem::%player%} to totem of undying named "&1Amis" with lore "&2cliquez pour afficher vos amis"
+        set slot 4 of player's inventory to {amisitem::%player%}
+        set {settingsitem::%player%} to redstone comparator named "&eSettings" with lore "&2cliquez pour afficher les réglages"
+        set slot 3 of player's inventory to {settingsitem::%player%}
+        set {lessitem::%player%} to stone button named "&8cacher les options" with lore "&8cacher les options de votre inventaire"
+        set slot 8 of player's inventory to {lessitem::%player%}
+on right click:
+    if item is player's skull:
+        if name of tool of player is "&6Profile":
+            cancel event
+            execute player command "/profil"
+                
+    else if item is compass:
+        if name of tool of player is "&2Games":
+            cancel event
+            execute player command "/play"
+        
+    else if item is stone button:
+        if name of tool of player is "&8cacher les options":
+            cancel event
+            clear player's inventory
+            wait 1 tick
+            send "&8les option sont désormais cachées" to player
+            set {moreitems::%player%} to oak button named "&6Plus d'options" with lore "&6montrer les options"
+            set slot 8 of player's inventory to {moreitems::%player%}
+        
+    else if item is oak button:
+        if name of tool of player is "&6Plus d'options":
+            cancel event
+            clear player's inventory
+            wait 1 tick
+            set slot 5 of player's inventory to {profileitem::%player%}
+            set slot 4 of player's inventory to {gameitem::%player%}
+            set slot 3 of player's inventory to {amisitem::%player%}
+            set slot 2 of player's inventory to {settingsitem::%player%}
+            set slot 8 of player's inventory to {lessitem::%player%}
+            send "&6les option sont désormais affichées" to player
+        
+    else if item is totem of undying:
+        if name of tool of player is "&1Amis":
+            cancel event
+            execute player command "/friend"
+        
+    else if item is redstone comparator:
+        if name of tool of player is "&esettings":
+            cancel event
+            execute player command "/setting"
+on drop:
+    if player is in world "lobby_jeux1":
+        cancel event
+        wait 1 second
+    if player is in world "dropper":
+        cancel event
+        wait 1 second
+    if player is in world "findthebutton":
+        cancel event
+        wait 1 second
+    if player is in world "coursedebateau":
+        cancel event
+        wait 1 second
+                    
+on inventory click:
+    if item is player's skull:
+        if player is in world "lobby_jeux1":
+            cancel event
+            execute player command "/profil"
+                
+    else if item is compass:
+        if player is in world "lobby_jeux1":
+            cancel event
+            execute player command "/play"
+        
+    else if item is stone button:
+        if player is in world "lobby_jeux1":
+            cancel event
+            close player's inventory
+            clear player's inventory
+            wait 1 tick
+            send "&8les option sont désormais cachées" to player
+            set {moreitems::%player%} to oak button named "&6Plus d'options" with lore "&6montrer les options"
+            set slot 8 of player's inventory to {moreitems::%player%}
+        
+    else if item is oak button:
+        if player is in world "lobby_jeux1":
+            cancel event
+            close player's inventory
+            clear player's inventory
+            wait 1 tick
+            set slot 5 of player's inventory to {profileitem::%player%}
+            set slot 4 of player's inventory to {gameitem::%player%}
+            set slot 3 of player's inventory to {amisitem::%player%}
+            set slot 2 of player's inventory to {settingsitem::%player%}
+            set slot 8 of player's inventory to {lessitem::%player%}
+            send "&6les option sont désormais affichées" to player
+        
+    else if item is totem of undying:
+        if player is in world "lobby_jeux1":
+            cancel event
+            execute player command "/friend"
+        
+    else if item is redstone comparator:
+        if name of tool of player is "&esettings":
+            cancel event
+            execute player command "/setting"
+                    
+                    
