@@ -40,20 +40,38 @@ function text(component) {
 // Like Minecraft: an address without a custom port can point to the real host/port with a DNS "SRV" record
 // (_minecraft._tcp.<address>). playit.gg addresses (xxx.joinmc.link) work this way.
 async function resolveAddress(host, port) {
-  if (port !== 25565 || net.isIP(host)) return { host, port };
+  if (port !== 25565 || net.isIP(host)) return { host, port, srv: false };
   try {
     const [record] = await dns.resolveSrv(`_minecraft._tcp.${host}`);
-    if (record) return { host: record.name, port: record.port };
+    if (record) return { host: record.name, port: record.port, srv: true };
   } catch {
     // no SRV record: use the address as typed
   }
-  return { host, port };
+  return { host, port, srv: false };
 }
 
-/** Returns { online, players: { online, max, list }, version, motd } (online: false if unreachable). */
+// Why the server didn't answer, in words the admins understand.
+const REASONS = {
+  ENOTFOUND: "adresse introuvable (vérifie l'orthographe de l'adresse)",
+  EAI_AGAIN: "adresse introuvable pour l'instant (problème DNS)",
+  ECONNREFUSED: "connexion refusée : rien n'écoute sur ce port (mauvais port ou serveur éteint)",
+  ECONNRESET: 'connexion coupée par le serveur',
+  EHOSTUNREACH: 'machine injoignable',
+  ENETUNREACH: 'réseau injoignable',
+  timeout: "pas de réponse dans les temps (mauvais port, tunnel playit.gg arrêté ou pare-feu)",
+  invalid: "quelque chose répond sur ce port, mais ce n'est pas un serveur Minecraft",
+};
+
+/**
+ * Returns { online, players: { online, max, list }, version, motd, tried }.
+ * When offline: { online: false, reason, tried } where tried is the "host:port" actually contacted.
+ */
 async function pingServer(host, port = 25565, timeoutMs = 3000) {
   const target = await resolveAddress(host, Number(port) || 25565);
-  return pingAddress(target.host, target.port, timeoutMs);
+  const tried = `${target.host}:${target.port}${target.srv ? ' (via SRV)' : ''}`;
+  const result = await pingAddress(target.host, target.port, timeoutMs);
+  if (!result.online) result.reason = REASONS[result.code] || `erreur ${result.code}`;
+  return { ...result, tried };
 }
 
 function pingAddress(host, port, timeoutMs) {
@@ -64,8 +82,8 @@ function pingAddress(host, port, timeoutMs) {
       socket.destroy();
       resolve(result);
     };
-    socket.setTimeout(timeoutMs, () => done({ online: false }));
-    socket.on('error', () => done({ online: false }));
+    socket.setTimeout(timeoutMs, () => done({ online: false, code: 'timeout' }));
+    socket.on('error', (err) => done({ online: false, code: err.code || 'unknown' }));
 
     socket.on('connect', () => {
       const address = Buffer.from(host, 'utf8');
@@ -96,7 +114,7 @@ function pingAddress(host, port, timeoutMs) {
           motd: text(json.description),
         });
       } catch {
-        done({ online: false });
+        done({ online: false, code: 'invalid' });
       }
     });
   });
