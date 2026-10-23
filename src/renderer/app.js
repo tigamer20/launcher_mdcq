@@ -11,13 +11,17 @@ function cleanError(err) {
 }
 
 let toastTimer;
-function showError(message) {
+function showToast(message, isError) {
   const toast = $('toast');
   toast.textContent = message;
+  toast.classList.toggle('info', !isError);
   toast.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (toast.hidden = true), 8000);
+  toastTimer = setTimeout(() => (toast.hidden = true), isError ? 8000 : 3500);
 }
+
+const showError = (message) => showToast(message, true);
+const showInfo = (message) => showToast(message, false);
 
 function setStatus(text, progress) {
   $('status-text').textContent = text;
@@ -112,6 +116,13 @@ async function init() {
   $('app-version').textContent = `v${data.version}`;
   state.settings = data.settings;
   showAccount(data.account);
+  // Developer section (hidden until Ctrl+Shift+D)
+  $('btn-dev').hidden = !state.settings.devTab;
+  $('dev-version').textContent = `v${data.version}${data.version.includes('-') ? ' (bêta)' : ''}`;
+  $('beta-key').value = state.settings.beta?.key || '';
+  $('beta-enabled').checked = Boolean(state.settings.beta?.enabled);
+  $('beta-enabled').disabled = !state.settings.beta?.key;
+
   await loadPack();
 
   // Settings dialog values
@@ -122,13 +133,6 @@ async function init() {
   updateRamLabel();
   refreshButtons();
 
-  // A newer launcher on GitHub? It downloads, installs and restarts by itself.
-  window.launcher.selfUpdate().catch((err) => {
-    $('self-update').hidden = true;
-    state.busy = false;
-    refreshButtons();
-    showError(`Mise à jour du launcher impossible: ${cleanError(err)}`);
-  });
 }
 
 function updateRamLabel() {
@@ -187,15 +191,44 @@ $('btn-settings-close').onclick = async () => {
 
 window.launcher.onStatus(({ text, progress }) => setStatus(text, progress));
 
-window.launcher.onSelfUpdate(({ version, progress }) => {
-  state.busy = true;
-  refreshButtons();
-  $('self-update').hidden = false;
-  $('self-update-text').textContent =
-    progress == null ? `Version ${version} trouvée...` : `Téléchargement de la version ${version} : ${Math.round(progress * 100)} %`;
-  $('self-update-bar').classList.toggle('indeterminate', progress == null);
-  $('self-update-bar').style.width = progress == null ? '' : `${Math.round(progress * 100)}%`;
+// ---------- Developer section: Ctrl+Shift+D shows/hides it (remembered) ----------
+
+document.addEventListener('keydown', async (event) => {
+  if (!(event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'd')) return;
+  event.preventDefault();
+  state.settings.devTab = !state.settings.devTab;
+  await window.launcher.saveSettings({ devTab: state.settings.devTab });
+  $('btn-dev').hidden = !state.settings.devTab;
+  if (!state.settings.devTab && $('dev').open) $('dev').close();
+  showInfo(state.settings.devTab ? 'Section développeur affichée' : 'Section développeur cachée');
 });
+
+$('btn-dev').onclick = () => $('dev').showModal();
+$('btn-dev-close').onclick = () => $('dev').close();
+
+$('btn-beta-check').onclick = async () => {
+  const key = $('beta-key').value.trim();
+  const status = $('beta-key-status');
+  status.className = 'muted-text';
+  status.textContent = 'Vérification...';
+  const { valid, error } = await window.launcher.betaCheckKey(key);
+  status.className = `muted-text ${valid ? 'ok' : 'bad'}`;
+  status.textContent = valid ? 'Clé valide. Tu peux activer les mises à jour bêta.' : error || 'Clé invalide.';
+  $('beta-enabled').disabled = !valid;
+  if (!valid) $('beta-enabled').checked = false;
+  await window.launcher.betaSet({ key: valid ? key : '', enabled: $('beta-enabled').checked });
+};
+
+$('beta-enabled').onchange = async () => {
+  await window.launcher.betaSet({ key: $('beta-key').value.trim(), enabled: $('beta-enabled').checked });
+  showInfo(
+    $('beta-enabled').checked
+      ? 'Bêta activée : le launcher te proposera les versions de test.'
+      : 'Bêta désactivée : tu restes sur les versions publiques.',
+  );
+};
+
+$('btn-check-updates').onclick = () => window.launcher.checkUpdatesNow();
 
 window.launcher.onGameStarted(() => setStatus('Bon jeu! Minecraft est lancé.', 1));
 

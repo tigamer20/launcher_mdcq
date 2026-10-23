@@ -134,9 +134,11 @@ git push origin main
 (On github.com, type the same thing in the **Commit message** box when you edit a file or merge a pull request.)
 
 What happens next, automatically:
-1. GitHub builds `ModdedQC-Setup.exe` with version **1.2.0** (about 5 minutes; follow it in the **Actions** tab).
+1. GitHub builds `ModdedQC-Setup.exe` with version **1.2.0** (about 5 minutes; follow it in the **Actions** tab), plus the list of the launcher's files with their fingerprint (`app-update.json`).
 2. It publishes release **v1.2.0** on the Releases page, with the rest of your commit message as release notes.
-3. Every installed launcher checks GitHub when it opens, sees 1.2.0 is newer, downloads it, checks it isn't corrupted, installs it silently and reopens. The version is shown next to the logo (`v1.2.0`).
+3. When a player opens the launcher, a small update window (like Discord's) checks GitHub, sees 1.2.0 is newer and downloads **only the files that changed**. It shows the version, size downloaded / total, speed, time remaining and how many files changed. Then it checks the files and restarts on the new version. Nothing to install. The version is shown next to the logo (`v1.2.0`).
+   - The full installer is only downloaded when the Electron runtime itself changes (when `electron` is upgraded in `package.json`).
+   - If a new version crashes twice at startup, the launcher goes back to the previous one by itself.
 
 Rules:
 - The version must be higher than the last one (`1.2.0` → `1.2.1`, `1.3.0` or `2.0.0`). Otherwise the build stops with an explanation.
@@ -160,6 +162,17 @@ You can also release by hand: **Actions** → **Release launcher** → **Run wor
 | **Fichiers joueurs** | Files copied into every player's Minecraft folder (resource packs, `options.txt`...).                |
 
 **Maintenance mode** blocks the JOUER button in every launcher and shows your message. Through the agent it also runs `whitelist on` (and `whitelist off` afterwards), so people using the official launcher can't join either. Staff on the whitelist can still connect.
+
+### Beta versions (dev) for testers
+
+Dev versions (`[dev_update] [x.y.z]`, or **Version dev** in the merge window) are published as pre-releases `vx.y.z-dev`. Normal launchers ignore them. To let testers get them:
+
+1. On the website, **Serveur** tab → **Clé bêta** → type a key or click **Générer**, then **Enregistrer**. Give that key to your testers. Changing it (or emptying it) removes access for everyone.
+2. In the launcher, the tester presses **Ctrl+Shift+D**: a **DEV** button appears next to the settings (it stays until they press Ctrl+Shift+D again).
+3. In **DEV** → **Mises à jour bêta**: they paste the key, click **Valider**, then tick **Activer les mises à jour bêta**.
+4. When a dev version newer than the official one comes out, the update window asks: **Installer la bêta** or **Rester sur la version publique** (it won't ask again for that version). The next official version replaces the beta automatically.
+
+The key decides who is *offered* beta updates in the launcher. The repository is public, so the dev installers on the Releases page can still be downloaded by anyone who finds them.
 
 ### Server file editor → GitHub → new version
 

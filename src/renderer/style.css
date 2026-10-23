@@ -421,29 +421,57 @@ dialog[open] {
   justify-content: flex-end;
 }
 
-/* ---------- Self-update screen ---------- */
-.self-update {
-  position: fixed;
-  inset: 44px 0 0 0;
+/* ---------- Developer section ---------- */
+.dev-button {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.4);
+}
+
+.dev-section {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  background: var(--bg);
-  z-index: 10;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
 }
 
-.self-update img {
-  width: 72px;
+.dev-section h3 {
+  font-size: 15px;
 }
 
-.self-update p {
+.muted-text {
   color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
-.self-update .progress {
-  width: 360px;
+.muted-text.ok {
+  color: var(--success);
+}
+
+.muted-text.bad {
+  color: var(--danger);
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+}
+
+dialog input[type='password'],
+dialog input[type='text'] {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
 }
 
 /* ---------- Toast ---------- */
@@ -458,4 +486,12 @@ dialog[open] {
   background: var(--danger);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
   user-select: text;
+}
+
+.toast.info {
+  background: var(--accent);
+}
+
+.row input {
+  min-width: 0;
 }

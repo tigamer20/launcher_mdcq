@@ -106,6 +106,17 @@
               <small class="muted">Monte toute seule quand tu changes les fichiers joueurs.</small>
             </label>
             <label class="check full"><input type="checkbox" name="autoConnect" /> Connecter les joueurs au serveur automatiquement</label>
+            <label class="field full">
+              <span>Clé bêta</span>
+              <div class="row">
+                <input name="betaKey" placeholder="Vide = bêta désactivée pour tout le monde" autocomplete="off" />
+                <button type="button" id="btn-gen-beta" class="ghost">Générer</button>
+              </div>
+              <small class="muted">
+                Les joueurs qui l'entrent dans la section développeur du launcher (Ctrl+Shift+D) peuvent recevoir les
+                versions dev. Change-la pour retirer l'accès à tout le monde.
+              </small>
+            </label>
             <div class="row end full"><button class="primary" type="submit">Enregistrer</button></div>
           </form>
         </section>

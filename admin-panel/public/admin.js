@@ -111,6 +111,7 @@ function renderServerForm() {
   form.versionId.value = pack.versionId || '';
   form.version.value = pack.version || '';
   form.autoConnect.checked = Boolean(pack.autoConnect);
+  form.betaKey.value = pack.betaKey || '';
 }
 
 function newsItem(item = {}) {
@@ -221,6 +222,7 @@ $('server-form').onsubmit = async (event) => {
       version: form.version.value,
       versionId: form.versionId.value,
       autoConnect: form.autoConnect.checked,
+      betaKey: form.betaKey.value.trim(),
       server: { host: form.host.value, port: form.port.value },
     }));
     render();
@@ -321,6 +323,14 @@ async function deletePlugin(name) {
 
 $('plugin-input').onchange = (event) => uploadPlugins([...event.target.files]);
 setupDropZone($('plugin-drop'), (list) => uploadPlugins([...list]));
+
+// A random beta key that's easy to share: e.g. "QC-7F3K-9P2M-X4TB"
+$('btn-gen-beta').onclick = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const random = crypto.getRandomValues(new Uint8Array(12));
+  const part = (from) => [...random.slice(from, from + 4)].map((n) => chars[n % chars.length]).join('');
+  $('server-form').betaKey.value = `QC-${part(0)}-${part(4)}-${part(8)}`;
+};
 
 // ---------- Server file editor ----------
 

@@ -301,7 +301,7 @@ const api = {
   'PUT /api/pack': async (req) => {
     const body = await readJson(req);
     const pack = readPack();
-    for (const key of ['name', 'subtitle', 'version', 'versionId', 'autoConnect', 'syncDirs', 'keepPlayerChanges']) {
+    for (const key of ['name', 'subtitle', 'version', 'versionId', 'autoConnect', 'syncDirs', 'keepPlayerChanges', 'betaKey']) {
       if (key in body) pack[key] = body[key];
     }
     if (body.server) pack.server = { host: String(body.server.host || ''), port: Number(body.server.port) || 25565 };
@@ -394,6 +394,25 @@ async function handleApi(req, res, url) {
     return sendJson(res, 200, { ok: true }, {
       'Set-Cookie': `session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${SESSION_HOURS * 3600}${secure}`,
     });
+  }
+
+  // Public: launchers check the beta key players type in their hidden dev section.
+  if (req.method === 'POST' && url.pathname === '/api/beta/check') {
+    const fail = failures.get(`beta:${ip}`);
+    if (fail && fail.until > Date.now()) throw httpError(429, 'Trop d\'essais. Réessaie dans quelques minutes.');
+    const { key } = await readJson(req);
+    const expected = String(readPack().betaKey || '');
+    const valid = expected.length > 0 && crypto.timingSafeEqual(
+      crypto.createHash('sha256').update(String(key || '')).digest(),
+      crypto.createHash('sha256').update(expected).digest(),
+    );
+    if (!valid) {
+      const count = (fail?.count || 0) + 1;
+      failures.set(`beta:${ip}`, { count, until: count >= 10 ? Date.now() + 10 * 60_000 : 0 });
+    } else {
+      failures.delete(`beta:${ip}`);
+    }
+    return sendJson(res, 200, { valid });
   }
 
   const token = getSession(req);
