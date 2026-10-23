@@ -1,0 +1,24 @@
+command /gm [<text>]:
+    trigger:
+        if arg-1 is set:
+            if arg-1 is "cr":
+                set player's gamemode to creative
+                send "&2gamemode créatif activé!" to player
+                stop
+            if arg-1 is "sv":
+                set player's gamemode to survival
+                send "&2gamemode survie activé" to player
+                stop
+            if arg-1 is "ad":
+                set player's gamemode to adventure
+                send "&2gamemode aventure activé" to player
+                stop
+            if arg-1 is "sp":
+                set player's gamemode to spectator
+                send "&2gamemode spectateur activé" to player
+                stop
+            else:
+                send "&2creative ==> cr" to player
+                send "&1survival ==> sv" to player
+                send "&3adventure ==> ad" to player
+                send "&espectator ==> sp" to player
