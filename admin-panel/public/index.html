@@ -30,6 +30,7 @@
           <button class="nav active" data-tab="dashboard">Tableau de bord</button>
           <button class="nav" data-tab="server">Serveur</button>
           <button class="nav" data-tab="plugins">Plugins</button>
+          <button class="nav" data-tab="editor">Fichiers du serveur</button>
           <button class="nav" data-tab="console">Console</button>
           <button class="nav" data-tab="news">Nouvelles</button>
           <button class="nav" data-tab="files">Fichiers joueurs</button>
@@ -136,6 +137,35 @@
           </div>
         </section>
 
+        <!-- Server file editor (files on the Paper machine, history on GitHub) -->
+        <section class="tab" id="tab-editor" hidden>
+          <div class="row between">
+            <h1>Fichiers du serveur</h1>
+            <button id="btn-merge" class="primary">Fusionner dans main</button>
+          </div>
+          <p class="card muted" id="editor-off">
+            L'éditeur a besoin de l'agent ModdedQC sur le serveur Paper (<code>AGENT_URL</code> et <code>AGENT_SECRET</code>).
+          </p>
+          <p class="notice" id="editor-github">
+            Chaque sauvegarde modifie le fichier sur le serveur et crée un commit sur la branche
+            <code>admin-website</code> (mots de passe masqués). <span id="pending-count"></span>
+          </p>
+          <div id="editor-on" class="editor-layout">
+            <div class="card file-browser">
+              <div id="breadcrumb" class="breadcrumb"></div>
+              <ul id="dir-list" class="dir-list"></ul>
+            </div>
+            <div class="card editor-pane">
+              <div class="row between">
+                <code id="editor-path">Choisis un fichier à gauche</code>
+                <button id="btn-save-file" class="primary" disabled>Enregistrer</button>
+              </div>
+              <textarea id="editor" class="editor" spellcheck="false" disabled></textarea>
+              <span id="editor-status" class="muted"></span>
+            </div>
+          </div>
+        </section>
+
         <!-- Console (RCON) -->
         <section class="tab" id="tab-console" hidden>
           <h1>Console</h1>
@@ -204,6 +234,31 @@
         </section>
       </main>
     </div>
+
+    <!-- Merge dialog: dev or official version + version number -->
+    <dialog id="merge-dialog">
+      <form id="merge-form" class="merge-form">
+        <h2>Fusionner dans main</h2>
+        <p class="muted" id="merge-pending"></p>
+        <fieldset class="channel">
+          <label><input type="radio" name="channel" value="dev" checked /> Version dev <small>(test, les launchers ne se mettent pas à jour)</small></label>
+          <label><input type="radio" name="channel" value="official" /> Version officielle <small>(tous les launchers se mettent à jour)</small></label>
+        </fieldset>
+        <div class="current-versions">
+          <span>Version officielle actuelle : <strong id="current-official">-</strong></span>
+          <span>Dernière version dev : <strong id="current-dev">-</strong></span>
+        </div>
+        <label class="field">
+          <span>Nouvelle version</span>
+          <input id="merge-version" placeholder="1.2.0" pattern="\d+\.\d+\.\d+" required />
+        </label>
+        <p id="merge-error" class="error" hidden></p>
+        <div class="row end">
+          <button type="button" id="btn-merge-cancel" class="ghost">Annuler</button>
+          <button type="submit" id="btn-merge-confirm" class="primary">Confirmer la fusion</button>
+        </div>
+      </form>
+    </dialog>
 
     <div id="toast" class="toast" hidden></div>
     <script src="admin.js"></script>

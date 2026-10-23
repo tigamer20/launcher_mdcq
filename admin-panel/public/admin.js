@@ -72,6 +72,10 @@ function render() {
   $('console-off').hidden = features.rcon;
   $('console-on').hidden = !features.rcon;
   $('maintenance-rcon').hidden = !features.rcon;
+  $('editor-off').hidden = features.plugins;
+  $('editor-on').hidden = !features.plugins;
+  $('editor-github').hidden = !features.github;
+  $('btn-merge').hidden = !features.github;
 }
 
 // Live server status (players, version), refreshed every 10 seconds.
@@ -184,6 +188,11 @@ document.querySelectorAll('.nav').forEach((button) => {
   button.onclick = () => {
     document.querySelectorAll('.nav').forEach((b) => b.classList.toggle('active', b === button));
     document.querySelectorAll('.tab').forEach((tab) => (tab.hidden = tab.id !== `tab-${button.dataset.tab}`));
+    if (button.dataset.tab === 'editor' && !editor.loaded && features.plugins) {
+      editor.loaded = true;
+      openDir('');
+      refreshPending();
+    }
   };
 });
 
@@ -312,6 +321,155 @@ async function deletePlugin(name) {
 
 $('plugin-input').onchange = (event) => uploadPlugins([...event.target.files]);
 setupDropZone($('plugin-drop'), (list) => uploadPlugins([...list]));
+
+// ---------- Server file editor ----------
+
+const editor = { loaded: false, dir: '', file: null, original: '' };
+const isDirty = () => editor.file !== null && $('editor').value !== editor.original;
+
+function confirmDiscard() {
+  return !isDirty() || confirm('Tu as des modifications non enregistrées. Les abandonner?');
+}
+
+function renderBreadcrumb() {
+  const parts = editor.dir ? editor.dir.split('/') : [];
+  const crumbs = [el('button', { textContent: 'paper', onclick: () => openDir('') })];
+  parts.forEach((part, i) => {
+    crumbs.push(el('span', { className: 'muted', textContent: '/' }));
+    crumbs.push(el('button', { textContent: part, onclick: () => openDir(parts.slice(0, i + 1).join('/')) }));
+  });
+  $('breadcrumb').replaceChildren(...crumbs);
+}
+
+async function openDir(dir) {
+  try {
+    const { entries } = await api('GET', `/api/server-files?dir=${encodeURIComponent(dir)}`);
+    editor.dir = dir;
+    renderBreadcrumb();
+    const join = (name) => (dir ? `${dir}/${name}` : name);
+    const items = [];
+    if (dir) items.push(el('li', {}, [el('button', { textContent: '⬑ ..', onclick: () => openDir(dir.split('/').slice(0, -1).join('/')) })]));
+    for (const entry of entries) {
+      const full = join(entry.name);
+      const button = entry.type === 'dir'
+        ? el('button', { textContent: `📁 ${entry.name}`, onclick: () => openDir(full) })
+        : el('button', {
+            textContent: `📄 ${entry.name}`,
+            title: entry.editable ? full : 'Ce type de fichier ne peut pas être modifié ici',
+            disabled: !entry.editable,
+            className: full === editor.file ? 'active' : '',
+            onclick: () => openFile(full),
+          });
+      items.push(el('li', {}, [button]));
+    }
+    $('dir-list').replaceChildren(...items);
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+async function openFile(filePath) {
+  if (!confirmDiscard()) return;
+  try {
+    const { content } = await api('GET', `/api/server-file?path=${encodeURIComponent(filePath)}`);
+    editor.file = filePath;
+    editor.original = content;
+    $('editor').value = content;
+    $('editor').disabled = false;
+    $('btn-save-file').disabled = false;
+    $('editor-path').textContent = filePath;
+    $('editor-status').textContent = '';
+    document.querySelectorAll('.dir-list button').forEach((b) => b.classList.toggle('active', b.title === filePath));
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+async function saveFile() {
+  if (editor.file === null) return;
+  const content = $('editor').value;
+  $('btn-save-file').disabled = true;
+  try {
+    const result = await api('PUT', `/api/server-file?path=${encodeURIComponent(editor.file)}`, content, true);
+    editor.original = content;
+    $('editor-status').textContent = `Enregistré à ${new Date().toLocaleTimeString('fr-CA')}`;
+    if (result.warning) toast(result.warning, true);
+    else toast('Enregistré sur le serveur + commit sur admin-website');
+    refreshPending();
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    $('btn-save-file').disabled = false;
+  }
+}
+
+async function refreshPending() {
+  if (!features.github) return;
+  try {
+    const { pending } = await api('GET', '/api/versions');
+    $('pending-count').textContent = pending ? `${pending} modification(s) en attente de fusion.` : 'Aucune modification en attente.';
+  } catch {
+    $('pending-count').textContent = '';
+  }
+}
+
+$('btn-save-file').onclick = saveFile;
+$('editor').oninput = () => {
+  $('editor-status').textContent = isDirty() ? 'Modifications non enregistrées' : '';
+};
+$('editor').onkeydown = (event) => {
+  if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+    event.preventDefault();
+    saveFile();
+  } else if (event.key === 'Tab') {
+    // Tab inserts spaces instead of leaving the editor (YAML doesn't allow tab characters).
+    event.preventDefault();
+    event.target.setRangeText('  ', event.target.selectionStart, event.target.selectionEnd, 'end');
+  }
+};
+window.addEventListener('beforeunload', (event) => {
+  if (isDirty()) event.preventDefault();
+});
+
+// ---------- Merge into main ----------
+
+$('btn-merge').onclick = async () => {
+  try {
+    const { official, dev, pending } = await api('GET', '/api/versions');
+    $('current-official').textContent = official || 'aucune';
+    $('current-dev').textContent = dev || 'aucune';
+    $('merge-pending').textContent = pending
+      ? `${pending} modification(s) de la branche admin-website seront fusionnées dans main.`
+      : 'Aucune modification en attente : enregistre un fichier d\'abord.';
+    $('btn-merge-confirm').disabled = !pending;
+    $('merge-error').hidden = true;
+    $('merge-version').value = '';
+    $('merge-dialog').showModal();
+    $('merge-version').focus();
+  } catch (err) {
+    toast(err.message, true);
+  }
+};
+
+$('btn-merge-cancel').onclick = () => $('merge-dialog').close();
+
+$('merge-form').onsubmit = async (event) => {
+  event.preventDefault();
+  const channel = event.target.channel.value;
+  $('btn-merge-confirm').disabled = true;
+  $('merge-error').hidden = true;
+  try {
+    const { number } = await api('POST', '/api/merge', { channel, version: $('merge-version').value });
+    $('merge-dialog').close();
+    toast(`Pull request #${number} créée et fusionnée dans main`);
+    refreshPending();
+  } catch (err) {
+    $('merge-error').textContent = err.message;
+    $('merge-error').hidden = false;
+  } finally {
+    $('btn-merge-confirm').disabled = false;
+  }
+};
 
 // ---------- Console ----------
 

@@ -20,6 +20,9 @@ const RCON = process.env.RCON_PASSWORD
   ? { host: process.env.RCON_HOST || '127.0.0.1', port: Number(process.env.RCON_PORT) || 25575, password: process.env.RCON_PASSWORD }
   : null;
 const MAX_UPLOAD = 200 * 1024 * 1024;
+const MAX_TEXT = 1024 * 1024;
+// Files the website can open in its editor (configs). Jars, worlds and other binary files are never edited.
+const TEXT_EXTENSIONS = new Set(['.yml', '.yaml', '.properties', '.json', '.txt', '.toml', '.conf', '.cfg', '.ini', '.md', '.sk', '.csv', '.xml']);
 
 if (!SECRET || SECRET.length < 32) {
   console.error('AGENT_SECRET doit faire au moins 32 caractères (le même que sur Render).');
@@ -74,6 +77,58 @@ async function saveBody(req, dest, expectedHash) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Server files (text editor on the website)
+// ---------------------------------------------------------------------------
+
+const isEditable = (name) => TEXT_EXTENSIONS.has(path.extname(name).toLowerCase());
+
+// "plugins/Essentials/config.yml" -> absolute path inside PAPER_DIR (refuses "../" and symlinks leading outside).
+function serverPath(relative) {
+  const root = fs.realpathSync(PAPER_DIR);
+  const target = path.resolve(root, String(relative || '').replace(/^\/+/, ''));
+  if (target !== root && !target.startsWith(root + path.sep)) throw httpError(400, 'Chemin invalide');
+  if (fs.existsSync(target)) {
+    const real = fs.realpathSync(target);
+    if (real !== root && !real.startsWith(root + path.sep)) throw httpError(400, 'Chemin invalide');
+  }
+  return target;
+}
+
+function listDir(relative) {
+  const dir = serverPath(relative);
+  if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) throw httpError(404, 'Dossier introuvable');
+  return fs
+    .readdirSync(dir, { withFileTypes: true })
+    .filter((e) => !e.name.startsWith('.') && (e.isDirectory() || e.isFile()))
+    .map((e) => ({
+      name: e.name,
+      type: e.isDirectory() ? 'dir' : 'file',
+      size: e.isFile() ? fs.statSync(path.join(dir, e.name)).size : 0,
+      editable: e.isFile() && isEditable(e.name),
+    }))
+    .sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === 'dir' ? -1 : 1));
+}
+
+function editableFile(relative) {
+  const file = serverPath(relative);
+  if (!isEditable(file)) throw httpError(400, 'Ce type de fichier ne peut pas être modifié ici');
+  return file;
+}
+
+async function readBody(req, expectedHash, limit) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > limit) throw httpError(413, 'Requête trop grande');
+    chunks.push(chunk);
+  }
+  const body = Buffer.concat(chunks);
+  if (sha256(body) !== expectedHash) throw httpError(400, 'Requête modifiée');
+  return body;
+}
+
 async function readJson(req, expectedHash) {
   const chunks = [];
   let size = 0;
@@ -114,6 +169,26 @@ const routes = {
     const to = name.endsWith('.disabled') ? from.slice(0, -'.disabled'.length) : `${from}.disabled`;
     fs.renameSync(from, to);
     return { plugins: listPlugins() };
+  },
+
+  'GET /files': (req, url) => ({ entries: listDir(url.searchParams.get('dir')) }),
+
+  'GET /file': (req, url) => {
+    const file = editableFile(url.searchParams.get('path'));
+    if (!fs.existsSync(file)) throw httpError(404, 'Fichier introuvable');
+    if (fs.statSync(file).size > MAX_TEXT) throw httpError(413, 'Fichier trop gros pour l\'éditeur (1 Mo max)');
+    return { content: fs.readFileSync(file, 'utf8') };
+  },
+
+  // Saves a text file (atomic: written to a temp file, then renamed).
+  'PUT /file': async (req, url, bodyHash) => {
+    const file = editableFile(url.searchParams.get('path'));
+    const body = await readBody(req, bodyHash, MAX_TEXT);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    const tmp = `${file}.${crypto.randomBytes(4).toString('hex')}.tmp`;
+    fs.writeFileSync(tmp, body);
+    fs.renameSync(tmp, file);
+    return { saved: true, size: body.length };
   },
 
   'POST /rcon': async (req, url, bodyHash) => {

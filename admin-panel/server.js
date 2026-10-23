@@ -6,6 +6,7 @@
 // Optional, to control the Paper server (plugins, console, whitelist) through paper-agent/:
 //   AGENT_URL=http://my-pc:8765/   AGENT_SECRET=same-as-the-agent
 // Behind a proxy like Render, also set TRUST_PROXY=1 (real visitor IPs for the login protection).
+// Server file editor history on GitHub: GITHUB_TOKEN=... (see admin-panel/github.js).
 //
 // The launcher reads:  /manifest.json  and  /files/...
 // Admins go to:        /admin/
@@ -17,6 +18,7 @@ const { pipeline } = require('stream/promises');
 const { buildManifest } = require('../tools/build-manifest');
 const { pingServer } = require('../src/main/status');
 const { signHeaders } = require('../paper-agent/signing');
+const github = require('./github');
 
 const PORT = Number(process.env.PORT) || 8080;
 const LOCAL_DATA_DIR = path.join(__dirname, 'data');
@@ -234,7 +236,7 @@ const api = {
   'GET /api/state': async () => {
     const features = await agentFeatures();
     const plugins = features.plugins ? (await agent('GET', '/plugins')).plugins : [];
-    return { pack: readPack(), files: listFiles(), plugins, features };
+    return { pack: readPack(), files: listFiles(), plugins, features: { ...features, github: github.configured() } };
   },
 
   // Live status of the Minecraft server (players, version...)
@@ -247,6 +249,43 @@ const api = {
     const { command } = await readJson(req);
     if (!command || typeof command !== 'string') throw httpError(400, 'Commande vide');
     return agent('POST', '/rcon', { command });
+  },
+
+  // Server file editor: files live on the Paper machine (through the agent),
+  // every save is also committed on the "admin-website" branch on GitHub (secrets masked).
+  'GET /api/server-files': (req, url) => agent('GET', `/files?dir=${encodeURIComponent(url.searchParams.get('dir') || '')}`),
+
+  'GET /api/server-file': (req, url) => agent('GET', `/file?path=${encodeURIComponent(url.searchParams.get('path') || '')}`),
+
+  'PUT /api/server-file': async (req, url) => {
+    const relative = String(url.searchParams.get('path') || '').replace(/^\/+/, '');
+    const content = await readBuffer(req, 1024 * 1024);
+    await agent('PUT', `/file?path=${encodeURIComponent(relative)}`, content);
+    if (!github.configured()) return { saved: true, warning: 'Enregistré sur le serveur. GITHUB_TOKEN manquant: pas de commit.' };
+    try {
+      return { saved: true, commit: await github.commitServerFile(relative, content.toString('utf8')) };
+    } catch (err) {
+      return { saved: true, warning: `Enregistré sur le serveur, mais le commit GitHub a échoué: ${err.message}` };
+    }
+  },
+
+  'GET /api/versions': async () => {
+    if (!github.configured()) throw httpError(400, 'GITHUB_TOKEN n\'est pas configuré');
+    const { official, dev, pending } = await github.status().catch((err) => {
+      throw httpError(502, err.message);
+    });
+    return { official, dev, pending };
+  },
+
+  // Opens a pull request admin-website -> main and merges it with "[off_update]" or "[dev_update]".
+  'POST /api/merge': async (req) => {
+    if (!github.configured()) throw httpError(400, 'GITHUB_TOKEN n\'est pas configuré');
+    const { channel, version } = await readJson(req);
+    try {
+      return await github.mergeToMain(channel, String(version || '').trim().replace(/^v/, ''));
+    } catch (err) {
+      throw httpError(400, err.message);
+    }
   },
 
   // Plugins: the website forwards everything to the agent. Paper loads changes at the next restart.

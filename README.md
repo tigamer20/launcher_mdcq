@@ -154,11 +154,31 @@ You can also release by hand: **Actions** → **Release launcher** → **Run wor
 | **Tableau de bord**  | Online/offline, players, Paper version, active plugins. **Maintenance** switch + message.            |
 | **Serveur**          | Name, subtitle, address, Minecraft version (same as Paper), auto-connect.                            |
 | **Plugins**          | Upload/update a `.jar`, enable/disable (renames to `.jar.disabled`), delete. Applies after a restart. |
+| **Fichiers du serveur** | Edit the Paper server's text files (configs) on the Mac. Each save is also committed to GitHub (see below). |
 | **Console**          | Runs server commands (`list`, `say ...`, `whitelist add ...`...).                                     |
 | **Nouvelles**        | News shown in the launcher.                                                                          |
 | **Fichiers joueurs** | Files copied into every player's Minecraft folder (resource packs, `options.txt`...).                |
 
 **Maintenance mode** blocks the JOUER button in every launcher and shows your message. Through the agent it also runs `whitelist on` (and `whitelist off` afterwards), so people using the official launcher can't join either. Staff on the whitelist can still connect.
+
+### Server file editor → GitHub → new version
+
+The **Fichiers du serveur** tab browses the Paper folder on the Mac (through the agent) and edits text files: `.yml`, `.properties`, `.json`, `.toml`, `.txt`... Jars and worlds can't be edited there.
+
+1. **Enregistrer** (or Cmd/Ctrl+S) writes the file on the Mac right away **and** commits it to the `admin-website` branch, in the `paper-server/` folder of this repository.
+   The repository is public, so **values that look like passwords, tokens or keys are replaced by `********`** in the commit (e.g. `rcon.password`, `mysql.password`, `bot-token`). The real values stay only on the Mac.
+2. **Fusionner dans main** opens a window: choose **Version dev** or **Version officielle**, look at the current versions shown above the box, type the new version, then **Confirmer la fusion**.
+   The website opens a pull request `admin-website` → `main` and merges it immediately, with the title:
+   - `[off_update] [x.y.z] ...` for an official version: release `vx.y.z`, **every launcher updates**;
+   - `[dev_update] [x.y.z] ...` for a dev version: pre-release `vx.y.z-dev` on the Releases page for testing, **launchers don't update**.
+
+   The version must be higher than the current official version. Paper itself applies config changes after a restart (or the plugin's reload command in **Console**).
+
+**Setup (once):** create a GitHub token that can only touch this repository:
+1. GitHub → your picture → **Settings** → **Developer settings** → **Personal access tokens** → **Fine-grained tokens** → **Generate new token**.
+2. **Repository access** → **Only select repositories** → `launcher_mdcq`.
+3. **Permissions** → **Contents: Read and write** and **Pull requests: Read and write**.
+4. Copy the token into `GITHUB_TOKEN` on Render (**Environment** tab).
 
 ## Development
 

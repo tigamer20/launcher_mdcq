@@ -33,3 +33,7 @@ services:
         sync: false
       - key: AGENT_SECRET
         sync: false
+      - key: GITHUB_TOKEN # server file editor: commits + pull requests (see README)
+        sync: false
+      - key: GITHUB_REPO
+        value: tigamer20/launcher_mdcq
