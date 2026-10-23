@@ -19,7 +19,8 @@ const { pingServer } = require('../src/main/status');
 const { signHeaders } = require('../paper-agent/signing');
 
 const PORT = Number(process.env.PORT) || 8080;
-const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(__dirname, 'data'));
+const LOCAL_DATA_DIR = path.join(__dirname, 'data');
+const DATA_DIR = writableDataDir(path.resolve(process.env.DATA_DIR || LOCAL_DATA_DIR));
 const FILES_DIR = path.join(DATA_DIR, 'files');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const PASSWORD = process.env.ADMIN_PASSWORD;
@@ -29,9 +30,27 @@ const AGENT_SECRET = process.env.AGENT_SECRET;
 const TRUST_PROXY = process.env.TRUST_PROXY === '1';
 const MAX_UPLOAD = 200 * 1024 * 1024;
 
-if (!PASSWORD || PASSWORD.length < 8) {
-  console.error('Définis un mot de passe admin d\'au moins 8 caractères: ADMIN_PASSWORD=... node admin-panel/server.js');
-  process.exit(1);
+// Without a valid password the site still starts (the launcher keeps working) but nobody can log in.
+const PASSWORD_OK = Boolean(PASSWORD && PASSWORD.length >= 8);
+if (!PASSWORD_OK) {
+  console.error('ATTENTION: ADMIN_PASSWORD manquant ou trop court (8 caractères minimum). Connexion admin désactivée.');
+  console.error('Sur Render: ouvre le service > Environment > ajoute ADMIN_PASSWORD, puis redéploie.');
+}
+
+// The data folder must be writable. On Render it's the disk mounted at /var/data; if the disk is missing
+// (free plan), use a local folder so the site still starts, and say that the data won't survive restarts.
+function writableDataDir(dir) {
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.accessSync(dir, fs.constants.W_OK);
+    return dir;
+  } catch (err) {
+    console.error(`ATTENTION: impossible d'écrire dans ${dir} (${err.code}). Utilisation de ${LOCAL_DATA_DIR} à la place.`);
+    console.error('Les nouvelles, réglages et fichiers seront PERDUS à chaque redémarrage.');
+    console.error('Sur Render: ajoute un disque (service > Disks, chemin /var/data). Il faut un plan payant (Starter).');
+    fs.mkdirSync(LOCAL_DATA_DIR, { recursive: true });
+    return LOCAL_DATA_DIR;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -148,6 +167,7 @@ const sessions = new Map(); // token -> expiry time
 const failures = new Map(); // ip -> { count, until }
 
 function checkPassword(given) {
+  if (!PASSWORD_OK) return false;
   const a = crypto.createHash('sha256').update(String(given)).digest();
   const b = crypto.createHash('sha256').update(PASSWORD).digest();
   return crypto.timingSafeEqual(a, b);
@@ -319,6 +339,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === 'POST' && url.pathname === '/api/login') {
     const fail = failures.get(ip);
+    if (!PASSWORD_OK) throw httpError(503, 'ADMIN_PASSWORD n\'est pas configuré sur le serveur (8 caractères minimum).');
     if (fail && fail.until > Date.now()) throw httpError(429, 'Trop d\'essais. Réessaie dans quelques minutes.');
     const { password } = await readJson(req);
     if (!checkPassword(password)) {
@@ -388,6 +409,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
+  console.log(`Données: ${DATA_DIR}`);
   console.log(`Site admin:      http://localhost:${PORT}/admin/`);
   console.log(`URL du launcher: http://localhost:${PORT}/  (serverUrl dans launcher.config.json)`);
 });
