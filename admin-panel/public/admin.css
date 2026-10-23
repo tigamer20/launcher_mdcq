@@ -691,3 +691,9 @@ dialog::backdrop {
   background: var(--bg);
   font-size: 14px;
 }
+
+.offline-reason {
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.4);
+  font-size: 14px;
+}

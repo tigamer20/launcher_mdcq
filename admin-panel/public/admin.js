@@ -96,6 +96,14 @@ function renderDashboard() {
   $('stat-plugins').textContent = features.plugins ? String(plugins.filter((p) => p.enabled).length) : '-';
   const names = online ? serverStatus.players.list : [];
   $('players-card').hidden = names.length === 0;
+  // Why it's offline + the address actually tried (helps with playit.gg ports).
+  const offline = serverStatus && !online;
+  $('offline-reason').hidden = !offline;
+  if (offline) {
+    $('offline-reason').textContent = serverStatus.reason
+      ? `Hors ligne : ${serverStatus.reason}. Adresse testée : ${serverStatus.tried}.`
+      : 'Hors ligne : aucune adresse de serveur dans l\'onglet Serveur.';
+  }
   $('players-list').replaceChildren(...names.map((n) => el('span', { textContent: n })));
   $('maintenance-enabled').checked = Boolean(maintenance);
   $('maintenance-message').value = pack.maintenance?.message || '';

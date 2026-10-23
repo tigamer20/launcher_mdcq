@@ -104,6 +104,7 @@ async function loadPack() {
   $('server-players').textContent = status?.online
     ? `En ligne · ${status.players.online}/${status.players.max} joueurs`
     : 'Hors ligne';
+  $('server-players').title = status?.online ? '' : status?.reason || '';
   $('maintenance').hidden = !pack.maintenance;
   $('maintenance-message').textContent = pack.maintenance?.message || '';
   renderNews(pack.news);
