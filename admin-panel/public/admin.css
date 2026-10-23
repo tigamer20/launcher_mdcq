@@ -560,3 +560,134 @@ code {
   border-color: rgba(239, 68, 68, 0.5);
   font-size: 14px;
 }
+
+/* ---------- Server file editor ---------- */
+.editor-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 16px;
+  min-height: 560px;
+}
+
+.file-browser {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  overflow: hidden;
+}
+
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.breadcrumb button {
+  color: var(--accent-2);
+  padding: 0;
+}
+
+.dir-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  max-height: 520px;
+  font-size: 14px;
+}
+
+.dir-list button {
+  width: 100%;
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dir-list button:hover:not(:disabled) {
+  background: var(--panel-2);
+}
+
+.dir-list button.active {
+  background: rgba(59, 130, 246, 0.18);
+}
+
+.dir-list button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.editor-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.editor {
+  flex: 1;
+  min-height: 460px;
+  font-family: Consolas, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  tab-size: 2;
+  white-space: pre;
+  background: #07090d;
+}
+
+/* ---------- Merge dialog ---------- */
+dialog {
+  width: 460px;
+  margin: auto;
+  padding: 24px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.merge-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.channel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.channel label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.channel input {
+  width: auto;
+}
+
+.channel small {
+  color: var(--muted);
+}
+
+.current-versions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--bg);
+  font-size: 14px;
+}

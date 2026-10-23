@@ -3,3 +3,4 @@ dist/
 server-example/manifest.json
 admin-panel/data/
 paper-agent/start-agent.bat
+paper-agent/start-agent.command

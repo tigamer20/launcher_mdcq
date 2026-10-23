@@ -10,14 +10,13 @@ const { downloadAll, sha256File } = require('./download');
 
 const INSTALLER = 'ModdedQC-Setup.exe';
 
-// "1.10.0" > "1.9.3"
+// "1.10.0" > "1.9.3", and an official "1.2.0" > a dev build "1.2.0-dev".
 function isNewer(latest, current) {
-  const a = latest.split('.').map(Number);
-  const b = current.split('.').map(Number);
-  for (let i = 0; i < 3; i++) {
-    if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) > (b[i] || 0);
-  }
-  return false;
+  const parse = (v) => (/^(\d+)\.(\d+)\.(\d+)/.exec(v) || [0, 0, 0, 0]).slice(1).map(Number);
+  const a = parse(latest);
+  const b = parse(current);
+  for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] > b[i];
+  return current.includes('-') && !latest.includes('-');
 }
 
 async function github(url) {
