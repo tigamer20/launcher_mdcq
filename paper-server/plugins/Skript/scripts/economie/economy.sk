@@ -1,0 +1,347 @@
+options:
+    commandsub: /subs
+on join:
+    if {eco::%player%} is not set:
+        set {eco::%player%} to 1000
+    if {moddedprime::status::%player%} is not set:
+        set {moddedprime::statustitle::%player%} to "&4Pas d'abbonement"
+    if {current::date} is greater or equal to {end::sub::day::%player%}:
+        if {current::month} is greater or equal to {end::sub::month::%player%}:
+            if {current::year} is greater or equal to {end::sub::year::%player%}:
+                wait 3 seconds
+                send "&4&lyou're subscription to &9ModdedPrime &4has ended!" to player
+                set {moddedprime::status::%player%} to false
+# ###################################################################################################################################
+#                                           système d'argent
+# ###################################################################################################################################
+
+command /balance [<player>]:
+    trigger:
+        if arg-1 is set:
+            send "&a%arg-1%'s balance is %{eco::%arg-1%}%$" to player
+        else:
+            send "&aYou're balance is %{eco::%player%}%$" to player
+
+command /pay [<player>] [<int>]:
+    trigger:
+        if arg-1 is set:
+            if arg-1 is not player:
+                if arg-2 is set:
+                    if arg-2 is smaller than {eco::%player%}:
+                        if arg-2 is greater than 0:
+                            add arg-2 to {eco::%arg-1%}
+                            subtract arg-2 from {eco::%player%}
+                            send action bar "&2%player% vous as payer &1%arg-2%&2$" to arg-1
+                            send action bar "&2vous avez payés&1 %arg-2%&2$ à &1%arg-1%" to player
+                            wait 0.5 seconds
+                            send action bar "&2%player% vous as payer &1%arg-2%&2$" to arg-1
+                            send action bar "&2vous avez payés&1 %arg-2%&2$ à &1%arg-1%" to player
+                            wait 0.5 seconds
+                            send action bar "&2%player% vous as payer &1%arg-2%&2$" to arg-1
+                            send action bar "&2vous avez payés&1 %arg-2%&2$ à &1%arg-1%" to player
+                            wait 0.5 seconds
+                            send action bar "&2%player% vous as payer &1%arg-2%&2$" to arg-1
+                            send action bar "&2vous avez payés&1 %arg-2%&2$ à &1%arg-1%" to player
+                            wait 0.5 seconds
+                            send action bar "&2%player% vous as payer &1%arg-2%&2$" to arg-1
+                            send action bar "&2vous avez payés&1 %arg-2%&2$ à &1%arg-1%" to player
+                            wait 0.5 seconds
+                            send action bar "&2%player% vous as payer &1%arg-2%&2$" to arg-1
+                            send action bar "&2vous avez payés&1 %arg-2%&2$ à &1%arg-1%" to player
+                else if {eco::%player%} is less than arg-2:
+                    send action bar "&4vous n'avez pas assez d'argent" to player
+                    stop
+
+command /givemoney [<player>] [<int>]:
+    trigger:
+        if arg-1 is set:
+            if arg-2 is set:
+                if arg-2 is greater than 0:
+                    add arg-2 to {eco::%arg-1%}
+                    send action bar "&2vous avez recu &1%arg-2% &2$ de &1%player%" to arg-1
+                    send action bar "&2vous avez envoyé&1 %arg-2% &2$ à &1%arg-1%" to player
+                    wait 0.5 seconds
+                    send action bar "&2vous avez recu &1%arg-2% &2$ de &1%player%" to arg-1
+                    send action bar "&2vous avez envoyé&1 %arg-2% &2$ à &1%arg-1%" to player
+                    wait 0.5 seconds
+                    send action bar "&2vous avez recu &1%arg-2% &2$ de &1%player%" to arg-1
+                    send action bar "&2vous avez envoyé&1 %arg-2% &2$ à &1%arg-1%" to player
+                    wait 0.5 seconds
+                    send action bar "&2vous avez recu &1%arg-2% &2$ de &1%player%" to arg-1
+                    send action bar "&2vous avez envoyé&1 %arg-2% &2$ à &1%arg-1%" to player
+                    wait 0.5 seconds
+                    send action bar "&2vous avez recu &1%arg-2% &2$ de &1%player%" to arg-1
+                    send action bar "&2vous avez envoyé&1 %arg-2% &2$ à &1%arg-1%" to player
+                    wait 0.5 seconds
+                    send action bar "&2vous avez recu &1%arg-2% &2$ de &1%player%" to arg-1
+                    send action bar "&2vous avez envoyé&1 %arg-2% &2$ à &1%arg-1%" to player
+
+command /removemoney [<player>] [<int>]:
+    trigger:
+        if arg-1 is set:
+            if arg-2 is set:
+                if arg-2 is greater than 0:
+                    subtract arg-2 from {eco::%arg-1%}
+                    send action bar "&c%player% removed %arg-2%$ from you, you now have %{eco::%arg-1%}%$ left" to arg-1
+                    send action bar "&ayou removed %arg-2%$ from %arg-1%'s account, he now has %{eco::%arg-1%}%$ left" to player
+                    wait 0.5 seconds
+                    send action bar "&c%player% removed %arg-2%$ from you, you now have %{eco::%arg-1%}%$ left" to arg-1
+                    send action bar "&ayou removed %arg-2%$ from %arg-1%'s account, he now has %{eco::%arg-1%}%$ left" to player
+                    wait 0.5 seconds
+                    send action bar "&c%player% removed %arg-2%$ from you, you now have %{eco::%arg-1%}%$ left" to arg-1
+                    send action bar "&ayou removed %arg-2%$ from %arg-1%'s account, he now has %{eco::%arg-1%}%$ left" to player
+                    wait 0.5 seconds
+                    send action bar "&c%player% removed %arg-2%$ from you, you now have %{eco::%arg-1%}%$ left" to arg-1
+                    send action bar "&ayou removed %arg-2%$ from %arg-1%'s account, he now has %{eco::%arg-1%}%$ left" to player
+                    wait 0.5 seconds
+                    send action bar "&c%player% removed %arg-2%$ from you, you now have %{eco::%arg-1%}%$ left" to arg-1
+                    send action bar "&ayou removed %arg-2%$ from %arg-1%'s account, he now has %{eco::%arg-1%}%$ left" to player
+                    wait 0.5 seconds
+                    send action bar "&c%player% removed %arg-2%$ from you, you now have %{eco::%arg-1%}%$ left" to arg-1
+                    send action bar "&ayou removed %arg-2%$ from %arg-1%'s account, he now has %{eco::%arg-1%}%$ left" to player
+                    wait 0.5 seconds
+                    send action bar "&c%player% removed %arg-2%$ from you, you now have %{eco::%arg-1%}%$ left" to arg-1
+                    send action bar "&ayou removed %arg-2%$ from %arg-1%'s account, he now has %{eco::%arg-1%}%$ left" to player
+
+command /clearmoney [<player>]:
+    permission: op
+    trigger:
+        if arg-1 is set:
+            set {eco::%arg-1%} to 0
+            send action bar "la balance de %arg-1% est maintenant de %{eco.%arg-1%}%$" to player
+        else:
+            send action bar "&4vous devez sélectionner un joueur!" to player
+
+command /buy [<int>]:
+    trigger:
+        if arg-1 is smaller than {eco.%player%}:
+            if arg-1 is greater than 0:
+                subtract arg-1 from {eco.%player%}
+                send action bar "&2merci de votre achat de %arg-1%$. vous avez désormains %{eco.%player%}%$" to player
+            else if arg-1 is greater than {eco.%player%}:
+                send action bar "&4vous n'avez pas assez d'argent" to player
+                
+# #################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################
+#                                                         abbonement
+# #################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################
+
+command /subscribe:
+    trigger:
+        send "&6&lBoutique - <link:https://store.moddedqc.com>Cliquez ici pour accèder à la boutique de ModdedQC." to player
+
+command /subs <text> [<player>] [<text>] [<int>] [<int>] [<int>]:
+    permission: op
+    trigger:
+        if arg-1 is "prime":
+            if arg-3 is "activate":
+                set {end::sub::day::%arg-2%} to arg-4
+                set {end::sub::month::%arg-2%} to arg-5
+                set {end::sub::year::%arg-2%} to arg-6
+                set {moddedprime::status::%player%} to true
+                set {moddedprime::statustitle::%player%} to "&1Abbonement Actif se terminant le&2 %{end.sub.day.%arg-2%}%/%{end.sub.month.%arg-2%}%/%{end.sub.year.%arg-2%}%"
+                send action bar "&6L'abonnement &9&lModdedPrime &6de %arg-2% est maintenant actif jusqu'au &1&l%{end.sub.day.%arg-2%}%/%{end.sub.month.%arg-2%}%/%{end.sub.year.%arg-2%}%!" to player
+                send action bar "&6Votre abbonement &9&lModdedPrime &6est maintenant actif jusqu'au &1&l%{end.sub.day.%arg-2%}%/%{end.sub.month.%arg-2%}%/%{end.sub.year.%arg-2%}%!" to arg-2
+            else if arg-3 is "cancel":
+                set {moddedprime::status::%player%} to false
+                set {moddedprime::statustitle::%player%} to "&4Pas d'abbonement"
+                send action bar "&cl'abbonement de %arg-2% à &9ModdedPrime &cest maintenant désactiver!" to player
+                send action bar "&cvotre abbonement à &9ModdedPrime &aà été désactivé et annulé" to arg-2
+        else if arg-1 is "status":
+            if arg-3 is "prime":
+                if {moddedprime::status::%player%} is true:
+                    send action bar "&6l'abbonement à &9ModdedPrime &6de &a%arg-2%&6 se termine le &1%{end.sub.day.%arg-2%}%/%{end.sub.month.%arg-2%}%/%{end.sub.year.%arg-2%}%" to player
+                else if {moddedprime::status::%player%} is false:
+                    send action bar "&a%arg-2% &4n'est pas abboné &fà &9ModdedPrime" to player
+            else:
+                send action bar "&4erreure de syntaxe" to player
+        else if arg-1 is "prime":
+            if arg-3 is "cancel":
+                set {moddedprime::status::%player%} to false
+                set {moddedprime::statustitle::%player%} to "&4Pas d'abbonement"
+                send action bar "&cl'abbonement de %arg-2% à &9ModdedPrime &cest maintenant désactiver!" to player
+                send action bar "&cvotre abbonement à &9ModdedPrime &aà été désactivé et annulé" to arg-2
+        else:
+            send " {@commandsub} status <player> prime ----------> see a player'S subscription status" to player
+            send " {@commandsub} prime <player> activate <day> <month> <year>(in numbers) ---------> activate a player's subscription until the marked date" to player
+            send " {@commandsub} prime <player> cancel ----------> cancel a player's subscription" to player
+# #################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################
+#                                                  date
+# #################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################################
+command /setdate:
+    trigger:
+        set {current.date} to now
+        send "&l&ethe date has been set to %{current.date}%" to player
+
+command /date:
+    trigger:
+        send action bar "&1la date du jour est le &2%{current.date}%" to player
+
+
+every minute:
+    set {current.date} to now
+
+
+on command "/tplob courseb":
+    if {moddedprime::status::%player%} is true:
+        execute console command "/mvtp %player% coursebateau"
+        send "&6bienvenue %player% sur la course de batteau disponible uniquement aux abbonés de &9ModdedPrime"
+    else if {moddedprime::status::%player%} is false:
+        send "&4ce mini-jeux est en béta &6Prime &4 uniquement et seul les abbonés à &9ModdedPrime &4peuvent y accèder" to player
+        wait 0.5 seconds
+        execute console command "/mvtp %player% lobby_jeux1"
+
+
+on command "/mvtp coursebateau":
+    if {moddedprime::status::%player%} is true:
+        execute console command "/mvtp %player% coursebateau"
+        send "&6bienvenue %player% sur la course de batteau disponible uniquement aux abbonés de &9ModdedPrime"
+    else if {moddedprime::status::%player%} is false:
+        send "&4ce mini-jeux est en béta &6Prime &4 uniquement et seul les abbonés à &9ModdedPrime &4peuvent y accèder" to player
+        wait 0.5 seconds
+        execute console command "/mvtp %player% lobby_jeux1"
+
+command /register [<text>]:
+    trigger:
+        if arg-1 is set:
+            if {p::account::%player%} is false:
+                if {p::isco::%player%} is false:
+                    set {p::isco::%player%} to true
+                    set {p::account::%player%} to true
+                    set {p::pass::%player%} to arg-1
+                    set {p::nbrco::%player%} to 0
+                    send "&6vous êtes maintenant inscrit(e) &5à votre compte ModdedQC" to player
+        else:
+            send "vous devez inscrire un mot de passe" to player
+    
+command /login [<text>]:
+    trigger:
+        if arg-1 is set:
+            if {p::account::%player%} is true:
+                if arg-1 is equal to {p::pass::%player%}:
+                    add 1 to {p::nbrco::%player%}
+                    send "vous êtes maintenant connecté(e) à votre compte &5ModdedQC" to player
+                    set {p::isco::%player%} to true
+                else if  arg-1 is not equal to {p::pass::%player%}:
+                    send "&4mot de passe incorect!" to player
+            else if {p::account::%player%} is false:
+                send "&4vous n'avez pas de compte &5ModdedQC!"
+        else:
+            send "vous devez inscrire votre mot de passe" to player
+#=======================================================================================================
+#                               codes
+#=======================================================================================================
+
+command /createcode [<text>] [<int>] [<int>] [<int>] [<int>] [<int>] [<int>]:
+    permission: op
+    trigger:
+        if arg-1 is "moddedcoin":
+            if arg-2 is set:
+                if arg-3 is set:
+                    if arg-4 is set:
+                        if arg-5 is set:
+                            if arg-6 is set:
+                                if arg-7 is set:
+                                    set {eco::code::type::%arg-6%} to arg-1
+                                    set {eco::code::first3::%arg-6%} to arg-2
+                                    set {eco::code::status::%arg-6%} to "active"
+                                    set {eco::code::sec3::%arg-6%} to arg-3
+                                    set {eco::code::third3::%arg-6%} to arg-4
+                                    set {eco::code::id::%arg-6%} to arg-6
+                                    set {eco::code::value::%arg-6%} to arg-5
+                                    set {eco::code::numusesmax::%arg-6%} to arg-7
+                                    set {eco::code::numuses::%arg-6%} to 0
+                                    set {eco::code::creator::%arg-6%} to player
+                                    set {eco::code::datecrea::%arg-6%} to {current.date}
+                                    set {eco::code::monthcrea::%arg-6%} to {current.month}
+                                    set {eco::code::yearcrea::%arg-6%} to {current.year}
+                                    wait 1 tick
+                                    send "&6vous avez créer un code pour &1%arg-5% %arg-1%&6s utilisable &2%arg-7% &6fois. Le code est: &1%arg-2%-%arg-3%-%arg-4% &6et l'ID du code est &2%arg-6%&6." to player
+        else:
+            send "arg-1 = type de monnaie - arg-2 = 3 premiers chiffres - arg-3 = 2e série 3 chiffres - arg-4 = 3e série 3 chiffres - arg-5 = valeure - arg-6 = ID - arg-7 = nbr d'utilisations" to player
+
+command /admincode [<text>] [<int>] [<int>]:
+    permission: op
+    trigger:
+        if arg-1 is "info":
+            if {eco::code::id::%arg-2%} is set:
+                send "&1Récolte des informations du code &2%arg-2%&1..." to player
+                wait 5 seconds
+                send "&5voici les informations trouvés sur le code &2%arg-2% &5dans nos serveurs" to player
+                wait 1 tick
+                send "===========================================================" to player
+                send "&1ID &e=======> &2%arg-2%" to player
+                send "&1type de monnaie &e====> &2%{eco::code::type::%arg-2%}%" to player
+                send "&1valeur &e=======> &2%{eco::code::value::%arg-2%}%" to player
+                send "&1nombre d'utilisation &e=====> &2%{eco::code::numuses::%arg-2%}%/%{eco::code::numusesmax::%arg-2%}%" to player
+                send "&1créateur &e===========> &2%{eco::code::creator::%arg-2%}%" to player
+                send "===========================================================" to player
+                send "&1date de création &e=======> &2%{eco::code::datecrea::%arg-2%}%/%{eco::code::monthcrea::%arg-2%}%/%{eco::code::yearcrea::%arg-2%}%" to player
+                send "&1date de dernière utilisation &e======> &2%{eco::code::lastusedate::%arg-2%}%/%{eco::code::lastusemonth::%arg-2%}%/%{eco::code::lastuseyear::%arg-2%}%" to player
+                send "&1status &e========> &2%{eco::code::status::%arg-2%}%" to player
+                send "&1dernier joueur qui a utiliser le code &e====> &2%{eco::code::lastplayer::%arg-2%}%" to player
+                send "=================================================" to player
+            else:
+                send "&4il n'y a aucuns code avec l'id &2%arg-2%&6!" to player
+        else if arg-1 is "close":
+            set {eco::code::status::%arg-2%} to "&4closed"
+            send "&4le code %arg-2% est maintenant fermé!" to player
+        else if arg-1 is "delete":
+            delete {eco::code::type::%arg-2%}
+            delete {eco::code::first3::%arg-2%}
+            delete {eco::code::status::%arg-2%}
+            delete {eco::code::sec3::%arg-2%}
+            delete {eco::code::third3::%arg-2%}
+            delete {eco::code::id::%arg-2%}
+            delete {eco::code::value::%arg-2%}
+            delete {eco::code::numusesmax::%arg-2%}
+            delete {eco::code::numuses::%arg-2%}
+            delete {eco::code::creator::%arg-2%}
+            delete {eco::code::datecrea::%arg-2%}
+            delete {eco::code::monthcrea::%arg-2%}
+            delete {eco::code::yearcrea::%arg-2%}
+            delete {eco::code::lastplayer::%arg-2%}
+            send "&2 le code &2%arg-2% &4à été supprimer avec succès" to player
+        else if arg-1 is "desactivate":
+            set {eco::code::status::%arg-2%} to "&einactif"
+            send "&4le code %arg-2% est maintenant inactif!" to player
+        else if arg-1 is "activate":
+            set {eco::code::status::%arg-2%} to "&2active"
+            send "&2le code %arg-2% est maintenant actif!" to player
+        else if arg-1 is "resetuses":
+            set {eco::code::numuses::%arg-2%} to 0
+            send "&2le nombre d'utilisation du code %arg-2% à été réinitialisé!" to player
+        else if arg-1 is "changeuses":
+            set {eco::code::numusesmax::%arg-2%} to arg-3
+            send "&2le nombre d'utilisation maximum du code %arg-2% est maintenant de %arg-3%!" to player
+        else if arg-1 is "changeid":
+            set {eco::code::id::%arg-2%} to arg-3
+            send "&2l'id du code %arg-2% est maintenant %arg-3%!" to player
+        else if arg-1 is "changevalue":
+            set {eco::code::value::%arg-2%} to arg-3
+            send "&2la valeur du code %arg-2% est maintenant de %arg-3% moddedcoins!" to player
+        else:
+            send "&4 erreur de syntaxe" to player
+command /usecode [<int>] [<int>] [<int>] [<int>]:
+    trigger:
+        if arg-1 is set:
+            if arg-2 is set:
+                if arg-3 is set:
+                    if arg-4 is set:
+                        if {eco::code::status::%arg-4%} is "active":
+                            if {eco::code::numuses::%arg-4%} is less than {eco::code::numusesmax::%arg-4%}:
+                                if {eco::code::id::%arg-4%} is set:
+                                    if arg-1 is equal to {eco::code::first3::%arg-4%}:
+                                        if arg-2 is equal to {eco::code::sec3::%arg-4%}:
+                                            if arg-3 is equal to {eco::code::third3::%arg-4%}:
+                                                add {eco::code::value::%arg-4%} to {eco.%player%}
+                                                add 1 to {eco::code::numuses::%arg-4%}
+                                                send "le code %arg-1%-%arg-2%-%arg-3% à été utilisé avec succès vous donnant %{eco::code::value::%arg-4%}% moddedcoins. vous avez désormais %{eco.%player%}% moddedcoins" to player
+                                                set {eco::code::lastusedate::%arg-4%} to {current.date}
+                                                set {eco::code::lastusemonth::%arg-4%} to {current.month}
+                                                set {eco::code::lastuseyear::%arg-4%} to {current.year}
+                                                set {eco::code::lastplayer::%arg-4%} to player
+                            else:
+                                send "&4ce code à été utlisé trop de fois!" to player
+                        else:
+                            send "&4ce code est inutilisable car il est %{eco::code::status::%arg-4%}%!" to player
+
