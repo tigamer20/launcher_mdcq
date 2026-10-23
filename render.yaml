@@ -1,0 +1,35 @@
+# Render Blueprint for the ModdedQC admin website (also serves the files the launcher downloads).
+# Render dashboard > New > Blueprint > pick this repository. See README "Héberger le site sur Render".
+services:
+  - type: web
+    name: moddedqc-admin
+    runtime: node
+    plan: starter # a paid plan is needed for the disk below (free instances lose files and sleep)
+    region: virginia # closest Render region to Québec
+    buildCommand: echo "Aucune installation nécessaire"
+    startCommand: node admin-panel/server.js
+    healthCheckPath: /healthz
+    buildFilter:
+      paths:
+        - admin-panel/**
+        - paper-agent/signing.js
+        - src/main/status.js
+        - tools/build-manifest.js
+        - render.yaml
+    disk:
+      name: moddedqc-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATA_DIR
+        value: /var/data
+      - key: TRUST_PROXY
+        value: "1"
+      - key: ADMIN_PASSWORD
+        sync: false # Render asks for it when you create the Blueprint
+      - key: AGENT_URL
+        sync: false
+      - key: AGENT_SECRET
+        sync: false

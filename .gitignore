@@ -1,0 +1,5 @@
+node_modules/
+dist/
+server-example/manifest.json
+admin-panel/data/
+paper-agent/start-agent.bat

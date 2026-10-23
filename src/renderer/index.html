@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data: https://mc-heads.net; style-src 'self'; script-src 'self'"
+    />
+    <title>ModdedQC Launcher</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- Title bar (the window has no native frame) -->
+    <header class="titlebar">
+      <div class="brand">
+        <img src="logo.svg" alt="" />
+        <span>ModdedQC</span>
+      </div>
+      <div class="window-buttons">
+        <button id="btn-minimize" title="Réduire">&#8211;</button>
+        <button id="btn-close" class="close" title="Fermer">&#10005;</button>
+      </div>
+    </header>
+
+    <!-- Shown when maintenance mode is turned on from the admin website -->
+    <div id="maintenance" class="maintenance" hidden>
+      <strong>Maintenance en cours</strong>
+      <span id="maintenance-message"></span>
+    </div>
+
+    <main>
+      <!-- Left: server presentation -->
+      <section class="hero">
+        <span class="chip" id="pack-version">Chargement...</span>
+        <h1 id="pack-name">ModdedQC</h1>
+        <p class="subtitle" id="pack-subtitle">Serveur Minecraft du Québec</p>
+        <div class="server-line" id="server-line" hidden>
+          <span class="dot"></span>
+          <span id="server-address"></span>
+          <span class="players" id="server-players"></span>
+        </div>
+      </section>
+
+      <!-- Right: news from the file server -->
+      <section class="news">
+        <h2>Nouvelles</h2>
+        <div id="news-list" class="news-list"></div>
+      </section>
+    </main>
+
+    <!-- Bottom bar: account, progress, play -->
+    <footer class="bottombar">
+      <div class="account" id="account-box">
+        <button id="btn-login" class="secondary">Connexion Microsoft</button>
+        <div id="account-info" class="account-info" hidden>
+          <img id="avatar" alt="" />
+          <div>
+            <div id="account-name" class="account-name"></div>
+            <button id="btn-logout" class="link">Déconnexion</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="progress-area">
+        <div id="status-text" class="status-text">Prêt à jouer</div>
+        <div class="progress"><div id="progress-bar" class="progress-bar"></div></div>
+      </div>
+
+      <button id="btn-settings" class="icon-button" title="Paramètres">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3" />
+          <path
+            d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"
+          />
+        </svg>
+      </button>
+      <button id="btn-play" class="play" disabled>JOUER</button>
+    </footer>
+
+    <!-- Settings dialog -->
+    <dialog id="settings">
+      <h2>Paramètres</h2>
+      <label class="field">
+        <span>Mémoire allouée: <strong id="ram-value"></strong></span>
+        <input type="range" id="ram" min="2048" step="512" />
+      </label>
+      <label class="check">
+        <input type="checkbox" id="hide-on-launch" />
+        Cacher le launcher pendant que je joue
+      </label>
+      <button id="btn-folder" class="secondary">Ouvrir le dossier du jeu</button>
+      <div class="dialog-buttons">
+        <button id="btn-settings-close" class="primary">Enregistrer</button>
+      </div>
+    </dialog>
+
+    <div id="toast" class="toast" hidden></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

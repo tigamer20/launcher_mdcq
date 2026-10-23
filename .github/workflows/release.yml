@@ -1,0 +1,54 @@
+# Builds the Windows installer (ModdedQC-Setup.exe).
+# - Push a tag like v1.0.1 -> builds it and publishes it on the Releases page.
+# - Or run it by hand (Actions tab > "Build Windows installer" > Run workflow) -> download it from the run's artifacts.
+name: Build Windows installer
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Configure the launcher
+        run: node tools/ci-config.js
+        env:
+          SERVER_URL: ${{ vars.SERVER_URL }}
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+
+      - name: Build installer
+        run: npx electron-builder --win --x64 --publish never
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ModdedQC-Setup
+          path: dist/ModdedQC-Setup.exe
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # Works both when you push a tag and when you create the release on GitHub's website.
+        run: |
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/ModdedQC-Setup.exe --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" dist/ModdedQC-Setup.exe \
+              --title "ModdedQC Launcher $GITHUB_REF_NAME" \
+              --notes "Télécharge **ModdedQC-Setup.exe** ci-dessous, ouvre-le et suis l'installation."
+          fi
