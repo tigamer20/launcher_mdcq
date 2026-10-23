@@ -6,7 +6,7 @@ services:
     runtime: node
     plan: starter # a paid plan is needed for the disk below (free instances lose files and sleep)
     region: virginia # closest Render region to Québec
-    buildCommand: echo "Aucune installation nécessaire"
+    buildCommand: node --version # nothing to install: the website has no dependencies
     startCommand: node admin-panel/server.js
     healthCheckPath: /healthz
     buildFilter:

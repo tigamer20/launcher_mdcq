@@ -62,6 +62,17 @@ This repository contains a `render.yaml` file, so Render sets everything up for 
 
 Every push to `main` that changes the website redeploys it automatically.
 
+**Created the service by hand (New → Web Service) instead of the Blueprint?** Use these settings:
+
+| Setting            | Value                        |
+| ------------------ | ---------------------------- |
+| Runtime / Language | Node                         |
+| Build Command      | `node --version`             |
+| Start Command      | `node admin-panel/server.js` |
+| Health Check Path  | `/healthz`                   |
+| Environment        | `NODE_VERSION` = `22`, `DATA_DIR` = `/var/data`, `TRUST_PROXY` = `1`, plus `ADMIN_PASSWORD`, `AGENT_SECRET`, `AGENT_URL` |
+| Disk               | mount path `/var/data`, 1 GB |
+
 ### 3. Install the agent on the Paper PC/VPS
 
 1. Install **Node.js 22 LTS** from <https://nodejs.org>.
