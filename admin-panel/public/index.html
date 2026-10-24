@@ -110,12 +110,14 @@
             <label class="field full">
               <span>Clé bêta</span>
               <div class="row">
-                <input name="betaKey" placeholder="Vide = bêta désactivée pour tout le monde" autocomplete="off" />
+                <input name="betaKey" autocomplete="off" />
                 <button type="button" id="btn-gen-beta" class="ghost">Générer</button>
+                <button type="button" id="btn-del-beta" class="danger">Supprimer</button>
               </div>
               <small class="muted">
                 Les joueurs qui l'entrent dans la section développeur du launcher (Ctrl+Shift+D) peuvent recevoir les
-                versions dev. Change-la pour retirer l'accès à tout le monde.
+                versions dev. Pour la sécurité, la clé n'est jamais réaffichée après l'enregistrement : copie-la avant.
+                En mettre une nouvelle retire l'accès à l'ancienne.
               </small>
             </label>
             <div class="row end full"><button class="primary" type="submit">Enregistrer</button></div>

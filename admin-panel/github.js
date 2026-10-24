@@ -144,4 +144,4 @@ async function mergeToMain(channel, version) {
   return { url: pr.html_url, number: pr.number };
 }
 
-module.exports = { configured, commitServerFile, status, mergeToMain, redact, isNewer };
+module.exports = { configured, commitServerFile, status, mergeToMain, redact, isNewer, gh, REPO };

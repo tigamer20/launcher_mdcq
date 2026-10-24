@@ -119,7 +119,11 @@ function renderServerForm() {
   form.versionId.value = pack.versionId || '';
   form.version.value = pack.version || '';
   form.autoConnect.checked = Boolean(pack.autoConnect);
-  form.betaKey.value = pack.betaKey || '';
+  form.betaKey.value = '';
+  form.betaKey.placeholder = pack.betaKeySet
+    ? 'Une clé est active (cachée). Tape ou génère une nouvelle clé pour la remplacer.'
+    : 'Aucune clé : la bêta est désactivée pour tout le monde';
+  $('btn-del-beta').hidden = !pack.betaKeySet;
 }
 
 function newsItem(item = {}) {
@@ -223,6 +227,7 @@ $('btn-maintenance').onclick = async () => {
 $('server-form').onsubmit = async (event) => {
   event.preventDefault();
   const form = event.target;
+  const newBetaKey = form.betaKey.value.trim();
   try {
     ({ pack } = await api('PUT', '/api/pack', {
       name: form.packName.value,
@@ -230,11 +235,12 @@ $('server-form').onsubmit = async (event) => {
       version: form.version.value,
       versionId: form.versionId.value,
       autoConnect: form.autoConnect.checked,
-      betaKey: form.betaKey.value.trim(),
+      ...(newBetaKey ? { betaKey: newBetaKey } : {}),
       server: { host: form.host.value, port: form.port.value },
     }));
     render();
-    toast('Informations du serveur enregistrées');
+    toast(newBetaKey ? `Enregistré. Nouvelle clé bêta : ${newBetaKey} (copie-la, elle ne sera plus affichée)` : 'Informations du serveur enregistrées');
+    if (newBetaKey) form.betaKey.value = newBetaKey; // still visible until the page is reloaded
   } catch (err) {
     toast(err.message, true);
   }
@@ -333,6 +339,17 @@ $('plugin-input').onchange = (event) => uploadPlugins([...event.target.files]);
 setupDropZone($('plugin-drop'), (list) => uploadPlugins([...list]));
 
 // A random beta key that's easy to share: e.g. "QC-7F3K-9P2M-X4TB"
+$('btn-del-beta').onclick = async () => {
+  if (!confirm('Supprimer la clé bêta? Plus personne ne recevra les versions dev.')) return;
+  try {
+    ({ pack } = await api('PUT', '/api/pack', { betaKey: null }));
+    render();
+    toast('Clé bêta supprimée');
+  } catch (err) {
+    toast(err.message, true);
+  }
+};
+
 $('btn-gen-beta').onclick = () => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const random = crypto.getRandomValues(new Uint8Array(12));
