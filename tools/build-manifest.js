@@ -42,8 +42,8 @@ function buildManifest(dir) {
     return file;
   });
 
-  // betaKey is a secret checked by the website (/api/beta/check): never put it in the public manifest.
-  const { keepPlayerChanges: _, betaKey: __, ...manifest } = pack;
+  // The beta key (and its hash) is checked by the website (/api/beta/check): never in the public manifest.
+  const { keepPlayerChanges: _, betaKey: __, betaKeyHash: ___, ...manifest } = pack;
   manifest.files = files;
   // Write to a temp file first so the launcher never reads a half-written manifest.
   const target = path.join(dir, 'manifest.json');

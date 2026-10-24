@@ -19,6 +19,7 @@ const { buildManifest } = require('../tools/build-manifest');
 const { pingServer } = require('../src/main/status');
 const { signHeaders } = require('../paper-agent/signing');
 const github = require('./github');
+const storage = require('./storage');
 
 const PORT = Number(process.env.PORT) || 8080;
 const LOCAL_DATA_DIR = path.join(__dirname, 'data');
@@ -60,7 +61,9 @@ function writableDataDir(dir) {
 // ---------------------------------------------------------------------------
 
 const packFile = path.join(DATA_DIR, 'pack.json');
-if (!fs.existsSync(packFile)) {
+
+function ensureDefaultPack() {
+  if (fs.existsSync(packFile)) return;
   fs.mkdirSync(FILES_DIR, { recursive: true });
   fs.writeFileSync(
     packFile,
@@ -82,13 +85,34 @@ if (!fs.existsSync(packFile)) {
     ),
   );
 }
-buildManifest(DATA_DIR);
 
 const readPack = () => JSON.parse(fs.readFileSync(packFile, 'utf8'));
 
-function savePack(pack) {
-  fs.writeFileSync(packFile, JSON.stringify(pack, null, 2));
+// Saves pack.json on disk, rebuilds manifest.json, and keeps a permanent copy on GitHub (see storage.js).
+async function savePack(pack) {
+  const json = JSON.stringify(pack, null, 2);
+  fs.writeFileSync(packFile, json);
   buildManifest(DATA_DIR);
+  await keepOnGitHub(() => storage.saveFile('pack.json', Buffer.from(json)));
+}
+
+// Without GITHUB_TOKEN the data only lives on disk (fine with a Render disk, lost on the free plan).
+async function keepOnGitHub(save) {
+  if (!storage.configured()) return;
+  try {
+    await save();
+  } catch (err) {
+    throw httpError(502, `Appliqué, mais pas sauvegardé sur GitHub (perdu au prochain redémarrage) : ${err.message}`);
+  }
+}
+
+// The beta key is never stored in clear text (the GitHub repository is public): only its SHA-256.
+const hashKey = (key) => crypto.createHash('sha256').update(String(key)).digest('hex');
+
+// pack.json as the admin pages see it: no hash, just whether a beta key exists.
+function publicPack(pack) {
+  const { betaKeyHash, betaKey, ...rest } = pack;
+  return { ...rest, betaKeySet: Boolean(betaKeyHash || betaKey) };
 }
 
 // 1.0.4 -> 1.0.5 (used when files change, so players see a new modpack version)
@@ -236,7 +260,7 @@ const api = {
   'GET /api/state': async () => {
     const features = await agentFeatures();
     const plugins = features.plugins ? (await agent('GET', '/plugins')).plugins : [];
-    return { pack: readPack(), files: listFiles(), plugins, features: { ...features, github: github.configured() } };
+    return { pack: publicPack(readPack()), files: listFiles(), plugins, features: { ...features, github: github.configured() } };
   },
 
   // Live status of the Minecraft server (players, version...)
@@ -301,12 +325,16 @@ const api = {
   'PUT /api/pack': async (req) => {
     const body = await readJson(req);
     const pack = readPack();
-    for (const key of ['name', 'subtitle', 'version', 'versionId', 'autoConnect', 'syncDirs', 'keepPlayerChanges', 'betaKey']) {
+    for (const key of ['name', 'subtitle', 'version', 'versionId', 'autoConnect', 'syncDirs', 'keepPlayerChanges']) {
       if (key in body) pack[key] = body[key];
     }
+    // betaKey: a new key replaces the old one, null removes it, empty/absent keeps it.
+    if (body.betaKey === null) delete pack.betaKeyHash;
+    else if (typeof body.betaKey === 'string' && body.betaKey.trim()) pack.betaKeyHash = hashKey(body.betaKey.trim());
+    delete pack.betaKey;
     if (body.server) pack.server = { host: String(body.server.host || ''), port: Number(body.server.port) || 25565 };
-    savePack(pack);
-    return { pack };
+    await savePack(pack);
+    return { pack: publicPack(pack) };
   },
 
   'PUT /api/news': async (req) => {
@@ -319,15 +347,15 @@ const api = {
       body: String(n.body || ''),
       ...(n.url ? { url: String(n.url) } : {}),
     }));
-    savePack(pack);
-    return { pack };
+    await savePack(pack);
+    return { pack: publicPack(pack) };
   },
 
   'PUT /api/maintenance': async (req) => {
     const { enabled, message } = await readJson(req);
     const pack = readPack();
     pack.maintenance = { enabled: Boolean(enabled), message: String(message || '') };
-    savePack(pack);
+    await savePack(pack);
     // Also close the Paper server itself, so players using another launcher can't join either.
     // Staff on the whitelist can still connect. With enforce-whitelist=true, others online get kicked.
     let warning = null;
@@ -338,7 +366,7 @@ const api = {
           : `Launchers débloqués, mais la whitelist n'a pas pu être désactivée: ${err.message}`;
       });
     }
-    return { pack, warning };
+    return { pack: publicPack(pack), warning };
   },
 
   // Upload: the raw file is the request body, its destination is ?path=mods/name.jar
@@ -352,23 +380,26 @@ const api = {
     } finally {
       fs.rmSync(tmp, { force: true });
     }
+    const relative = path.relative(DATA_DIR, dest).split(path.sep).join('/');
+    await keepOnGitHub(() => storage.saveFile(relative, fs.readFileSync(dest)));
     const pack = readPack();
     bumpVersion(pack);
-    savePack(pack);
-    return { pack, files: listFiles() };
+    await savePack(pack);
+    return { pack: publicPack(pack), files: listFiles() };
   },
 
   'DELETE /api/files': async (req, url) => {
     const target = filePath(url.searchParams.get('path'));
     fs.rmSync(target, { force: true });
+    await keepOnGitHub(() => storage.deleteFile(path.relative(DATA_DIR, target).split(path.sep).join('/')));
     // Remove folders that became empty (but never files/ itself).
     for (let dir = path.dirname(target); dir !== FILES_DIR && fs.readdirSync(dir).length === 0; dir = path.dirname(dir)) {
       fs.rmdirSync(dir);
     }
     const pack = readPack();
     bumpVersion(pack);
-    savePack(pack);
-    return { pack, files: listFiles() };
+    await savePack(pack);
+    return { pack: publicPack(pack), files: listFiles() };
   },
 };
 
@@ -401,11 +432,8 @@ async function handleApi(req, res, url) {
     const fail = failures.get(`beta:${ip}`);
     if (fail && fail.until > Date.now()) throw httpError(429, 'Trop d\'essais. Réessaie dans quelques minutes.');
     const { key } = await readJson(req);
-    const expected = String(readPack().betaKey || '');
-    const valid = expected.length > 0 && crypto.timingSafeEqual(
-      crypto.createHash('sha256').update(String(key || '')).digest(),
-      crypto.createHash('sha256').update(expected).digest(),
-    );
+    const expected = readPack().betaKeyHash || '';
+    const valid = expected.length === 64 && crypto.timingSafeEqual(Buffer.from(hashKey(String(key || '').trim()), 'hex'), Buffer.from(expected, 'hex'));
     if (!valid) {
       const count = (fail?.count || 0) + 1;
       failures.set(`beta:${ip}`, { count, until: count >= 10 ? Date.now() + 10 * 60_000 : 0 });
@@ -466,8 +494,34 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
-  console.log(`Données: ${DATA_DIR}`);
+// Startup: get the data back from GitHub (Render's free plan erased it), then start serving.
+async function start() {
+  if (storage.configured()) {
+    try {
+      const result = await storage.restore(DATA_DIR);
+      console.log(result === 'created'
+        ? `Données: branche ${storage.BRANCH} créée sur GitHub.`
+        : `Données: restaurées depuis la branche ${storage.BRANCH} sur GitHub.`);
+    } catch (err) {
+      console.error(`ATTENTION: impossible de lire les données sur GitHub (${err.message}). Données locales utilisées.`);
+    }
+  } else {
+    console.warn('GITHUB_TOKEN absent: les données restent seulement sur le disque du serveur.');
+  }
+  ensureDefaultPack();
+  // Old versions stored the beta key in clear text: keep only its hash.
+  const pack = readPack();
+  if (pack.betaKey) {
+    pack.betaKeyHash = hashKey(pack.betaKey);
+    delete pack.betaKey;
+    await savePack(pack).catch((err) => console.error(err.message));
+  }
+  buildManifest(DATA_DIR);
+  server.listen(PORT, () => {
+    console.log(`Données: ${DATA_DIR}`);
   console.log(`Site admin:      http://localhost:${PORT}/admin/`);
-  console.log(`URL du launcher: http://localhost:${PORT}/  (serverUrl dans launcher.config.json)`);
-});
+    console.log(`URL du launcher: http://localhost:${PORT}/  (serverUrl dans launcher.config.json)`);
+  });
+}
+
+start();

@@ -4,7 +4,7 @@ services:
   - type: web
     name: moddedqc-admin
     runtime: node
-    plan: starter # a paid plan is needed for the disk below (free instances lose files and sleep)
+    plan: free # data is kept in the GitHub repository (branch admin-data), so no paid disk is needed
     region: virginia # closest Render region to Québec
     buildCommand: node --version # nothing to install: the website has no dependencies
     startCommand: node admin-panel/server.js
@@ -16,15 +16,9 @@ services:
         - src/main/status.js
         - tools/build-manifest.js
         - render.yaml
-    disk:
-      name: moddedqc-data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: NODE_VERSION
         value: "22"
-      - key: DATA_DIR
-        value: /var/data
       - key: TRUST_PROXY
         value: "1"
       - key: ADMIN_PASSWORD
@@ -33,7 +27,7 @@ services:
         sync: false
       - key: AGENT_SECRET
         sync: false
-      - key: GITHUB_TOKEN # server file editor: commits + pull requests (see README)
+      - key: GITHUB_TOKEN # website data storage (branch admin-data) + server file editor (see README)
         sync: false
       - key: GITHUB_REPO
         value: tigamer20/launcher_mdcq

@@ -58,7 +58,10 @@ This repository contains a `render.yaml` file, so Render sets everything up for 
    | `AGENT_URL`      | Address of the agent from step 3, e.g. `http://203.0.113.10:8765/`. You can leave it empty for now and add it later in **Environment**. |
 4. Wait for the deploy to finish. Your website is at `https://moddedqc-admin.onrender.com/admin/` (Render shows the exact URL; you can add your own domain in **Settings** → **Custom Domains**).
 
-**Cost:** the Blueprint uses the **Starter** plan (about 7 US$/month) with a 1 GB disk (about 0.25 US$/month). The disk is what keeps your news, settings and player files. On the free plan, Render erases files on every restart and puts the site to sleep, so launchers would wait up to a minute.
+**Cost: free.** Render's free plan erases the website's files on every restart, so the website keeps its data (server address, news, maintenance, beta key, player files) in the **`admin-data` branch of this repository**: it restores everything from there at startup and saves every change there right away. This needs `GITHUB_TOKEN` (see "Server file editor" below, the same token is used).
+- The beta key is only stored as a SHA-256 fingerprint, never in clear text (the repository is public).
+- Player files must be under 95 MB each (GitHub limit).
+- On the free plan the site goes to sleep after 15 minutes without visits: the first launcher to open after that waits up to about a minute while it wakes up.
 
 Every push to `main` that changes the website redeploys it automatically.
 
@@ -70,8 +73,8 @@ Every push to `main` that changes the website redeploys it automatically.
 | Build Command      | `node --version`             |
 | Start Command      | `node admin-panel/server.js` |
 | Health Check Path  | `/healthz`                   |
-| Environment        | `NODE_VERSION` = `22`, `DATA_DIR` = `/var/data`, `TRUST_PROXY` = `1`, plus `ADMIN_PASSWORD`, `AGENT_SECRET`, `AGENT_URL` |
-| Disk               | mount path `/var/data`, 1 GB |
+| Instance type      | Free                         |
+| Environment        | `NODE_VERSION` = `22`, `TRUST_PROXY` = `1`, plus `ADMIN_PASSWORD`, `AGENT_SECRET`, `AGENT_URL`, `GITHUB_TOKEN` |
 
 ### 3. Install the agent on the Paper machine (Mac, Windows or Linux)
 
