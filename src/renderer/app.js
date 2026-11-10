@@ -192,7 +192,6 @@ async function init() {
   ram.max = Math.max(2048, Math.floor((data.maxRamMb - 2048) / 512) * 512);
   ram.value = Math.min(state.settings.ramMb, ram.max);
   $('hide-on-launch').checked = state.settings.hideOnLaunch;
-  $('start-fullscreen').checked = Boolean(state.settings.fullscreen);
   updateRamLabel();
   refreshButtons();
 
@@ -205,11 +204,11 @@ function updateRamLabel() {
 // ---------- Events ----------
 
 $('btn-minimize').onclick = () => window.launcher.minimize();
-$('btn-fullscreen').onclick = () => window.launcher.toggleFullscreen();
-// The icon shows what the button does: enter (corners out) or leave (corners in) full screen.
-window.launcher.onFullscreen((on) => {
-  $('fullscreen-icon').setAttribute('d', on ? 'M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5' : 'M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5');
-  $('btn-fullscreen').title = on ? 'Quitter le plein écran (F11)' : 'Plein écran (F11)';
+// Like the Windows button: one square to maximize, two squares to restore. Double-clicking the title bar does the same.
+$('btn-maximize').onclick = () => window.launcher.toggleMaximize();
+window.launcher.onMaximized((on) => {
+  $('maximize-icon').setAttribute('d', on ? 'M8 8h11v11H8zM5 16V5h11' : 'M5 5h14v14H5z');
+  $('btn-maximize').title = on ? 'Restaurer' : 'Agrandir';
 });
 $('btn-close').onclick = () => window.launcher.close();
 
@@ -284,7 +283,6 @@ $('btn-settings-close').onclick = async () => {
   await window.launcher.saveSettings({
     ramMb: Number($('ram').value),
     hideOnLaunch: $('hide-on-launch').checked,
-    fullscreen: $('start-fullscreen').checked,
   });
   $('settings').close();
 };
@@ -300,12 +298,6 @@ window.launcher.onStatus(({ step, text, progress, detail }) => {
 });
 
 // ---------- Developer section: Ctrl+Shift+D shows/hides it (remembered) ----------
-
-document.addEventListener('keydown', (event) => {
-  if (event.key !== 'F11') return;
-  event.preventDefault();
-  window.launcher.toggleFullscreen();
-});
 
 document.addEventListener('keydown', async (event) => {
   if (!(event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'd')) return;

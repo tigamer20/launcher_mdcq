@@ -30,7 +30,7 @@ let playing = false;
 function loadSettings() {
   // All the Mods 10 needs a lot of memory: 8 Go when the PC has 16 Go or more, 6 Go otherwise.
   const ramMb = os.totalmem() >= 15 * 1024 ** 3 ? 8192 : 6144;
-  const defaults = { ramMb, hideOnLaunch: false, fullscreen: false, devTab: false, beta: { enabled: false, key: '' }, declinedBeta: null };
+  const defaults = { ramMb, hideOnLaunch: false, maximized: false, devTab: false, beta: { enabled: false, key: '' }, declinedBeta: null };
   try {
     return { ...defaults, ...JSON.parse(fs.readFileSync(settingsFile(), 'utf8')) };
   } catch {
@@ -56,15 +56,19 @@ function createWindow() {
   });
   win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
   win.once('ready-to-show', () => {
-    if (loadSettings().fullscreen) win.setFullScreen(true);
+    if (loadSettings().maximized) win.maximize(); // opens the way the player left it
     win.show();
     updater.confirmCurrentVersion(VERSION); // this version starts fine: keep it
     legacy.removeOldApp(); // the old ModdedQC app, replaced by ATM Launcher
   });
 
-  const sendFullscreen = () => win.webContents.send('fullscreen', win.isFullScreen());
-  win.on('enter-full-screen', sendFullscreen);
-  win.on('leave-full-screen', sendFullscreen);
+  // Maximized or not is remembered for the next start.
+  const onMaximizeChange = () => {
+    win.webContents.send('maximized', win.isMaximized());
+    saveSettings({ maximized: win.isMaximized() });
+  };
+  win.on('maximize', onMaximizeChange);
+  win.on('unmaximize', onMaximizeChange);
 
   // Links in the news open in the normal web browser.
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -262,7 +266,7 @@ function finish(error) {
 
 ipcMain.on('window', (_event, action) => {
   if (action === 'minimize') win.minimize();
-  if (action === 'fullscreen') win.setFullScreen(!win.isFullScreen());
+  if (action === 'maximize') win.isMaximized() ? win.unmaximize() : win.maximize();
   if (action === 'close') win.close();
 });
 
