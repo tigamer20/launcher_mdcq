@@ -134,10 +134,15 @@
         <section class="tab" id="tab-modpack" hidden>
           <h1>Modpack</h1>
           <div class="card" id="modpack-current"></div>
+          <div class="card" id="modpack-github" hidden>
+            <span class="muted">Versions publiées sur GitHub</span>
+            <table class="files"><tbody id="modpack-versions"></tbody></table>
+          </div>
           <p class="card muted" id="modpack-off">
-            Pour publier le modpack, ajoute <code>MODPACK_DIR</code> (le dossier de l'instance client du modpack, avec
-            <code>mods/</code>, <code>config/</code>...) et <code>GITHUB_TOKEN</code> dans <code>start-agent</code> sur le Mac,
-            puis redémarre l'agent.
+            Pour publier d'ici, ajoute <code>MODPACK_DIR</code> (le dossier de l'instance CurseForge du modpack, avec
+            <code>mods/</code>, <code>config/</code>...) et <code>GITHUB_TOKEN</code> dans <code>start-agent.bat</code> sur le PC
+            du serveur, puis redémarre l'agent. Si le modpack est sur un autre PC, utilise <code>publish-modpack.bat</code>
+            sur ce PC, puis clique « Activer » ci-dessus.
           </p>
           <form id="modpack-form" class="card form-grid">
             <label class="field">
@@ -155,11 +160,11 @@
             </label>
             <div class="field full">
               <small class="muted">
-                Envoie sur GitHub les mods et configurations du dossier <code>MODPACK_DIR</code> du Mac. Seuls les fichiers
-                modifiés sont envoyés. Les launchers installent la nouvelle version au prochain clic sur JOUER.
+                Envoie sur GitHub les mods et configurations du dossier <code>MODPACK_DIR</code> du PC du serveur. Seuls les
+                fichiers modifiés sont envoyés. Les launchers installent la nouvelle version au prochain clic sur JOUER.
               </small>
             </div>
-            <div class="row end full"><button class="primary" type="submit" id="btn-publish">Publier depuis le Mac</button></div>
+            <div class="row end full"><button class="primary" type="submit" id="btn-publish">Publier depuis le PC du serveur</button></div>
           </form>
           <div class="card publish-progress" id="publish-progress" hidden>
             <strong id="publish-step"></strong>

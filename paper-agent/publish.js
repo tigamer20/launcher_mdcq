@@ -17,12 +17,18 @@ const TAG = 'modpack';
 const MAX_ASSETS = 990; // GitHub allows 1000 files per release
 const BIG_FILE = 1024 * 1024; // bigger files get their own download
 
-// Folders and files of a Minecraft instance that belong to the player, not to the modpack.
+// Top-level folders and files of a Minecraft instance that are not part of the modpack.
 const EXCLUDE = new Set([
-  'saves', 'logs', 'crash-reports', 'screenshots', 'backups', 'journeymap', 'xaero', 'XaeroWaypoints', 'XaeroWorldMap',
-  'downloads', 'local', 'cache', '.cache', '.launcher', 'usercache.json', 'usernamecache.json', 'servers.dat',
-  'launcher_profiles.json', 'command_history.txt', 'realms_persistence.json', 'instance.json', 'minecraftinstance.json',
-]);
+  // the player's own data
+  'saves', 'logs', 'crash-reports', 'screenshots', 'backups', 'simplebackups', 'schematics', 'journeymap', 'xaero',
+  'XaeroWaypoints', 'XaeroWorldMap', 'local', 'servers.dat', 'command_history.txt', 'realms_persistence.json',
+  'usercache.json', 'usernamecache.json', 'fancymenu_data',
+  // caches rebuilt by the game or mods
+  'downloads', 'cache', '.cache', '.launcher', 'dynamic-data-pack-cache', 'dynamic-resource-pack-cache',
+  'moonlight-global-datapacks', '.mixin.out',
+  // launcher / CurseForge files
+  'launcher_profiles.json', 'instance.json', 'minecraftinstance.json', 'manifest.json', 'modlist.html', '.curseclient',
+])
 // Player settings: installed the first time only, never overwritten afterwards.
 const KEEP_PLAYER_CHANGES = ['options.txt', 'optionsof.txt', 'optionsshaders.txt', 'config/jei/world', 'config/xaero'];
 
@@ -33,7 +39,8 @@ function walk(root, dir = root) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const full = path.join(dir, entry.name);
     const relative = path.relative(root, full).split(path.sep).join('/');
-    if (entry.name.startsWith('.') || EXCLUDE.has(relative) || EXCLUDE.has(entry.name)) return [];
+    // EXCLUDE is about the instance's top-level folders/files only (a config/foo/cache folder is kept).
+    if (entry.name.startsWith('.') || EXCLUDE.has(relative)) return [];
     if (entry.isDirectory()) return walk(root, full);
     return entry.isFile() ? [{ full, relative }] : [];
   });
@@ -96,6 +103,18 @@ async function listAssets(release) {
 }
 
 const sha1 = (data) => crypto.createHash('sha1').update(data).digest('hex');
+
+/** Minecraft and NeoForge versions read from the CurseForge instance (manifest.json / minecraftinstance.json). */
+function detectVersions(dir = process.env.MODPACK_DIR) {
+  try {
+    const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'manifest.json'), 'utf8'));
+    const loader = (manifest.minecraft?.modLoaders || []).find((l) => l.primary) || manifest.minecraft?.modLoaders?.[0];
+    const neoforge = /^neoforge-(.+)$/.exec(loader?.id || '')?.[1];
+    return { minecraft: manifest.minecraft?.version, neoforge, name: manifest.name, version: manifest.version };
+  } catch {
+    return {};
+  }
+}
 
 async function publish({ version, minecraft, neoforge }) {
   const dir = path.resolve(process.env.MODPACK_DIR);
@@ -182,4 +201,4 @@ function start(options) {
 
 const status = () => ({ ...job });
 
-module.exports = { start, status, configured };
+module.exports = { start, status, configured, detectVersions, publish, job };

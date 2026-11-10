@@ -203,7 +203,10 @@ document.querySelectorAll('.nav').forEach((button) => {
   button.onclick = () => {
     document.querySelectorAll('.nav').forEach((b) => b.classList.toggle('active', b === button));
     document.querySelectorAll('.tab').forEach((tab) => (tab.hidden = tab.id !== `tab-${button.dataset.tab}`));
-    if (button.dataset.tab === 'modpack' && features.modpack) followPublish();
+    if (button.dataset.tab === 'modpack') {
+      if (features.modpack) followPublish();
+      loadGithubVersions();
+    }
     if (button.dataset.tab === 'editor' && !editor.loaded && features.plugins) {
       editor.loaded = true;
       openDir('');
@@ -386,6 +389,42 @@ function renderModpack() {
   if (mp && form.minecraft.value === '1.21.1') form.minecraft.value = mp.minecraft;
 }
 
+// Versions on GitHub (published from the server's PC or with publish-modpack.bat on another PC)
+async function loadGithubVersions() {
+  if (!features.github) return;
+  try {
+    const { versions, active } = await api('GET', '/api/modpack/github');
+    $('modpack-github').hidden = versions.length === 0;
+    $('modpack-versions').replaceChildren(
+      ...versions.map((v) =>
+        el('tr', {}, [
+          el('td', { textContent: `Modpack ${v.version}` }),
+          el('td', { textContent: `NeoForge ${v.neoforge} · ${v.files} fichiers · ${formatSize(v.size)}` }),
+          el('td', {}, [
+            v.manifestUrl === active
+              ? el('span', { className: 'badge on', textContent: 'Active' })
+              : el('button', { className: 'primary', textContent: 'Activer', onclick: () => activateVersion(v) }),
+          ]),
+        ]),
+      ),
+    );
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+async function activateVersion(v) {
+  if (!confirm(`Activer le modpack ${v.version}? Les joueurs l'installeront au prochain JOUER.`)) return;
+  try {
+    ({ modpack: pack.modpack } = await api('POST', '/api/modpack/activate', { manifestUrl: v.manifestUrl }));
+    renderModpack();
+    loadGithubVersions();
+    toast(`Modpack ${v.version} activé`);
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
 let publishTimer = null;
 let lastPublishState = null; // only announce the end of a publish we watched running
 async function followPublish() {
@@ -405,6 +444,7 @@ async function followPublish() {
       pack.modpack = modpack;
       renderModpack();
       if (justFinished) toast(`Modpack ${modpack.version} publié : les joueurs l'auront au prochain JOUER`);
+      if (justFinished) loadGithubVersions();
     } else if (job.state === 'error' && justFinished) {
       toast(job.message, true);
     }

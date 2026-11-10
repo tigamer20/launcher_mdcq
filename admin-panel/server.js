@@ -107,6 +107,26 @@ async function keepOnGitHub(save) {
   }
 }
 
+// Makes `info` ({ version, minecraft, neoforge, manifestUrl, files, size }) the modpack the launchers install.
+async function activateModpack(info) {
+  if (!String(info.manifestUrl).startsWith(`https://github.com/${github.REPO}/releases/download/modpack/`)) {
+    throw httpError(502, 'Adresse du modpack inattendue');
+  }
+  const pack = readPack();
+  pack.modpack = {
+    version: info.version,
+    minecraft: info.minecraft,
+    neoforge: info.neoforge,
+    manifestUrl: info.manifestUrl,
+    files: info.files,
+    size: info.size,
+    publishedAt: new Date().toISOString(),
+  };
+  pack.versionId = info.minecraft;
+  await savePack(pack);
+  return pack.modpack;
+}
+
 // The beta key is never stored in clear text (the GitHub repository is public): only its SHA-256.
 const hashKey = (key) => crypto.createHash('sha256').update(String(key)).digest('hex');
 
@@ -274,25 +294,28 @@ const api = {
   'GET /api/modpack/status': async () => {
     const job = await agent('GET', '/modpack/status');
     const result = job.result;
-    const pack = readPack();
-    // Publishing finished: launchers start using the new version (only GitHub URLs of this repository).
-    if (job.state === 'done' && result?.manifestUrl && result.manifestUrl !== pack.modpack?.manifestUrl) {
-      if (!result.manifestUrl.startsWith(`https://github.com/${github.REPO}/releases/download/modpack/`)) {
-        throw httpError(502, 'Adresse du modpack inattendue');
-      }
-      pack.modpack = {
-        version: result.version,
-        minecraft: result.minecraft,
-        neoforge: result.neoforge,
-        manifestUrl: result.manifestUrl,
-        files: result.files,
-        size: result.size,
-        publishedAt: new Date().toISOString(),
-      };
-      pack.versionId = result.minecraft;
-      await savePack(pack);
+    // Publishing finished on the Mac: launchers start using the new version.
+    if (job.state === 'done' && result?.manifestUrl && result.manifestUrl !== readPack().modpack?.manifestUrl) {
+      await activateModpack(result);
     }
-    return { job, modpack: pack.modpack || null };
+    return { job, modpack: readPack().modpack || null };
+  },
+
+  // Versions published on GitHub (also from a PC with publish-modpack.bat), to activate one.
+  'GET /api/modpack/github': async () => {
+    if (!github.configured()) throw httpError(400, 'GITHUB_TOKEN n\'est pas configuré');
+    try {
+      return { versions: await github.listModpackVersions(), active: readPack().modpack?.manifestUrl || null };
+    } catch (err) {
+      throw httpError(502, err.message);
+    }
+  },
+
+  'POST /api/modpack/activate': async (req) => {
+    const { manifestUrl } = await readJson(req);
+    const version = (await github.listModpackVersions()).find((v) => v.manifestUrl === manifestUrl);
+    if (!version) throw httpError(404, 'Version introuvable sur GitHub');
+    return { modpack: await activateModpack(version) };
   },
 
   'GET /api/status': async () => {

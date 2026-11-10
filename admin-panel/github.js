@@ -145,4 +145,27 @@ async function mergeToMain(channel, version) {
   return { url: pr.html_url, number: pr.number };
 }
 
-module.exports = { configured, commitServerFile, status, mergeToMain, redact, isNewer, gh, REPO };
+// Modpack versions published to the "modpack" release (by the agent on the Mac or publish-modpack on a PC).
+async function listModpackVersions() {
+  const release = await gh('GET', '/releases/tags/modpack');
+  if (!release) return [];
+  const manifests = (release.assets || []).filter((a) => /^modpack-[0-9][0-9A-Za-z.+-]*\.json$/.test(a.name));
+  const versions = [];
+  for (const asset of manifests) {
+    const res = await fetch(asset.browser_download_url);
+    if (!res.ok) continue;
+    const m = await res.json();
+    versions.push({
+      version: m.version,
+      minecraft: m.minecraft,
+      neoforge: m.neoforge,
+      files: m.files.length + (m.bundle?.files.length || 0),
+      size: m.files.reduce((s, f) => s + f.size, 0) + (m.bundle?.size || 0),
+      publishedAt: m.publishedAt || asset.created_at,
+      manifestUrl: asset.browser_download_url,
+    });
+  }
+  return versions.sort((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)));
+}
+
+module.exports = { configured, commitServerFile, status, mergeToMain, redact, isNewer, gh, REPO, listModpackVersions };

@@ -76,7 +76,10 @@ Every push to `main` that changes the website redeploys it automatically.
 | Instance type      | Free                         |
 | Environment        | `NODE_VERSION` = `22`, `TRUST_PROXY` = `1`, plus `ADMIN_PASSWORD`, `AGENT_SECRET`, `AGENT_URL`, `GITHUB_TOKEN` |
 
-### 3. Install the agent on the Paper machine (Mac, Windows or Linux)
+### 3. Install the agent on the server machine (Windows, Mac or Linux)
+
+> **All the Mod · Saison 3 runs on a Windows PC.** On Windows: use `start-agent.example.bat` (copy it to `start-agent.bat`), set `PAPER_DIR` to the **server** folder (the All the Mods 10 *server pack*, with `server.properties`), allow **Node.js** when Windows Defender Firewall asks, forward port **8765** on the router to this PC, and in **Settings → System → Power** set sleep to **Never**, so the server and the agent stay reachable. The **Plugins** tab is for Paper servers: a NeoForge server has mods instead.
+
 
 1. Install **Node.js 22 LTS** from <https://nodejs.org> (on a Mac, take the **macOS Installer (.pkg)**).
 2. Copy the `paper-agent/` folder from this repository to that machine (for example next to your Paper folder).
@@ -119,19 +122,18 @@ Every request from the website is signed with the secret, expires after 60 secon
 
 The launcher installs **NeoForge** and a **custom modpack based on All the Mods 10** (Minecraft 1.21.1).
 
-**On the Mac (once):** in `start-agent.command`, set:
-- `MODPACK_DIR`: the **client** instance of your modpack (the folder with `mods/`, `config/`, `kubejs/`...), for example your CurseForge instance;
-- `GITHUB_TOKEN`: a GitHub token with **Contents: Read and write** on this repository (the same kind as on Render).
+**Where the modpack comes from:** your **CurseForge instance** of the modpack (the folder with `mods/`, `config/`, `kubejs/`..., found with CurseForge > your profile > **...** > **Open Folder**). There are two ways to publish it:
 
-Restart the agent: its window shows `Modpack: <folder>`.
+- **The instance is on the server's PC** (simplest): in `start-agent.bat`, set `MODPACK_DIR` to that folder and `GITHUB_TOKEN` (Contents: Read and write on this repository), then restart the agent. Its window shows `Modpack: <folder>`, and you publish from the admin website.
+- **The instance is on another PC:** install Node.js 22 there, copy `paper-agent/` to it, copy `publish-modpack.example.bat` to `publish-modpack.bat`, fill in `MODPACK_DIR` and `GITHUB_TOKEN`, and double-click it. It asks for the version (Minecraft and NeoForge are read from the instance). Then on the admin website: **Modpack** tab > **Activer** on that version.
 
 **Each time you change the modpack:**
-1. Change the mods and configs in that instance on the Mac (test it there first).
-2. Admin website → **Modpack** tab → type the new version (e.g. `1.0.1`), check **Minecraft** (`1.21.1`) and **NeoForge** (the version of your instance, e.g. `21.1.211`) → **Publier depuis le Mac**.
-3. The Mac sends **only the changed files** to the `modpack` release on GitHub (a pre-release, separate from the launcher's versions). The first time, the whole modpack is uploaded, which can take a while.
+1. Change the mods and configs in the instance and test it in CurseForge first (`branding/GUIDE.md` explains how to customise it).
+2. Admin website → **Modpack** tab → type the new version (e.g. `1.0.1`), check **Minecraft** (`1.21.1`) and **NeoForge** (the version of your instance, e.g. `21.1.211`) → **Publier depuis le PC du serveur** (or run `publish-modpack.bat` on the other PC, then **Activer**).
+3. Only **the changed files** are sent to the `modpack` release on GitHub (a pre-release, separate from the launcher's versions). The first time, the whole modpack is uploaded, which can take a while.
 4. When it says *Modpack x publié*, every launcher gets it at the next click on **JOUER**. Players only download what changed.
 
-What is sent: everything in the instance except the player's own data (`saves`, `logs`, `screenshots`, `journeymap`, `servers.dat`...). Mods and files over 1 MB are sent one by one; small files (configs, scripts) go in one zip. `options.txt` and a few personal settings are only installed the first time, never overwritten.
+What is sent: everything in the instance except the player's own data and caches (`saves`, `logs`, `screenshots`, `simplebackups`, `schematics`, `journeymap`, `servers.dat`, `dynamic-*-pack-cache`, `moonlight-global-datapacks`, CurseForge's own files...). Mods and files over 1 MB are sent one by one; small files (configs, scripts) go in one zip. `options.txt` and a few personal settings are only installed the first time, never overwritten.
 
 **What players see:** the first time, **INSTALLER** downloads Java, NeoForge, Minecraft and the modpack with the steps, progress, speed and time remaining (5 to 20 minutes). After that the button is **JOUER**: it applies updates, starts NeoForge and joins the server. Each season gets its own game folder (`.moddedqc/instances/saison-3`), set by the **Saison** field in the **Serveur** tab.
 
