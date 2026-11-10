@@ -130,7 +130,7 @@
           </form>
         </section>
 
-        <!-- Modpack: published from the Mac, downloaded by the launchers -->
+        <!-- Modpack: what the launchers install (editor below, or published from a PC) -->
         <section class="tab" id="tab-modpack" hidden>
           <h1>Modpack</h1>
           <div class="card" id="modpack-current"></div>
@@ -138,39 +138,131 @@
             <span class="muted">Versions publiées sur GitHub</span>
             <table class="files"><tbody id="modpack-versions"></tbody></table>
           </div>
-          <p class="card muted" id="modpack-off">
-            Pour publier d'ici, ajoute <code>MODPACK_DIR</code> (le dossier de l'instance CurseForge du modpack, avec
-            <code>mods/</code>, <code>config/</code>...) et <code>GITHUB_TOKEN</code> dans <code>start-agent.bat</code> sur le PC
-            du serveur, puis redémarre l'agent. Si le modpack est sur un autre PC, utilise <code>publish-modpack.bat</code>
-            sur ce PC, puis clique « Activer » ci-dessus.
-          </p>
-          <form id="modpack-form" class="card form-grid">
-            <label class="field">
-              <span>Version du modpack</span>
-              <input name="version" placeholder="1.0.0" required pattern="[0-9][0-9A-Za-z.+\-]*" />
-            </label>
-            <label class="field">
-              <span>Minecraft</span>
-              <input name="minecraft" value="1.21.1" required />
-            </label>
-            <label class="field">
-              <span>NeoForge</span>
-              <input name="neoforge" placeholder="21.1.211" required />
-              <small class="muted">La version de NeoForge du modpack (dans l'instance : Profil → Version).</small>
-            </label>
-            <div class="field full">
-              <small class="muted">
-                Envoie sur GitHub les mods et configurations du dossier <code>MODPACK_DIR</code> du PC du serveur. Seuls les
-                fichiers modifiés sont envoyés. Les launchers installent la nouvelle version au prochain clic sur JOUER.
-              </small>
-            </div>
-            <div class="row end full"><button class="primary" type="submit" id="btn-publish">Publier depuis le PC du serveur</button></div>
-          </form>
-          <div class="card publish-progress" id="publish-progress" hidden>
-            <strong id="publish-step"></strong>
-            <div class="bar-track"><div class="bar-fill" id="publish-bar"></div></div>
-            <span class="muted" id="publish-detail"></span>
+          <!-- Modpack editor: import a CurseForge export once, then change everything here -->
+          <div class="card" id="ed-setup" hidden>
+            <h2>Éditeur du modpack</h2>
+            <p class="muted" id="ed-setup-text"></p>
           </div>
+
+          <div class="card ed-import" id="ed-import">
+            <div class="row between wrap">
+              <div>
+                <h2 id="ed-title">Éditeur du modpack</h2>
+                <p class="muted" id="ed-summary">
+                  Importe l'export CurseForge de ton modpack (CurseForge → ⋮ → <strong>Export Profile</strong>, sans cocher
+                  <code>mods</code>) : tu pourras ensuite changer les mods et les configurations ici, puis publier.
+                </p>
+              </div>
+              <label class="primary file-button">
+                <input type="file" id="ed-import-file" accept=".zip" hidden />
+                <span id="ed-import-label">Importer un export CurseForge (.zip)</span>
+              </label>
+            </div>
+            <div class="publish-progress" id="ed-progress" hidden>
+              <strong id="ed-step"></strong>
+              <div class="bar-track"><div class="bar-fill" id="ed-bar"></div></div>
+              <span class="muted" id="ed-detail"></span>
+            </div>
+          </div>
+
+          <div id="ed-main" hidden>
+            <form class="card row wrap ed-publish" id="ed-publish-form">
+              <div class="ed-pending" id="ed-pending"></div>
+              <label class="field">
+                <span>Nouvelle version</span>
+                <input name="version" required pattern="[0-9][0-9A-Za-z.+\-]*" placeholder="1.0.1" />
+              </label>
+              <button class="primary" type="submit" id="btn-ed-publish">Publier pour les joueurs</button>
+            </form>
+
+            <div class="ed-tabs row">
+              <button class="ed-tab active" data-ed="mods" type="button">Mods <span id="ed-mods-count"></span></button>
+              <button class="ed-tab" data-ed="files" type="button">Configurations <span id="ed-files-count"></span></button>
+            </div>
+
+            <section class="card" id="ed-mods">
+              <p class="card offline-reason" id="ed-missing" hidden></p>
+              <div class="row wrap ed-add">
+                <input id="ed-add-input" placeholder="Lien CurseForge du mod à ajouter (ex. https://www.curseforge.com/minecraft/mc-mods/jei)" />
+                <button class="primary" id="btn-ed-add" type="button">Ajouter</button>
+                <label class="ghost file-button">
+                  <input type="file" id="ed-jar-file" accept=".jar" hidden />
+                  <span>Téléverser un .jar</span>
+                </label>
+              </div>
+              <div class="row between ed-filter">
+                <input id="ed-mod-filter" placeholder="Rechercher un mod..." />
+                <span class="muted" id="ed-mod-summary"></span>
+              </div>
+              <table class="files ed-table">
+                <thead><tr><th>Mod</th><th>Fichier</th><th>État</th><th></th></tr></thead>
+                <tbody id="ed-mod-list"></tbody>
+              </table>
+            </section>
+
+            <section class="editor-layout" id="ed-files" hidden>
+              <div class="card file-browser">
+                <input id="ed-file-filter" placeholder="Rechercher (ex. config/ftb)..." />
+                <div class="row wrap">
+                  <button class="ghost" id="btn-ed-new" type="button">Nouveau fichier</button>
+                  <label class="ghost file-button">
+                    <input type="file" id="ed-file-upload" hidden />
+                    <span>Téléverser</span>
+                  </label>
+                </div>
+                <ul class="dir-list" id="ed-file-list"></ul>
+              </div>
+              <div class="card editor-pane">
+                <div class="row between wrap">
+                  <strong id="ed-file-path">Choisis un fichier à gauche</strong>
+                  <span class="row">
+                    <button class="ghost" id="btn-ed-revert" type="button" hidden>Annuler mes changements</button>
+                    <button class="ghost" id="btn-ed-delete" type="button" hidden>Supprimer</button>
+                    <button class="primary" id="btn-ed-save" type="button" disabled>Enregistrer</button>
+                  </span>
+                </div>
+                <p class="muted" id="ed-file-info"></p>
+                <textarea class="editor" id="ed-file-content" spellcheck="false" disabled></textarea>
+              </div>
+            </section>
+          </div>
+
+          <details class="card ed-legacy">
+            <summary>Autre méthode : publier depuis le PC (agent ou publish-modpack.bat)</summary>
+            <p class="card muted" id="modpack-off">
+              Pour publier d'ici, ajoute <code>MODPACK_DIR</code> (le dossier de l'instance CurseForge du modpack, avec
+              <code>mods/</code>, <code>config/</code>...) et <code>GITHUB_TOKEN</code> dans <code>start-agent.bat</code> sur le PC
+              du serveur, puis redémarre l'agent. Si le modpack est sur un autre PC, utilise <code>publish-modpack.bat</code>
+              sur ce PC, puis clique « Activer » ci-dessus.
+            </p>
+            <form id="modpack-form" class="card form-grid">
+              <label class="field">
+                <span>Version du modpack</span>
+                <input name="version" placeholder="1.0.0" required pattern="[0-9][0-9A-Za-z.+\-]*" />
+              </label>
+              <label class="field">
+                <span>Minecraft</span>
+                <input name="minecraft" value="1.21.1" required />
+              </label>
+              <label class="field">
+                <span>NeoForge</span>
+                <input name="neoforge" placeholder="21.1.211" required />
+                <small class="muted">La version de NeoForge du modpack (dans l'instance : Profil → Version).</small>
+              </label>
+              <div class="field full">
+                <small class="muted">
+                  Envoie sur GitHub les mods et configurations du dossier <code>MODPACK_DIR</code> du PC du serveur. Seuls les
+                  fichiers modifiés sont envoyés. Les launchers installent la nouvelle version au prochain clic sur JOUER.
+                </small>
+              </div>
+              <div class="row end full"><button class="primary" type="submit" id="btn-publish">Publier depuis le PC du serveur</button></div>
+            </form>
+            <div class="card publish-progress" id="publish-progress" hidden>
+              <strong id="publish-step"></strong>
+              <div class="bar-track"><div class="bar-fill" id="publish-bar"></div></div>
+              <span class="muted" id="publish-detail"></span>
+            </div>
+          </details>
         </section>
 
         <!-- Plugins (Paper server) -->
@@ -357,6 +449,19 @@
         <div class="row end">
           <button type="button" id="btn-merge-cancel" class="ghost">Annuler</button>
           <button type="submit" id="btn-merge-confirm" class="primary">Confirmer la fusion</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Modpack editor: choose another version of a mod -->
+    <dialog id="ed-version-dialog">
+      <form method="dialog" class="merge-form">
+        <h2 id="ed-version-title">Version du mod</h2>
+        <p class="muted">Versions pour Minecraft <span id="ed-version-mc"></span> avec NeoForge, la plus récente en premier.</p>
+        <select id="ed-version-select" size="10"></select>
+        <div class="row end">
+          <button type="button" id="btn-ed-version-cancel" class="ghost">Annuler</button>
+          <button type="button" id="btn-ed-version-ok" class="primary">Utiliser cette version</button>
         </div>
       </form>
     </dialog>

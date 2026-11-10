@@ -122,7 +122,19 @@ Every request from the website is signed with the secret, expires after 60 secon
 
 The launcher installs **NeoForge** and a **custom modpack based on All the Mods 10** (Minecraft 1.21.1).
 
-**Where the modpack comes from:** your **CurseForge instance** of the modpack (the folder with `mods/`, `config/`, `kubejs/`..., found with CurseForge > your profile > **...** > **Open Folder**). There are two ways to publish it:
+**Recommended: the modpack editor of the admin website** (no PC needs to be on)
+
+1. **Once:** get a free CurseForge API key (https://console.curseforge.com → API Keys) and add it on Render as `CURSEFORGE_API_KEY` (`GITHUB_TOKEN` must be set too).
+2. In the CurseForge app: your profile → **⋮** → **Export Profile**. Tick `config`, `kubejs`, `defaultconfigs` and the other folders you changed, **but not `mods`**: the export then only lists the mods, so it stays small.
+3. Admin website → **Modpack** → **Importer un export CurseForge (.zip)**. The website finds every mod on CurseForge and stores the configurations on GitHub.
+4. Change what you want:
+   - **Mods**: add one by pasting its CurseForge link, choose another **Version**, **Désactiver** or **Retirer** it, or upload a `.jar`. A few authors forbid other apps from downloading their mod: those show **À téléverser**, download the `.jar` from their CurseForge page and upload it (publishing is blocked until then).
+   - **Configurations**: open a file, edit it and **Enregistrer**, add a new file or upload one (images, resource packs...).
+5. Type the version and click **Publier pour les joueurs**: every launcher gets it at the next **JOUER** (mods are downloaded straight from CurseForge, only what changed).
+
+Importing a new export replaces the list of mods and configurations (changes not published yet are lost).
+
+**Other method:** your **CurseForge instance** of the modpack (the folder with `mods/`, `config/`, `kubejs/`..., found with CurseForge > your profile > **...** > **Open Folder**). There are two ways to publish it this way:
 
 - **The instance is on the server's PC** (simplest): in `start-agent.bat`, set `MODPACK_DIR` to that folder and `GITHUB_TOKEN` (Contents: Read and write on this repository), then restart the agent. Its window shows `Modpack: <folder>`, and you publish from the admin website.
 - **The instance is on another PC:** install Node.js 22 there, copy `paper-agent/` to it, copy `publish-modpack.example.bat` to `publish-modpack.bat`, fill in `MODPACK_DIR` and `GITHUB_TOKEN`, and double-click it. It asks for the version (Minecraft and NeoForge are read from the instance). Then on the admin website: **Modpack** tab > **Activer** on that version.

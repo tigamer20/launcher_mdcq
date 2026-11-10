@@ -180,7 +180,8 @@ async function publish({ version, minecraft, neoforge }) {
   set('Nettoyage');
   const used = new Set([...entries.map((e) => e.url.split('/').pop()), zipName, manifestName]);
   for (const [name, asset] of assets) {
-    if (!used.has(name)) await gh('DELETE', `/releases/assets/${asset.id}`);
+    // editor-*: files of the admin website's modpack editor, it cleans them up itself
+    if (!used.has(name) && !name.startsWith('editor-')) await gh('DELETE', `/releases/assets/${asset.id}`);
   }
 
   const size = entries.reduce((s, e) => s + e.size, 0) + zip.length;
@@ -202,4 +203,8 @@ function start(options) {
 
 const status = () => ({ ...job });
 
-module.exports = { start, status, configured, detectVersions, publish, job };
+// Also used by the admin website's modpack editor (admin-panel/modpack-editor.js).
+module.exports = {
+  start, status, configured, detectVersions, publish, job,
+  getRelease, listAssets, upload, gh, sha1, EXCLUDE, KEEP_PLAYER_CHANGES, MAX_ASSETS, BIG_FILE,
+};

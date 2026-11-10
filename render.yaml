@@ -29,5 +29,7 @@ services:
         sync: false
       - key: GITHUB_TOKEN # website data storage (branch admin-data) + server file editor (see README)
         sync: false
+      - key: CURSEFORGE_API_KEY # modpack editor: finds mods on CurseForge (free key on console.curseforge.com)
+        sync: false
       - key: GITHUB_REPO
         value: tigamer20/launcher_mdcq

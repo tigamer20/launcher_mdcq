@@ -21,6 +21,7 @@ const { signHeaders } = require('../paper-agent/signing');
 const github = require('./github');
 const storage = require('./storage');
 const players = require('./players');
+const editor = require('./modpack-editor');
 
 const PORT = Number(process.env.PORT) || 8080;
 const LOCAL_DATA_DIR = path.join(__dirname, 'data');
@@ -95,6 +96,15 @@ async function savePack(pack) {
   fs.writeFileSync(packFile, json);
   buildManifest(DATA_DIR);
   await keepOnGitHub(() => storage.saveFile('pack.json', Buffer.from(json)));
+}
+
+// Editor errors from CurseForge/GitHub are shown to the admin as they are (not "Erreur serveur").
+async function editorCall(fn, ...args) {
+  try {
+    return await fn(...args);
+  } catch (err) {
+    throw err.status ? err : httpError(502, err.message);
+  }
 }
 
 // Without GITHUB_TOKEN the data only lives on disk (fine with a Render disk, lost on the free plan).
@@ -310,6 +320,35 @@ const api = {
       throw httpError(502, err.message);
     }
   },
+
+  // Modpack editor (admin-panel/modpack-editor.js): import a CurseForge export, change mods and files, publish.
+  'GET /api/editor': () => editor.status(),
+  'PUT /api/editor/upload': async (req, url) =>
+    editor.uploadChunk(url.searchParams.get('id'), url.searchParams.get('offset'), await readBuffer(req, 16 * 1024 * 1024)),
+  'POST /api/editor/import': async (req) => editor.startImport((await readJson(req)).uploadId),
+  'POST /api/editor/publish': async (req) => editor.startPublish((await readJson(req)).version),
+  'POST /api/editor/mods/toggle': async (req) => ({ mod: await editorCall(editor.toggleMod, (await readJson(req)).id) }),
+  'POST /api/editor/mods/remove': async (req) => editorCall(editor.removeMod, (await readJson(req)).id).then(() => ({ ok: true })),
+  'GET /api/editor/mods/versions': (req, url) => editorCall(editor.modVersions, url.searchParams.get('id')),
+  'POST /api/editor/mods/version': async (req) => {
+    const { id, fileId } = await readJson(req);
+    return { mod: await editorCall(editor.setModVersion, id, fileId) };
+  },
+  'POST /api/editor/mods/add': async (req) => ({ mod: await editorCall(editor.addMod, (await readJson(req)).input) }),
+  'POST /api/editor/mods/upload': async (req) => {
+    const { uploadId, fileName, id } = await readJson(req);
+    return { mod: await editorCall(editor.uploadMod, uploadId, fileName, id) };
+  },
+  'GET /api/editor/files': () => editor.listFiles(),
+  'GET /api/editor/file': (req, url) => editorCall(editor.readFile, url.searchParams.get('path')),
+  'PUT /api/editor/file': async (req, url) =>
+    editorCall(editor.writeFile, url.searchParams.get('path'), await readBuffer(req, 2 * 1024 * 1024)).then(() => ({ ok: true })),
+  'POST /api/editor/file/upload': async (req) => {
+    const { uploadId, path: target } = await readJson(req);
+    return editorCall(editor.uploadAsFile, uploadId, target).then(() => ({ ok: true }));
+  },
+  'DELETE /api/editor/file': (req, url) => editorCall(editor.deleteFile, url.searchParams.get('path')).then(() => ({ ok: true })),
+  'POST /api/editor/file/revert': async (req) => editorCall(editor.revertFile, (await readJson(req)).path).then(() => ({ ok: true })),
 
   'POST /api/modpack/activate': async (req) => {
     const { manifestUrl } = await readJson(req);
@@ -589,6 +628,7 @@ async function start() {
     secret: process.env.DATA_KEY || (PASSWORD_OK ? PASSWORD : null),
     save: storage.configured() ? (relative, buffer) => storage.saveFile(relative, buffer) : null,
   });
+  editor.init({ dataDir: DATA_DIR, storage, activate: activateModpack });
   // Render stops the website when it sleeps or redeploys: save the latest players on GitHub first.
   process.once('SIGTERM', () => players.flush().finally(() => process.exit(0)));
   // Old versions stored the beta key in clear text: keep only its hash.

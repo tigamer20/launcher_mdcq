@@ -204,6 +204,7 @@ document.querySelectorAll('.nav').forEach((button) => {
     document.querySelectorAll('.tab').forEach((tab) => (tab.hidden = tab.id !== `tab-${button.dataset.tab}`));
     if (button.dataset.tab === 'players') loadPlayers();
     if (button.dataset.tab === 'modpack') {
+      loadEditor();
       if (features.modpack) followPublish();
       loadGithubVersions();
     }
@@ -726,5 +727,399 @@ $('btn-players-clear').onclick = async () => {
     toast('Historique effacé');
   } catch (err) {
     toast(err.message, true);
+  }
+};
+
+// ---------- Modpack editor (admin-panel/modpack-editor.js) ----------
+
+const ed = { status: null, files: [], current: null, versionMod: null, timer: null, lastJob: null };
+const CHUNK = 8 * 1024 * 1024;
+
+// Sends a file in 8 MB pieces (big exports would be refused in one request). Returns the upload id.
+async function sendInPieces(file, onProgress) {
+  const id = [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, '0')).join('');
+  for (let offset = 0; offset < file.size || offset === 0; offset += CHUNK) {
+    const piece = file.slice(offset, offset + CHUNK);
+    await api('PUT', `/api/editor/upload?id=${id}&offset=${offset}`, piece, true);
+    onProgress?.(Math.min(offset + CHUNK, file.size), file.size);
+    if (file.size === 0) break;
+  }
+  return id;
+}
+
+function edProgress(text, done, total) {
+  $('ed-progress').hidden = !text;
+  $('ed-step').textContent = text || '';
+  $('ed-detail').textContent = total ? `${done} / ${total}` : '';
+  $('ed-bar').style.width = total ? `${Math.max(3, (done / total) * 100)}%` : '5%';
+}
+
+async function loadEditor() {
+  try {
+    ed.status = await api('GET', '/api/editor');
+    renderEditor();
+    if (ed.status.job.state === 'running') followEditorJob();
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+function renderEditor() {
+  const { configured, draft, job } = ed.status;
+  const setup = [];
+  if (!configured.curseforge) setup.push('ajoute CURSEFORGE_API_KEY sur Render (clé gratuite sur console.curseforge.com → API Keys)');
+  if (!configured.github) setup.push('ajoute GITHUB_TOKEN sur Render');
+  $('ed-setup').hidden = setup.length === 0;
+  $('ed-setup-text').textContent = setup.length ? `Pour utiliser l'éditeur, ${setup.join(' et ')}, puis redéploie le site.` : '';
+  $('ed-import-file').disabled = setup.length > 0 || job.state === 'running';
+
+  $('ed-main').hidden = !draft;
+  if (!draft) return;
+  $('ed-title').textContent = `${draft.name} · Minecraft ${draft.minecraft} · NeoForge ${draft.neoforge}`;
+  $('ed-summary').textContent =
+    `Importé le ${when(draft.importedAt)}${draft.publishedAt ? ` · dernière publication : ${draft.version} le ${when(draft.publishedAt)}` : ''}. ` +
+    'Réimporter un export remplace la liste des mods et les configurations.';
+  $('ed-import-label').textContent = 'Réimporter un export (.zip)';
+
+  const enabled = draft.mods.filter((m) => m.enabled).length;
+  $('ed-mods-count').textContent = `(${enabled})`;
+  $('ed-files-count').textContent = `(${draft.files})`;
+  const changes = draft.edits.length + draft.deleted.length;
+  $('ed-pending').replaceChildren(
+    el('strong', { textContent: draft.unpublished ? 'Changements pas encore publiés' : 'Tout est publié' }),
+    el('span', {
+      className: 'muted',
+      textContent: draft.unpublished
+        ? `${enabled} mods activés${changes ? ` · ${changes} configuration(s) modifiée(s)` : ''}. Les joueurs reçoivent les changements quand tu publies.`
+        : `Version ${draft.version} : les joueurs l'installent au prochain JOUER.`,
+    }),
+  );
+  const form = $('ed-publish-form');
+  if (!form.version.value || form.dataset.from !== draft.version) {
+    form.version.value = nextVersion(draft.version);
+    form.dataset.from = draft.version;
+  }
+  $('btn-ed-publish').disabled = job.state === 'running' || draft.missing > 0;
+  $('ed-missing').hidden = draft.missing === 0;
+  $('ed-missing').textContent = `${draft.missing} mod(s) ne peuvent pas être téléchargés automatiquement (choix de leur auteur sur CurseForge) : clique « Téléverser » sur leur ligne et envoie le .jar (téléchargé depuis leur page CurseForge). La publication est bloquée d'ici là.`;
+  renderMods();
+}
+
+// 1.0.0 -> 1.0.1 (the admin can change it)
+function nextVersion(version) {
+  const m = /^(.*?)(\d+)$/.exec(String(version || ''));
+  return m ? `${m[1]}${Number(m[2]) + 1}` : '1.0.0';
+}
+
+function renderMods() {
+  const draft = ed.status.draft;
+  const filter = $('ed-mod-filter').value.trim().toLowerCase();
+  const mods = draft.mods.filter((m) => !filter || `${m.name} ${m.fileName}`.toLowerCase().includes(filter));
+  $('ed-mod-summary').textContent = `${mods.length} / ${draft.mods.length} mods`;
+  $('ed-mod-list').replaceChildren(
+    ...mods.map((m) => {
+      const actions = [];
+      if (m.source === 'curseforge') actions.push(el('button', { className: 'ghost', textContent: 'Version', onclick: () => chooseVersion(m) }));
+      if (!m.url || m.source === 'file') actions.push(uploadButton(m.url ? 'Remplacer' : 'Téléverser', (file) => uploadJar(file, m.source === 'curseforge' ? m.id : null)));
+      actions.push(el('button', { className: 'ghost', textContent: m.enabled ? 'Désactiver' : 'Activer', onclick: () => modAction('toggle', m) }));
+      actions.push(el('button', { className: 'danger', textContent: 'Retirer', onclick: () => modAction('remove', m) }));
+      const state = !m.url
+        ? el('span', { className: 'badge warn', textContent: 'À téléverser' })
+        : el('span', { className: `badge ${m.enabled ? 'on' : 'off'}`, textContent: m.enabled ? (m.source === 'file' ? 'Activé · .jar' : 'Activé') : 'Désactivé' });
+      return el('tr', { className: m.enabled ? '' : 'disabled' }, [
+        el('td', {}, [m.link ? el('a', { href: m.link, target: '_blank', rel: 'noopener', textContent: m.name }) : el('strong', { textContent: m.name })]),
+        el('td', { textContent: m.folder === 'mods' ? m.fileName : `${m.folder}/${m.fileName}` }),
+        el('td', {}, [state]),
+        el('td', {}, actions),
+      ]);
+    }),
+  );
+}
+
+function uploadButton(text, onFile) {
+  const input = el('input', { type: 'file', accept: '.jar', hidden: true });
+  input.onchange = () => input.files[0] && onFile(input.files[0]);
+  return el('label', { className: 'ghost file-button' }, [input, el('span', { textContent: text })]);
+}
+
+async function modAction(action, mod) {
+  if (action === 'remove' && !confirm(`Retirer ${mod.name} du modpack ?`)) return;
+  try {
+    await api('POST', `/api/editor/mods/${action}`, { id: mod.id });
+    await loadEditor();
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+async function uploadJar(file, id) {
+  try {
+    edProgress(`Envoi de ${file.name}`, 0, 0);
+    const uploadId = await sendInPieces(file, (done, total) => edProgress(`Envoi de ${file.name}`, Math.round(done / 1048576), Math.round(total / 1048576)));
+    edProgress(`Envoi de ${file.name} sur GitHub`, 0, 0);
+    const { mod } = await api('POST', '/api/editor/mods/upload', { uploadId, fileName: file.name, id });
+    toast(`${mod.name} ajouté`);
+    await loadEditor();
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    edProgress('');
+  }
+}
+
+async function chooseVersion(mod) {
+  ed.versionMod = mod;
+  $('ed-version-title').textContent = mod.name;
+  $('ed-version-mc').textContent = ed.status.draft.minecraft;
+  const select = $('ed-version-select');
+  select.replaceChildren(el('option', { textContent: 'Chargement...', disabled: true }));
+  $('ed-version-dialog').showModal();
+  try {
+    const { versions, current } = await api('GET', `/api/editor/mods/versions?id=${encodeURIComponent(mod.id)}`);
+    const types = { 1: '', 2: ' (bêta)', 3: ' (alpha)' };
+    select.replaceChildren(
+      ...versions.map((v) =>
+        el('option', {
+          value: v.fileId,
+          selected: v.fileId === current,
+          textContent: `${v.displayName}${types[v.releaseType] || ''} · ${new Date(v.date).toLocaleDateString('fr-CA')}${v.fileId === current ? ' · actuelle' : ''}${v.url ? '' : ' · à téléverser'}`,
+        }),
+      ),
+    );
+    if (!versions.length) select.replaceChildren(el('option', { textContent: 'Aucune version pour cette version de Minecraft', disabled: true }));
+  } catch (err) {
+    $('ed-version-dialog').close();
+    toast(err.message, true);
+  }
+}
+
+$('btn-ed-version-cancel').onclick = () => $('ed-version-dialog').close();
+$('btn-ed-version-ok').onclick = async () => {
+  const fileId = $('ed-version-select').value;
+  if (!fileId || !ed.versionMod) return;
+  try {
+    const { mod } = await api('POST', '/api/editor/mods/version', { id: ed.versionMod.id, fileId: Number(fileId) });
+    $('ed-version-dialog').close();
+    toast(`${mod.name} : ${mod.fileName}`);
+    await loadEditor();
+  } catch (err) {
+    toast(err.message, true);
+  }
+};
+
+$('btn-ed-add').onclick = async () => {
+  const input = $('ed-add-input').value.trim();
+  if (!input) return;
+  $('btn-ed-add').disabled = true;
+  try {
+    const { mod } = await api('POST', '/api/editor/mods/add', { input });
+    $('ed-add-input').value = '';
+    toast(`${mod.name} ajouté (${mod.fileName})`);
+    await loadEditor();
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    $('btn-ed-add').disabled = false;
+  }
+};
+
+$('ed-jar-file').onchange = (event) => event.target.files[0] && uploadJar(event.target.files[0], null);
+$('ed-mod-filter').oninput = renderMods;
+
+// Import and publish run in the background on the website: follow them.
+async function followEditorJob() {
+  clearTimeout(ed.timer);
+  try {
+    ed.status = await api('GET', '/api/editor');
+    const { job } = ed.status;
+    const finished = ed.lastJob === 'running' && job.state !== 'running';
+    ed.lastJob = job.state;
+    if (job.state === 'running') {
+      edProgress(`${job.step}...`, job.done, job.total);
+      renderEditor();
+      ed.timer = setTimeout(followEditorJob, 1500);
+      return;
+    }
+    edProgress('');
+    renderEditor();
+    if (finished && job.state === 'error') toast(job.message, true);
+    if (finished && job.state === 'done' && job.kind === 'import') {
+      const r = job.result;
+      toast(`Modpack importé : ${r.mods} mods, ${r.files} fichiers${r.missing ? ` (${r.missing} à téléverser)` : ''}`);
+      ed.files = [];
+    }
+    if (finished && job.state === 'done' && job.kind === 'publish') {
+      toast(`Modpack ${job.result.version} publié : les joueurs l'auront au prochain JOUER`);
+      ({ pack } = await api('GET', '/api/state'));
+      renderModpack();
+      loadGithubVersions();
+      ed.files = [];
+    }
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+$('ed-import-file').onchange = async (event) => {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  if (ed.status?.draft && !confirm('Réimporter remplace la liste des mods et les configurations (les changements pas encore publiés seront perdus). Continuer ?')) return;
+  try {
+    const uploadId = await sendInPieces(file, (done, total) =>
+      edProgress(`Envoi de ${file.name} (${formatSize(done)} / ${formatSize(total)})`, done, total),
+    );
+    await api('POST', '/api/editor/import', { uploadId });
+    ed.lastJob = 'running';
+    followEditorJob();
+  } catch (err) {
+    edProgress('');
+    toast(err.message, true);
+  }
+};
+
+$('ed-publish-form').onsubmit = async (event) => {
+  event.preventDefault();
+  const version = event.target.version.value.trim();
+  if (!confirm(`Publier le modpack ${version} ? Tous les joueurs l'installeront au prochain JOUER.`)) return;
+  try {
+    await api('POST', '/api/editor/publish', { version });
+    ed.lastJob = 'running';
+    followEditorJob();
+  } catch (err) {
+    toast(err.message, true);
+  }
+};
+
+// ---- Configuration files ----
+
+document.querySelectorAll('.ed-tab').forEach((button) => {
+  button.onclick = () => {
+    document.querySelectorAll('.ed-tab').forEach((b) => b.classList.toggle('active', b === button));
+    $('ed-mods').hidden = button.dataset.ed !== 'mods';
+    $('ed-files').hidden = button.dataset.ed !== 'files';
+    if (button.dataset.ed === 'files') loadEditorFiles();
+  };
+});
+
+async function loadEditorFiles() {
+  try {
+    ({ files: ed.files } = await api('GET', '/api/editor/files'));
+    renderEditorFiles();
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+function renderEditorFiles() {
+  const filter = $('ed-file-filter').value.trim().toLowerCase();
+  const shown = ed.files.filter((f) => !filter || f.path.toLowerCase().includes(filter)).slice(0, 400);
+  $('ed-file-list').replaceChildren(
+    ...shown.map((f) =>
+      el('li', {}, [
+        el('button', { className: ed.current?.path === f.path ? 'active' : '', title: f.path, onclick: () => openEditorFile(f.path) }, [
+          document.createTextNode(f.path),
+          ...(f.state ? [el('span', { className: 'state', textContent: f.state })] : []),
+        ]),
+      ]),
+    ),
+    ...(shown.length === 400 ? [el('li', { className: 'muted', textContent: 'Affine la recherche pour voir les autres fichiers.' })] : []),
+  );
+}
+
+$('ed-file-filter').oninput = renderEditorFiles;
+
+async function openEditorFile(filePath) {
+  try {
+    const file = await api('GET', `/api/editor/file?path=${encodeURIComponent(filePath)}`);
+    ed.current = file;
+    const info = ed.files.find((f) => f.path === filePath);
+    $('ed-file-path').textContent = filePath;
+    $('ed-file-content').value = file.binary ? '' : file.content;
+    $('ed-file-content').disabled = Boolean(file.binary);
+    $('ed-file-info').textContent = file.binary
+      ? `Fichier binaire (${formatSize(file.size)}) : utilise « Téléverser » avec le même chemin pour le remplacer.`
+      : info?.state ? `Modifié sur le site, pas encore publié.` : '';
+    $('btn-ed-save').disabled = Boolean(file.binary);
+    $('btn-ed-delete').hidden = false;
+    $('btn-ed-revert').hidden = !info?.state;
+    renderEditorFiles();
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+async function saveEditorFile(filePath, body) {
+  await api('PUT', `/api/editor/file?path=${encodeURIComponent(filePath)}`, body, true);
+  await Promise.all([loadEditorFiles(), loadEditor()]);
+}
+
+$('btn-ed-save').onclick = async () => {
+  if (!ed.current) return;
+  try {
+    await saveEditorFile(ed.current.path, new Blob([$('ed-file-content').value]));
+    toast('Enregistré (sera envoyé aux joueurs à la prochaine publication)');
+    openEditorFile(ed.current.path);
+  } catch (err) {
+    toast(err.message, true);
+  }
+};
+
+$('btn-ed-delete').onclick = async () => {
+  if (!ed.current || !confirm(`Supprimer ${ed.current.path} du modpack ?`)) return;
+  try {
+    await api('DELETE', `/api/editor/file?path=${encodeURIComponent(ed.current.path)}`);
+    ed.current = null;
+    $('ed-file-path').textContent = 'Choisis un fichier à gauche';
+    $('ed-file-content').value = '';
+    $('btn-ed-save').disabled = true;
+    $('btn-ed-delete').hidden = true;
+    $('btn-ed-revert').hidden = true;
+    await Promise.all([loadEditorFiles(), loadEditor()]);
+    toast('Supprimé (à la prochaine publication)');
+  } catch (err) {
+    toast(err.message, true);
+  }
+};
+
+$('btn-ed-revert').onclick = async () => {
+  if (!ed.current) return;
+  try {
+    await api('POST', '/api/editor/file/revert', { path: ed.current.path });
+    await Promise.all([loadEditorFiles(), loadEditor()]);
+    openEditorFile(ed.current.path).catch(() => {});
+    toast('Changements annulés');
+  } catch (err) {
+    toast(err.message, true);
+  }
+};
+
+$('btn-ed-new').onclick = async () => {
+  const filePath = prompt('Chemin du nouveau fichier (ex. config/monmod-client.toml) :');
+  if (!filePath) return;
+  try {
+    await saveEditorFile(filePath.trim(), new Blob(['']));
+    openEditorFile(filePath.trim().replace(/\\/g, '/').replace(/^\/+/, ''));
+  } catch (err) {
+    toast(err.message, true);
+  }
+};
+
+$('ed-file-upload').onchange = async (event) => {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  const target = prompt('Chemin dans le modpack :', ed.current ? ed.current.path : `config/${file.name}`);
+  if (!target) return;
+  try {
+    const uploadId = await sendInPieces(file, (done, total) => edProgress(`Envoi de ${file.name}`, Math.round(done / 1024), Math.round(total / 1024)));
+    edProgress(`Enregistrement de ${target}`, 0, 0);
+    await api('POST', '/api/editor/file/upload', { uploadId, path: target.trim() });
+    await Promise.all([loadEditorFiles(), loadEditor()]);
+    toast(`${target} enregistré`);
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    edProgress('');
   }
 };
