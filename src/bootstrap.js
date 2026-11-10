@@ -9,7 +9,7 @@ const BUNDLED_ROOT = path.join(__dirname, '..');
 const MAX_FAILED_STARTS = 2;
 
 function appRoot() {
-  if (!app.isPackaged && !process.env.MODDEDQC_FORCE_UPDATER) return BUNDLED_ROOT;
+  if (!app.isPackaged && !process.env.ATM_FORCE_UPDATER) return BUNDLED_ROOT;
   const updatesDir = path.join(app.getPath('userData'), 'app');
   const stateFile = path.join(updatesDir, 'current.json');
   try {

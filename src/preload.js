@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('launcher', {
   login: () => ipcRenderer.invoke('login'),
   logout: () => ipcRenderer.invoke('logout'),
   play: () => ipcRenderer.invoke('play'),
+  install: () => ipcRenderer.invoke('install'),
   saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
   openFolder: () => ipcRenderer.invoke('open-folder'),
   minimize: () => ipcRenderer.send('window', 'minimize'),

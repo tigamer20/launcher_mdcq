@@ -72,6 +72,7 @@ function render() {
   $('console-off').hidden = features.rcon;
   $('console-on').hidden = !features.rcon;
   $('maintenance-rcon').hidden = !features.rcon;
+  renderModpack();
   $('editor-off').hidden = features.plugins;
   $('editor-on').hidden = !features.plugins;
   $('editor-github').hidden = !features.github;
@@ -114,6 +115,7 @@ function renderServerForm() {
   const form = $('server-form');
   form.packName.value = pack.name || '';
   form.subtitle.value = pack.subtitle || '';
+  form.season.value = pack.season || 'Saison 3';
   form.host.value = pack.server?.host || '';
   form.port.value = pack.server?.port || 25565;
   form.versionId.value = pack.versionId || '';
@@ -201,6 +203,10 @@ document.querySelectorAll('.nav').forEach((button) => {
   button.onclick = () => {
     document.querySelectorAll('.nav').forEach((b) => b.classList.toggle('active', b === button));
     document.querySelectorAll('.tab').forEach((tab) => (tab.hidden = tab.id !== `tab-${button.dataset.tab}`));
+    if (button.dataset.tab === 'modpack') {
+      if (features.modpack) followPublish();
+      loadGithubVersions();
+    }
     if (button.dataset.tab === 'editor' && !editor.loaded && features.plugins) {
       editor.loaded = true;
       openDir('');
@@ -232,6 +238,7 @@ $('server-form').onsubmit = async (event) => {
     ({ pack } = await api('PUT', '/api/pack', {
       name: form.packName.value,
       subtitle: form.subtitle.value,
+      season: form.season.value.trim() || 'Saison 3',
       version: form.version.value,
       versionId: form.versionId.value,
       autoConnect: form.autoConnect.checked,
@@ -355,6 +362,112 @@ $('btn-gen-beta').onclick = () => {
   const random = crypto.getRandomValues(new Uint8Array(12));
   const part = (from) => [...random.slice(from, from + 4)].map((n) => chars[n % chars.length]).join('');
   $('server-form').betaKey.value = `QC-${part(0)}-${part(4)}-${part(8)}`;
+};
+
+// ---------- Modpack ----------
+
+function renderModpack() {
+  const mp = pack.modpack;
+  $('modpack-current').replaceChildren(
+    el('span', { className: 'muted', textContent: 'Version publiée' }),
+    mp
+      ? el('div', { className: 'modpack-facts' }, [
+          el('div', {}, [el('strong', { textContent: mp.version }), el('span', { className: 'muted', textContent: 'Modpack' })]),
+          el('div', {}, [el('strong', { textContent: mp.minecraft }), el('span', { className: 'muted', textContent: 'Minecraft' })]),
+          el('div', {}, [el('strong', { textContent: mp.neoforge }), el('span', { className: 'muted', textContent: 'NeoForge' })]),
+          el('div', {}, [
+            el('strong', { textContent: `${mp.files} · ${formatSize(mp.size)}` }),
+            el('span', { className: 'muted', textContent: 'Fichiers' }),
+          ]),
+        ])
+      : el('p', { textContent: "Aucun modpack publié : les launchers affichent « Le modpack n'est pas encore publié »." }),
+  );
+  const form = $('modpack-form');
+  $('modpack-off').hidden = Boolean(features.modpack);
+  form.hidden = !features.modpack;
+  if (mp && !form.neoforge.value) form.neoforge.value = mp.neoforge;
+  if (mp && form.minecraft.value === '1.21.1') form.minecraft.value = mp.minecraft;
+}
+
+// Versions on GitHub (published from the server's PC or with publish-modpack.bat on another PC)
+async function loadGithubVersions() {
+  if (!features.github) return;
+  try {
+    const { versions, active } = await api('GET', '/api/modpack/github');
+    $('modpack-github').hidden = versions.length === 0;
+    $('modpack-versions').replaceChildren(
+      ...versions.map((v) =>
+        el('tr', {}, [
+          el('td', { textContent: `Modpack ${v.version}` }),
+          el('td', { textContent: `NeoForge ${v.neoforge} · ${v.files} fichiers · ${formatSize(v.size)}` }),
+          el('td', {}, [
+            v.manifestUrl === active
+              ? el('span', { className: 'badge on', textContent: 'Active' })
+              : el('button', { className: 'primary', textContent: 'Activer', onclick: () => activateVersion(v) }),
+          ]),
+        ]),
+      ),
+    );
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+async function activateVersion(v) {
+  if (!confirm(`Activer le modpack ${v.version}? Les joueurs l'installeront au prochain JOUER.`)) return;
+  try {
+    ({ modpack: pack.modpack } = await api('POST', '/api/modpack/activate', { manifestUrl: v.manifestUrl }));
+    renderModpack();
+    loadGithubVersions();
+    toast(`Modpack ${v.version} activé`);
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+let publishTimer = null;
+let lastPublishState = null; // only announce the end of a publish we watched running
+async function followPublish() {
+  try {
+    const { job, modpack } = await api('GET', '/api/modpack/status');
+    const justFinished = lastPublishState === 'running' && job.state !== 'running';
+    lastPublishState = job.state;
+    $('publish-progress').hidden = job.state === 'idle';
+    $('publish-step').textContent =
+      job.state === 'error' ? `Échec : ${job.message}` : job.state === 'done' ? `Modpack ${job.result.version} publié!` : `${job.step}...`;
+    $('publish-detail').textContent = job.total ? `${job.done} / ${job.total}` : '';
+    $('publish-bar').style.width = job.state === 'done' ? '100%' : job.total ? `${(job.done / job.total) * 100}%` : '5%';
+    $('btn-publish').disabled = job.state === 'running';
+    if (job.state === 'running') {
+      publishTimer = setTimeout(followPublish, 1500);
+    } else if (job.state === 'done' && modpack) {
+      pack.modpack = modpack;
+      renderModpack();
+      if (justFinished) toast(`Modpack ${modpack.version} publié : les joueurs l'auront au prochain JOUER`);
+      if (justFinished) loadGithubVersions();
+    } else if (job.state === 'error' && justFinished) {
+      toast(job.message, true);
+    }
+  } catch (err) {
+    toast(err.message, true);
+    $('btn-publish').disabled = false;
+  }
+}
+
+$('modpack-form').onsubmit = async (event) => {
+  event.preventDefault();
+  const form = event.target;
+  try {
+    clearTimeout(publishTimer);
+    await api('POST', '/api/modpack/publish', {
+      version: form.version.value.trim(),
+      minecraft: form.minecraft.value.trim(),
+      neoforge: form.neoforge.value.trim(),
+    });
+    followPublish();
+  } catch (err) {
+    toast(err.message, true);
+  }
 };
 
 // ---------- Server file editor ----------

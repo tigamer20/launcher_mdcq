@@ -18,7 +18,7 @@ async function gh(method, url, body) {
     headers: {
       Authorization: `Bearer ${TOKEN}`,
       Accept: 'application/vnd.github+json',
-      'User-Agent': 'ModdedQC-Admin',
+      'User-Agent': 'ATM-Admin',
       ...(body ? { 'Content-Type': 'application/json' } : {}),
     },
     body: body && JSON.stringify(body),
@@ -99,7 +99,8 @@ function isNewer(a, b) {
 
 /** Latest official and dev versions + how many saved changes wait on the admin branch. */
 async function status() {
-  const releases = (await gh('GET', '/releases?per_page=50')) || [];
+  // Only the launcher's versions (v1.2.0, v1.2.0-dev), not the "modpack" release that holds the modpack files.
+  const releases = ((await gh('GET', '/releases?per_page=50')) || []).filter((r) => /^v\d+\.\d+\.\d+(-dev)?$/.test(r.tag_name));
   const official = releases.find((r) => !r.prerelease && !r.draft);
   const dev = releases.find((r) => r.prerelease && !r.draft);
   const branch = await gh('GET', `/git/ref/heads/${BRANCH}`);
@@ -144,4 +145,27 @@ async function mergeToMain(channel, version) {
   return { url: pr.html_url, number: pr.number };
 }
 
-module.exports = { configured, commitServerFile, status, mergeToMain, redact, isNewer, gh, REPO };
+// Modpack versions published to the "modpack" release (by the agent on the Mac or publish-modpack on a PC).
+async function listModpackVersions() {
+  const release = await gh('GET', '/releases/tags/modpack');
+  if (!release) return [];
+  const manifests = (release.assets || []).filter((a) => /^modpack-[0-9][0-9A-Za-z.+-]*\.json$/.test(a.name));
+  const versions = [];
+  for (const asset of manifests) {
+    const res = await fetch(asset.browser_download_url);
+    if (!res.ok) continue;
+    const m = await res.json();
+    versions.push({
+      version: m.version,
+      minecraft: m.minecraft,
+      neoforge: m.neoforge,
+      files: m.files.length + (m.bundle?.files.length || 0),
+      size: m.files.reduce((s, f) => s + f.size, 0) + (m.bundle?.size || 0),
+      publishedAt: m.publishedAt || asset.created_at,
+      manifestUrl: asset.browser_download_url,
+    });
+  }
+  return versions.sort((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)));
+}
+
+module.exports = { configured, commitServerFile, status, mergeToMain, redact, isNewer, gh, REPO, listModpackVersions };

@@ -4,8 +4,8 @@
   --border: rgba(255, 255, 255, 0.08);
   --text: #e8ebf2;
   --muted: #8a93a8;
-  --accent: #3b82f6;
-  --accent-2: #22d3ee;
+  --accent: #8b5cf6;
+  --accent-2: #fbbf24;
   --danger: #ef4444;
   --success: #22c55e;
   --radius: 14px;
@@ -23,8 +23,8 @@ body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at 15% 20%, rgba(59, 130, 246, 0.25), transparent 45%),
-    radial-gradient(circle at 85% 90%, rgba(34, 211, 238, 0.15), transparent 40%),
+    radial-gradient(circle at 15% 20%, rgba(139, 92, 246, 0.25), transparent 45%),
+    radial-gradient(circle at 85% 90%, rgba(251, 191, 36, 0.15), transparent 40%),
     var(--bg);
   user-select: none;
   overflow: hidden;
@@ -151,9 +151,9 @@ main {
   padding: 4px 12px;
   border-radius: 999px;
   font-size: 13px;
-  background: rgba(59, 130, 246, 0.15);
-  border: 1px solid rgba(59, 130, 246, 0.4);
-  color: #93c5fd;
+  background: rgba(139, 92, 246, 0.15);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  color: #ddd6fe;
 }
 
 .server-line {
@@ -347,14 +347,14 @@ main {
   font-size: 20px;
   font-weight: 800;
   letter-spacing: 2px;
-  background: linear-gradient(135deg, var(--accent), #2563eb);
-  box-shadow: 0 8px 30px rgba(59, 130, 246, 0.4);
+  background: linear-gradient(135deg, var(--accent), #6d28d9);
+  box-shadow: 0 8px 30px rgba(139, 92, 246, 0.4);
   transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .play:not(:disabled):hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 36px rgba(59, 130, 246, 0.55);
+  box-shadow: 0 12px 36px rgba(139, 92, 246, 0.55);
 }
 
 .secondary,
@@ -494,4 +494,116 @@ dialog input[type='text'] {
 
 .row input {
   min-width: 0;
+}
+
+/* ---------- All the Mod · Saison 3 ---------- */
+.hero-logo {
+  width: 96px;
+  height: 96px;
+  filter: drop-shadow(0 10px 30px rgba(139, 92, 246, 0.45));
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip.season {
+  background: rgba(251, 191, 36, 0.15);
+  border-color: rgba(251, 191, 36, 0.5);
+  color: #fde68a;
+  font-weight: 700;
+}
+
+.chip.update {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.5);
+  color: #86efac;
+}
+
+.status-detail {
+  min-height: 16px;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.play.install {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  box-shadow: 0 8px 30px rgba(245, 158, 11, 0.35);
+}
+
+/* First installation */
+.install-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+}
+
+.install-panel h2 {
+  font-size: 20px;
+}
+
+.steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.steps li::before {
+  content: '○';
+  display: inline-block;
+  width: 22px;
+  color: var(--muted);
+}
+
+.steps li.active {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.steps li.active::before {
+  content: '●';
+  color: var(--accent-2);
+}
+
+.steps li.done {
+  color: #86efac;
+}
+
+.steps li.done::before {
+  content: '✓';
+  color: var(--success);
+}
+
+.install-text {
+  font-size: 14px;
+}
+
+.progress.big {
+  height: 10px;
+}
+
+.install-detail {
+  min-height: 18px;
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.install-note {
+  font-size: 12px;
+  color: var(--muted);
 }

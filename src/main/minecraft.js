@@ -4,6 +4,7 @@ const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
 const { downloadAll, fetchJson } = require('./download');
+const { progressTracker } = require('./progress');
 const { extractZip } = require('./unzip');
 
 const VERSION_MANIFEST = 'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json';
@@ -11,6 +12,7 @@ const JAVA_MANIFEST =
   'https://launchermeta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json';
 const ASSETS_URL = 'https://resources.download.minecraft.net/';
 const LIBRARIES_URL = 'https://libraries.minecraft.net/';
+const NEOFORGE_MAVEN = 'https://maven.neoforged.net/releases/net/neoforged/neoforge/';
 
 const OS_NAME = { win32: 'windows', darwin: 'osx', linux: 'linux' }[process.platform];
 const CP_SEPARATOR = process.platform === 'win32' ? ';' : ':';
@@ -185,7 +187,8 @@ async function installJava(root, component, onProgress) {
 async function install(root, versionId, onStatus) {
   onStatus('Lecture de la version...', null);
   const version = await loadVersion(root, versionId);
-  const progress = (text) => ({ done, total }) => onStatus(text, total ? done / total : null);
+  // onStatus(text, progress 0..1 or null, download details for the speed / time remaining)
+  const progress = (text) => progressTracker((p) => onStatus(text, p.bytesTotal ? p.bytesDone / p.bytesTotal : null, p));
 
   // Client jar: downloaded once for the vanilla version, copied for the mod loader version.
   const jarId = version.jar || version.id;
@@ -268,6 +271,69 @@ async function install(root, versionId, onStatus) {
 }
 
 // ---------------------------------------------------------------------------
+// NeoForge: installed with the official NeoForge installer, run in the background (like the official launcher)
+// ---------------------------------------------------------------------------
+
+/**
+ * Makes sure NeoForge `neoforgeVersion` (for Minecraft `minecraftVersion`) is installed in root.
+ * Returns the version id to start, e.g. "neoforge-21.1.211".
+ * onStatus({ step, text, progress, detail }) receives what's happening.
+ */
+async function installNeoForge(root, { minecraftVersion, neoforgeVersion }, onStatus) {
+  const id = `neoforge-${neoforgeVersion}`;
+  const versionFile = path.join(root, 'versions', id, `${id}.json`);
+  if (fs.existsSync(versionFile)) return id;
+
+  // 1. Java (the installer is a Java program) for this Minecraft version
+  onStatus({ step: 'java', text: 'Installation de Java...', progress: null });
+  const vanilla = await loadVersion(root, minecraftVersion);
+  const javaw = await installJava(
+    root,
+    vanilla.javaVersion?.component || 'java-runtime-delta',
+    progressTracker((p) => onStatus({ step: 'java', text: 'Installation de Java...', progress: p.bytesTotal ? p.bytesDone / p.bytesTotal : null, download: p })),
+  );
+  // javaw.exe has no console output on Windows: use java.exe for the installer.
+  const java = javaw.endsWith('javaw.exe') ? path.join(path.dirname(javaw), 'java.exe') : javaw;
+
+  // 2. The official installer from NeoForge's maven, checked with its SHA-1
+  onStatus({ step: 'neoforge', text: 'Téléchargement de NeoForge...', progress: null });
+  const installerUrl = `${NEOFORGE_MAVEN}${neoforgeVersion}/neoforge-${neoforgeVersion}-installer.jar`;
+  const sha1 = (await (await fetch(`${installerUrl}.sha1`)).text()).trim().slice(0, 40);
+  const installer = path.join(root, 'installers', `neoforge-${neoforgeVersion}-installer.jar`);
+  await downloadAll([{ url: installerUrl, dest: installer, sha1: /^[0-9a-f]{40}$/.test(sha1) ? sha1 : undefined }]);
+
+  // The installer only works in a folder that looks like the official launcher's.
+  const profiles = path.join(root, 'launcher_profiles.json');
+  if (!fs.existsSync(profiles)) fs.writeFileSync(profiles, JSON.stringify({ profiles: {} }));
+
+  // 3. Run it: it downloads NeoForge's libraries and patches Minecraft (1 to 3 minutes).
+  const run = (flag) =>
+    new Promise((resolve) => {
+      const child = spawn(java, ['-jar', installer, flag, root], { cwd: root });
+      let output = '';
+      const onData = (chunk) => {
+        output += chunk;
+        const last = String(chunk).trim().split('\n').pop();
+        if (last) onStatus({ step: 'neoforge', text: 'Installation de NeoForge (1 à 3 minutes)...', progress: null, detail: last.slice(0, 120) });
+      };
+      child.stdout.on('data', onData);
+      child.stderr.on('data', onData);
+      child.on('error', (err) => resolve({ code: -1, output: err.message }));
+      child.on('exit', (code) => resolve({ code, output }));
+    });
+  onStatus({ step: 'neoforge', text: 'Installation de NeoForge (1 à 3 minutes)...', progress: null });
+  let result = await run('--install-client');
+  if (result.code !== 0 && /not a recognized option|UnrecognizedOption/i.test(result.output)) {
+    result = await run('--installClient'); // older installers use this spelling
+  }
+  fs.writeFileSync(path.join(root, 'installers', `neoforge-${neoforgeVersion}.log`), result.output);
+  if (result.code !== 0 || !fs.existsSync(versionFile)) {
+    throw new Error(`L'installation de NeoForge a échoué (voir installers/neoforge-${neoforgeVersion}.log)`);
+  }
+  return id;
+}
+
+// ---------------------------------------------------------------------------
 // Launch
 // ---------------------------------------------------------------------------
 
@@ -287,13 +353,17 @@ function flattenArgs(list, features) {
 function launch(root, installed, options) {
   const { version, java, libraries, clientJar, nativesDir, loggingArg, legacyAssets } = installed;
   const { account, ramMb, server } = options;
+  // Shared files (Java, libraries, assets) live in root; the season's game folder (mods, saves...) in gameDir.
+  const gameDir = options.gameDir || root;
 
   const classpath = [
     ...libraries.filter((l) => !l.native).map((l) => path.join(root, 'libraries', l.path)),
     clientJar,
   ].join(CP_SEPARATOR);
 
-  const serverAddress = server ? `${server.host}:${server.port || 25565}` : '';
+  // Without ":25565" Minecraft also follows SRV records (playit.gg addresses), like when a player types it.
+  const serverPort = Number(server?.port) || 25565;
+  const serverAddress = server ? (serverPort === 25565 ? server.host : `${server.host}:${serverPort}`) : '';
   const vars = {
     auth_player_name: account.name,
     auth_uuid: account.uuid,
@@ -305,7 +375,7 @@ function launch(root, installed, options) {
     user_properties: '{}',
     version_name: version.id,
     version_type: version.type || 'release',
-    game_directory: root,
+    game_directory: gameDir,
     assets_root: path.join(root, 'assets'),
     game_assets: legacyAssets || path.join(root, 'assets'),
     assets_index_name: version.assetIndex.id,
@@ -313,7 +383,7 @@ function launch(root, installed, options) {
     library_directory: path.join(root, 'libraries'),
     classpath,
     classpath_separator: CP_SEPARATOR,
-    launcher_name: 'ModdedQC',
+    launcher_name: 'ATM',
     launcher_version: '1.0.0',
     quickPlayMultiplayer: serverAddress,
     quick_play_multiplayer: serverAddress,
@@ -345,13 +415,13 @@ function launch(root, installed, options) {
     ...gameArgs.map(fill),
   ];
 
-  const logDir = path.join(root, 'logs');
+  const logDir = path.join(gameDir, 'logs');
   fs.mkdirSync(logDir, { recursive: true });
   const log = fs.createWriteStream(path.join(logDir, 'launcher-latest.log'));
-  const child = spawn(java, args, { cwd: root });
+  const child = spawn(java, args, { cwd: gameDir });
   child.stdout.pipe(log);
   child.stderr.pipe(log);
   return child;
 }
 
-module.exports = { install, launch, mavenPath, resolveLibraries, loadVersion, rulesAllow };
+module.exports = { install, installNeoForge, launch, mavenPath, resolveLibraries, loadVersion, rulesAllow };

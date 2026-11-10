@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ModdedQC agent: runs on the PC/VPS that hosts Paper, so the admin website (on Render) can
+// ATM agent: runs on the PC/VPS that hosts Paper, so the admin website (on Render) can
 // manage plugins and send console commands. No dependencies, only Node.js.
 //
 //   AGENT_SECRET=... PAPER_DIR=/path/to/paper RCON_PASSWORD=... node agent.js
@@ -11,6 +11,7 @@ const http = require('http');
 const crypto = require('crypto');
 const { rcon } = require('./rcon');
 const { sha256, verify } = require('./signing');
+const modpack = require('./publish');
 
 const PORT = Number(process.env.AGENT_PORT) || 8765;
 const SECRET = process.env.AGENT_SECRET;
@@ -147,7 +148,20 @@ async function readJson(req, expectedHash) {
 // ---------------------------------------------------------------------------
 
 const routes = {
-  'GET /info': () => ({ plugins: true, rcon: Boolean(RCON) }),
+  'GET /info': () => ({ plugins: true, rcon: Boolean(RCON), modpack: modpack.configured() }),
+
+  // Publishes the client modpack (MODPACK_DIR) for the launchers; runs in the background.
+  'POST /modpack/publish': async (req, url, bodyHash) => {
+    const options = await readJson(req, bodyHash);
+    try {
+      modpack.start(options);
+    } catch (err) {
+      throw httpError(400, err.message);
+    }
+    return modpack.status();
+  },
+
+  'GET /modpack/status': () => modpack.status(),
 
   'GET /plugins': () => ({ plugins: listPlugins() }),
 
@@ -222,7 +236,8 @@ http
     }
   })
   .listen(PORT, () => {
-    console.log(`Agent ModdedQC prêt sur le port ${PORT}`);
+    console.log(`Agent ATM prêt sur le port ${PORT}`);
     console.log(`Plugins: ${PLUGINS_DIR}`);
     console.log(`Console RCON: ${RCON ? `${RCON.host}:${RCON.port}` : 'désactivée (RCON_PASSWORD manquant)'}`);
+    console.log(`Modpack: ${modpack.configured() ? process.env.MODPACK_DIR : 'désactivé (MODPACK_DIR ou GITHUB_TOKEN manquant)'}`);
   });

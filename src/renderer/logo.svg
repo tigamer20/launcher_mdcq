@@ -1,11 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- All the Mod · Saison 3 · ATM — original logo -->
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#3b82f6"/>
-      <stop offset="1" stop-color="#22d3ee"/>
+    <linearGradient id="hex" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a78bfa"/>
+      <stop offset="0.55" stop-color="#6d28d9"/>
+      <stop offset="1" stop-color="#3b0764"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fde68a"/>
+      <stop offset="1" stop-color="#f59e0b"/>
     </linearGradient>
   </defs>
-  <path d="M32 4 58 18v28L32 60 6 46V18z" fill="url(#g)"/>
-  <path d="M32 4 58 18 32 32 6 18z" fill="#fff" fill-opacity=".25"/>
-  <path d="M32 32v28L6 46V18z" fill="#000" fill-opacity=".15"/>
+  <path d="M64 6 114 35v58L64 122 14 93V35z" fill="url(#hex)"/>
+  <path d="M64 6 114 35 64 64 14 35z" fill="#fff" fill-opacity=".12"/>
+  <path d="M64 13 108 38.5v51L64 115 20 89.5v-51z" fill="none" stroke="#fde68a" stroke-opacity=".35" stroke-width="2"/>
+  <!-- the "A": a mountain / pickaxe shape -->
+  <path d="M64 30 92 92H78l-5.5-13h-17L50 92H36zm0 22-5 15h10z" fill="url(#gold)"/>
+  <!-- season star -->
+  <path d="M97 18l3.2 7.8L108 29l-7.8 3.2L97 40l-3.2-7.8L86 29l7.8-3.2z" fill="#fde68a"/>
 </svg>

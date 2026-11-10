@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ModdedQC admin website + file server for the launcher. No dependencies, only Node.js.
+// ATM admin website + file server for the launcher. No dependencies, only Node.js.
 //
 //   ADMIN_PASSWORD=secret node admin-panel/server.js
 //
@@ -69,11 +69,12 @@ function ensureDefaultPack() {
     packFile,
     JSON.stringify(
       {
-        name: 'ModdedQC',
-        subtitle: 'Serveur Minecraft du Québec',
+        name: 'All the Mod',
+        season: 'Saison 3',
+        subtitle: 'Saison 3 · basé sur All the Mods 10',
         version: '1.0.0',
-        versionId: '1.21.4',
-        server: { host: 'play.moddedqc.ca', port: 25565 },
+        versionId: '1.21.1',
+        server: { host: 'exemple.gl.joinmc.link', port: 25565 },
         autoConnect: true,
         maintenance: { enabled: false, message: '' },
         syncDirs: [],
@@ -104,6 +105,26 @@ async function keepOnGitHub(save) {
   } catch (err) {
     throw httpError(502, `Appliqué, mais pas sauvegardé sur GitHub (perdu au prochain redémarrage) : ${err.message}`);
   }
+}
+
+// Makes `info` ({ version, minecraft, neoforge, manifestUrl, files, size }) the modpack the launchers install.
+async function activateModpack(info) {
+  if (!String(info.manifestUrl).startsWith(`https://github.com/${github.REPO}/releases/download/modpack/`)) {
+    throw httpError(502, 'Adresse du modpack inattendue');
+  }
+  const pack = readPack();
+  pack.modpack = {
+    version: info.version,
+    minecraft: info.minecraft,
+    neoforge: info.neoforge,
+    manifestUrl: info.manifestUrl,
+    files: info.files,
+    size: info.size,
+    publishedAt: new Date().toISOString(),
+  };
+  pack.versionId = info.minecraft;
+  await savePack(pack);
+  return pack.modpack;
 }
 
 // The beta key is never stored in clear text (the GitHub repository is public): only its SHA-256.
@@ -165,12 +186,12 @@ async function agent(method, pathWithQuery, body) {
 
 // What the agent can do. Never throws: an unreachable agent just disables the tabs.
 async function agentFeatures() {
-  if (!AGENT_URL) return { plugins: false, rcon: false, error: null };
+  if (!AGENT_URL) return { plugins: false, rcon: false, modpack: false, error: null };
   try {
     const info = await agent('GET', '/info');
-    return { plugins: Boolean(info.plugins), rcon: Boolean(info.rcon), error: null };
+    return { plugins: Boolean(info.plugins), rcon: Boolean(info.rcon), modpack: Boolean(info.modpack), error: null };
   } catch (err) {
-    return { plugins: false, rcon: false, error: err.message };
+    return { plugins: false, rcon: false, modpack: false, error: err.message };
   }
 }
 
@@ -264,6 +285,39 @@ const api = {
   },
 
   // Live status of the Minecraft server (players, version...)
+  // Modpack: published from the Mac by the agent (paper-agent/publish.js), then announced to the launchers here.
+  'POST /api/modpack/publish': async (req) => {
+    const { version, minecraft, neoforge } = await readJson(req);
+    return agent('POST', '/modpack/publish', { version, minecraft, neoforge });
+  },
+
+  'GET /api/modpack/status': async () => {
+    const job = await agent('GET', '/modpack/status');
+    const result = job.result;
+    // Publishing finished on the Mac: launchers start using the new version.
+    if (job.state === 'done' && result?.manifestUrl && result.manifestUrl !== readPack().modpack?.manifestUrl) {
+      await activateModpack(result);
+    }
+    return { job, modpack: readPack().modpack || null };
+  },
+
+  // Versions published on GitHub (also from a PC with publish-modpack.bat), to activate one.
+  'GET /api/modpack/github': async () => {
+    if (!github.configured()) throw httpError(400, 'GITHUB_TOKEN n\'est pas configuré');
+    try {
+      return { versions: await github.listModpackVersions(), active: readPack().modpack?.manifestUrl || null };
+    } catch (err) {
+      throw httpError(502, err.message);
+    }
+  },
+
+  'POST /api/modpack/activate': async (req) => {
+    const { manifestUrl } = await readJson(req);
+    const version = (await github.listModpackVersions()).find((v) => v.manifestUrl === manifestUrl);
+    if (!version) throw httpError(404, 'Version introuvable sur GitHub');
+    return { modpack: await activateModpack(version) };
+  },
+
   'GET /api/status': async () => {
     const { server, versionId } = readPack();
     return server?.host ? pingServer(server.host, server.port, { minecraftVersion: versionId }) : { online: false };
@@ -325,7 +379,7 @@ const api = {
   'PUT /api/pack': async (req) => {
     const body = await readJson(req);
     const pack = readPack();
-    for (const key of ['name', 'subtitle', 'version', 'versionId', 'autoConnect', 'syncDirs', 'keepPlayerChanges']) {
+    for (const key of ['name', 'season', 'subtitle', 'version', 'versionId', 'autoConnect', 'syncDirs', 'keepPlayerChanges']) {
       if (key in body) pack[key] = body[key];
     }
     // betaKey: a new key replaces the old one, null removes it, empty/absent keeps it.

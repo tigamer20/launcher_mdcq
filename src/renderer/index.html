@@ -6,7 +6,7 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; img-src 'self' data: https://mc-heads.net; style-src 'self'; script-src 'self'"
     />
-    <title>ModdedQC Launcher</title>
+    <title>All the Mod · Saison 3</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -14,7 +14,7 @@
     <header class="titlebar">
       <div class="brand">
         <img src="logo.svg" alt="" />
-        <span>ModdedQC</span>
+        <span>All the Mod</span>
         <span class="app-version" id="app-version"></span>
       </div>
       <div class="window-buttons">
@@ -32,9 +32,14 @@
     <main>
       <!-- Left: server presentation -->
       <section class="hero">
-        <span class="chip" id="pack-version">Chargement...</span>
-        <h1 id="pack-name">ModdedQC</h1>
-        <p class="subtitle" id="pack-subtitle">Serveur Minecraft du Québec</p>
+        <img src="logo.svg" alt="" class="hero-logo" />
+        <div class="chips">
+          <span class="chip season" id="pack-season">Saison 3</span>
+          <span class="chip" id="pack-version">Chargement...</span>
+          <span class="chip update" id="pack-update" hidden>Mise à jour disponible</span>
+        </div>
+        <h1 id="pack-name">All the Mod</h1>
+        <p class="subtitle" id="pack-subtitle">Saison 3 · basé sur All the Mods 10</p>
         <div class="server-line" id="server-line" hidden>
           <span class="dot"></span>
           <span id="server-address"></span>
@@ -42,8 +47,24 @@
         </div>
       </section>
 
+      <!-- First installation: steps + progress (replaces the news while it runs) -->
+      <section class="install-panel" id="install-panel" hidden>
+        <h2 id="install-title">Installation du modpack</h2>
+        <ol class="steps" id="install-steps">
+          <li data-step="java">Java</li>
+          <li data-step="neoforge">NeoForge</li>
+          <li data-step="minecraft">Minecraft</li>
+          <li data-step="modpack">Modpack</li>
+          <li data-step="files">Fichiers du serveur</li>
+        </ol>
+        <p class="install-text" id="install-text">Préparation...</p>
+        <div class="progress big"><div id="install-bar" class="progress-bar indeterminate"></div></div>
+        <p class="install-detail" id="install-detail"></p>
+        <p class="install-note">Tu peux laisser le launcher ouvert : la première installation peut prendre 5 à 20 minutes selon ta connexion.</p>
+      </section>
+
       <!-- Right: news from the file server -->
-      <section class="news">
+      <section class="news" id="news-section">
         <h2>Nouvelles</h2>
         <div id="news-list" class="news-list"></div>
       </section>
@@ -63,8 +84,9 @@
       </div>
 
       <div class="progress-area">
-        <div id="status-text" class="status-text">Prêt à jouer</div>
+        <div id="status-text" class="status-text">Chargement...</div>
         <div class="progress"><div id="progress-bar" class="progress-bar"></div></div>
+        <div id="status-detail" class="status-detail"></div>
       </div>
 
       <!-- Hidden developer section: Ctrl+Shift+D shows/hides it -->
@@ -77,7 +99,7 @@
           />
         </svg>
       </button>
-      <button id="btn-play" class="play" disabled>JOUER</button>
+      <button id="btn-play" class="play" disabled>INSTALLER</button>
     </footer>
 
     <!-- Settings dialog -->

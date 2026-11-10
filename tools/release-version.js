@@ -43,7 +43,7 @@ const dev = channel === 'dev';
 const appVersion = dev ? `${version}-dev` : version;
 fs.appendFileSync(
   process.env.GITHUB_OUTPUT,
-  `version=${appVersion}\ntag=v${appVersion}\nprerelease=${dev}\ntitle=ModdedQC Launcher ${dev ? `${version} (dev)` : version}\n`,
+  `version=${appVersion}\ntag=v${appVersion}\nprerelease=${dev}\ntitle=ATM Launcher ${dev ? `${version} (dev)` : version}\n`,
 );
 fs.writeFileSync(path.join(process.env.RUNNER_TEMP || '.', 'release-notes.md'), notes);
 console.log(`Nouvelle version ${dev ? 'dev' : 'officielle'} du launcher: ${appVersion} (officielle précédente: ${latest || 'aucune'})`);

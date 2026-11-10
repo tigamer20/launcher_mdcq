@@ -69,7 +69,7 @@ async function downloadOne(task, onBytes) {
 /**
  * Downloads every task that is missing or outdated.
  * task = { url, dest, sha1?, size?, executable? }
- * onProgress({ done, total }) is called with byte counts.
+ * onProgress({ done, total, filesDone, filesTotal }) is called with byte counts and finished files.
  */
 async function downloadAll(tasks, onProgress = () => {}) {
   const needed = [];
@@ -80,14 +80,19 @@ async function downloadAll(tasks, onProgress = () => {}) {
 
   const total = needed.reduce((sum, t) => sum + (t.size || 0), 0);
   let done = 0;
+  let filesDone = 0;
   const report = (n) => {
     done += n;
-    onProgress({ done, total: Math.max(total, done) });
+    onProgress({ done, total: Math.max(total, done), filesDone, filesTotal: needed.length });
   };
 
   const queue = [...needed];
   const workers = Array.from({ length: Math.min(PARALLEL, queue.length) }, async () => {
-    while (queue.length) await downloadOne(queue.shift(), report);
+    while (queue.length) {
+      await downloadOne(queue.shift(), report);
+      filesDone++;
+      report(0);
+    }
   });
   await Promise.all(workers);
   return needed.length;

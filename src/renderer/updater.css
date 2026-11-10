@@ -4,8 +4,8 @@
   --border: rgba(255, 255, 255, 0.08);
   --text: #e8ebf2;
   --muted: #8a93a8;
-  --accent: #3b82f6;
-  --accent-2: #22d3ee;
+  --accent: #8b5cf6;
+  --accent-2: #fbbf24;
 }
 
 * {
@@ -27,7 +27,7 @@ body {
   padding: 28px;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   color: var(--text);
-  background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.25), transparent 60%), var(--bg);
+  background: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.25), transparent 60%), var(--bg);
   user-select: none;
   -webkit-app-region: drag;
   text-align: center;
@@ -141,7 +141,7 @@ button {
 }
 
 .primary:hover {
-  background: #2563eb;
+  background: #6d28d9;
 }
 
 .ghost {

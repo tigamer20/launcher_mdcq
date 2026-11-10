@@ -1,18 +1,18 @@
-# ModdedQC Launcher
+# ATM Launcher
 
-Custom Minecraft launcher + admin website for the **ModdedQC** Paper server.
+Custom Minecraft launcher + admin website for the **ATM** server (All the Mod · Saison 3, based on All the Mods 10).
 
 ```
- Players' PCs                    Render (internet)                  Your Paper PC / VPS
+ Players' PCs                    Render (internet)                  Server PC (Windows)
 ┌──────────────────┐  news,     ┌──────────────────────┐  signed   ┌──────────────────────┐
-│ ModdedQC Launcher│◄───────────│ Admin website        │──────────►│ paper-agent          │
-│ (ModdedQC-Setup  │ maintenance│ admin-panel/         │ requests  │  ├─ plugins/ folder  │
-│  .exe)           │ files      │                      │           │  └─ RCON (local)     │
-└────────┬─────────┘            └──────────────────────┘           │ Paper server         │
+│ ATM Launcher     │◄───────────│ Admin website        │──────────►│ paper-agent          │
+│ (ATM-Setup.exe)  │ maintenance│ admin-panel/         │ requests  │  ├─ plugins/ folder  │
+│                  │ files      │                      │           │  └─ RCON (local)     │
+└────────┬─────────┘            └──────────────────────┘           │ Minecraft server     │
          └──────────────────── plays on ──────────────────────────►└──────────────────────┘
 ```
 
-- **Launcher (players):** install `ModdedQC-Setup.exe`, log in with Microsoft, click **JOUER**. It installs the right Minecraft version and Java, downloads the files you publish (resource packs, `options.txt`...) and connects straight to the server. It shows the news, the player count and the maintenance message.
+- **Launcher (players):** install `ATM-Setup.exe`, log in with Microsoft, click **JOUER**. It installs the right Minecraft version and Java, downloads the files you publish (resource packs, `options.txt`...) and connects straight to the server. It shows the news, the player count and the maintenance message.
 - **Admin website (staff, on Render):** live server status, plugins, console, news, maintenance mode and player files. Changes show up in every launcher within 15 seconds.
 - **Agent (on the Paper machine):** a tiny program that lets the website manage plugins and send console commands. It only accepts requests signed with your secret.
 
@@ -20,9 +20,9 @@ Plugins stay on the Paper server: players run normal (vanilla) Minecraft, matchi
 
 ## Download (players)
 
-**<https://github.com/tigamer20/launcher_mdcq/releases/latest/download/ModdedQC-Setup.exe>**
+**<https://github.com/tigamer20/launcher_mdcq/releases/latest/download/ATM-Setup.exe>**
 
-Open the file and follow the installer. It creates a **ModdedQC** shortcut on the desktop and in the Start menu. After that, the launcher updates itself.
+Open the file and follow the installer. It creates an **ATM** shortcut on the desktop and in the Start menu. After that, the launcher updates itself.
 
 > Windows may show "Windows protected your PC" because the installer isn't signed with a paid certificate. Click **More info** → **Run anyway**.
 
@@ -56,7 +56,7 @@ This repository contains a `render.yaml` file, so Render sets everything up for 
    | `ADMIN_PASSWORD` | Password to log in to the website (8+ characters).                      |
    | `AGENT_SECRET`   | The secret from step 1.                                                 |
    | `AGENT_URL`      | Address of the agent from step 3, e.g. `http://203.0.113.10:8765/`. You can leave it empty for now and add it later in **Environment**. |
-4. Wait for the deploy to finish. Your website is at `https://moddedqc-admin.onrender.com/admin/` (Render shows the exact URL; you can add your own domain in **Settings** → **Custom Domains**).
+4. Wait for the deploy to finish. Your website is at `https://atm-admin.onrender.com/admin/` (Render shows the exact URL; you can add your own domain in **Settings** → **Custom Domains**).
 
 **Cost: free.** Render's free plan erases the website's files on every restart, so the website keeps its data (server address, news, maintenance, beta key, player files) in the **`admin-data` branch of this repository**: it restores everything from there at startup and saves every change there right away. This needs `GITHUB_TOKEN` (see "Server file editor" below, the same token is used).
 - The beta key is only stored as a SHA-256 fingerprint, never in clear text (the repository is public).
@@ -76,7 +76,10 @@ Every push to `main` that changes the website redeploys it automatically.
 | Instance type      | Free                         |
 | Environment        | `NODE_VERSION` = `22`, `TRUST_PROXY` = `1`, plus `ADMIN_PASSWORD`, `AGENT_SECRET`, `AGENT_URL`, `GITHUB_TOKEN` |
 
-### 3. Install the agent on the Paper machine (Mac, Windows or Linux)
+### 3. Install the agent on the server machine (Windows, Mac or Linux)
+
+> **All the Mod · Saison 3 runs on a Windows PC.** On Windows: use `start-agent.example.bat` (copy it to `start-agent.bat`), set `PAPER_DIR` to the **server** folder (the All the Mods 10 *server pack*, with `server.properties`), allow **Node.js** when Windows Defender Firewall asks, forward port **8765** on the router to this PC, and in **Settings → System → Power** set sleep to **Never**, so the server and the agent stay reachable. The **Plugins** tab is for Paper servers: a NeoForge server has mods instead.
+
 
 1. Install **Node.js 22 LTS** from <https://nodejs.org> (on a Mac, take the **macOS Installer (.pkg)**).
 2. Copy the `paper-agent/` folder from this repository to that machine (for example next to your Paper folder).
@@ -115,12 +118,33 @@ Every request from the website is signed with the secret, expires after 60 secon
 | `AGENT_PORT`     | no       | Default `8765`.                                            |
 | `RCON_HOST/PORT` | no       | Default `127.0.0.1` / `25575`.                             |
 
+### Publish the modpack (All the Mod · Saison 3)
+
+The launcher installs **NeoForge** and a **custom modpack based on All the Mods 10** (Minecraft 1.21.1).
+
+**Where the modpack comes from:** your **CurseForge instance** of the modpack (the folder with `mods/`, `config/`, `kubejs/`..., found with CurseForge > your profile > **...** > **Open Folder**). There are two ways to publish it:
+
+- **The instance is on the server's PC** (simplest): in `start-agent.bat`, set `MODPACK_DIR` to that folder and `GITHUB_TOKEN` (Contents: Read and write on this repository), then restart the agent. Its window shows `Modpack: <folder>`, and you publish from the admin website.
+- **The instance is on another PC:** install Node.js 22 there, copy `paper-agent/` to it, copy `publish-modpack.example.bat` to `publish-modpack.bat`, fill in `MODPACK_DIR` and `GITHUB_TOKEN`, and double-click it. It asks for the version (Minecraft and NeoForge are read from the instance). Then on the admin website: **Modpack** tab > **Activer** on that version.
+
+**Each time you change the modpack:**
+1. Change the mods and configs in the instance and test it in CurseForge first (`branding/GUIDE.md` explains how to customise it).
+2. Admin website → **Modpack** tab → type the new version (e.g. `1.0.1`), check **Minecraft** (`1.21.1`) and **NeoForge** (the version of your instance, e.g. `21.1.211`) → **Publier depuis le PC du serveur** (or run `publish-modpack.bat` on the other PC, then **Activer**).
+3. Only **the changed files** are sent to the `modpack` release on GitHub (a pre-release, separate from the launcher's versions). The first time, the whole modpack is uploaded, which can take a while.
+4. When it says *Modpack x publié*, every launcher gets it at the next click on **JOUER**. Players only download what changed.
+
+What is sent: everything in the instance except the player's own data and caches (`saves`, `logs`, `screenshots`, `simplebackups`, `schematics`, `journeymap`, `servers.dat`, `dynamic-*-pack-cache`, `moonlight-global-datapacks`, CurseForge's own files...). Mods and files over 1 MB are sent one by one; small files (configs, scripts) go in one zip. `options.txt` and a few personal settings are only installed the first time, never overwritten.
+
+**What players see:** the first time, **INSTALLER** downloads Java, NeoForge, Minecraft and the modpack with the steps, progress, speed and time remaining (5 to 20 minutes). After that the button is **JOUER**: it applies updates, starts NeoForge and joins the server. Each season gets its own game folder (`.atm/instances/saison-3`), set by the **Saison** field in the **Serveur** tab.
+
+> The modpack files are public on GitHub (the repository is public). Many mods allow redistribution in a modpack, but some don't: check the licenses of the mods you add.
+
 ### 4. Publish the launcher (and its updates)
 
 The installer is built by GitHub (on a Windows machine) with `.github/workflows/release.yml`.
 
 **Once:** in the GitHub repository, **Settings** → **Secrets and variables** → **Actions** → **Variables** tab → add:
-- `SERVER_URL` = your Render URL, e.g. `https://moddedqc-admin.onrender.com/`
+- `SERVER_URL` = your Render URL, e.g. `https://atm-admin.onrender.com/`
 - `AZURE_CLIENT_ID` = the ID from step 1
 
 **Every time you want to release a version**, push to `main` with a commit message that contains:
@@ -137,7 +161,7 @@ git push origin main
 (On github.com, type the same thing in the **Commit message** box when you edit a file or merge a pull request.)
 
 What happens next, automatically:
-1. GitHub builds `ModdedQC-Setup.exe` with version **1.2.0** (about 5 minutes; follow it in the **Actions** tab), plus the list of the launcher's files with their fingerprint (`app-update.json`).
+1. GitHub builds `ATM-Setup.exe` with version **1.2.0** (about 5 minutes; follow it in the **Actions** tab), plus the list of the launcher's files with their fingerprint (`app-update.json`).
 2. It publishes release **v1.2.0** on the Releases page, with the rest of your commit message as release notes.
 3. When a player opens the launcher, a small update window (like Discord's) checks GitHub, sees 1.2.0 is newer and downloads **only the files that changed**. It shows the version, size downloaded / total, speed, time remaining and how many files changed. Then it checks the files and restarts on the new version. Nothing to install. The version is shown next to the logo (`v1.2.0`).
    - The full installer is only downloaded when the Electron runtime itself changes (when `electron` is upgraded in `package.json`).
@@ -201,10 +225,10 @@ The **Fichiers du serveur** tab browses the Paper folder on the Mac (through the
 ```bash
 npm install
 ADMIN_PASSWORD=devpassword node admin-panel/server.js          # website on http://localhost:8080/admin/
-MODDEDQC_SERVER_URL=http://localhost:8080/ npm start            # launcher pointed at it
+ATM_SERVER_URL=http://localhost:8080/ npm start            # launcher pointed at it
 ```
 
-Game files are stored in `%APPDATA%\.moddedqc` (Windows), `~/Library/Application Support/.moddedqc` (macOS) or `~/.config/.moddedqc` (Linux). The game output is written to `logs/launcher-latest.log` there.
+Game files are stored in `%APPDATA%\.atm` (Windows), `~/Library/Application Support/.atm` (macOS) or `~/.config/.atm` (Linux). The game output is written to `logs/launcher-latest.log` there.
 
 ```
 src/main/            launcher: window, Microsoft login, file sync, Minecraft install/launch, server status, self-update
@@ -214,5 +238,5 @@ paper-agent/         agent for the Paper machine (no dependencies)
 tools/               manifest builder + release helpers
 build/icon.png       app icon
 render.yaml          Render Blueprint
-.github/workflows/   builds ModdedQC-Setup.exe
+.github/workflows/   builds ATM-Setup.exe
 ```
