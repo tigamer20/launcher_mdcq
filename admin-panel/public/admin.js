@@ -202,6 +202,7 @@ document.querySelectorAll('.nav').forEach((button) => {
   button.onclick = () => {
     document.querySelectorAll('.nav').forEach((b) => b.classList.toggle('active', b === button));
     document.querySelectorAll('.tab').forEach((tab) => (tab.hidden = tab.id !== `tab-${button.dataset.tab}`));
+    if (button.dataset.tab === 'players') loadPlayers();
     if (button.dataset.tab === 'modpack') {
       if (features.modpack) followPublish();
       loadGithubVersions();
@@ -662,3 +663,68 @@ setupDropZone($('drop-zone'), uploadFiles);
 // ---------- Start ----------
 
 showApp().catch(showLogin);
+
+// ---------- Players who logged in to the launcher ----------
+
+const dateFormat = new Intl.DateTimeFormat('fr-CA', { dateStyle: 'medium', timeStyle: 'short' });
+const when = (iso) => (iso ? dateFormat.format(new Date(iso)) : '-');
+
+function playerCell(name, uuid) {
+  return el('td', {}, [
+    el('span', { className: 'player' }, [
+      el('img', { src: `https://mc-heads.net/avatar/${encodeURIComponent(uuid)}/24`, alt: '', width: 24, height: 24 }),
+      el('span', { textContent: name }),
+    ]),
+  ]);
+}
+
+function renderPlayers(data) {
+  $('players-off').hidden = data.enabled;
+  const now = Date.now();
+  const activeSince = (ms) => data.players.filter((p) => now - Date.parse(p.lastSeen) < ms).length;
+  $('players-count').textContent = data.players.length;
+  $('players-today').textContent = activeSince(24 * 3600_000);
+  $('players-week').textContent = activeSince(7 * 24 * 3600_000);
+  $('players-empty').hidden = data.players.length > 0;
+  $('launcher-players').replaceChildren(
+    ...data.players.map((p) =>
+      el('tr', {}, [
+        playerCell(p.name, p.uuid),
+        el('td', { textContent: when(p.lastSeen) }),
+        el('td', { textContent: when(p.lastLogin) }),
+        el('td', { textContent: when(p.lastPlay) }),
+        el('td', { textContent: String(p.launches) }),
+        el('td', { textContent: p.launcherVersion ? `v${p.launcherVersion}` : '-' }),
+      ]),
+    ),
+  );
+  $('players-events').replaceChildren(
+    ...data.events.map((e) =>
+      el('tr', {}, [
+        playerCell(e.name, e.uuid),
+        el('td', { textContent: data.labels[e.event] || e.event }),
+        el('td', { textContent: when(e.at) }),
+        el('td', { textContent: e.version ? `v${e.version}` : '' }),
+      ]),
+    ),
+  );
+}
+
+async function loadPlayers() {
+  try {
+    renderPlayers(await api('GET', '/api/players'));
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+$('btn-players-refresh').onclick = loadPlayers;
+$('btn-players-clear').onclick = async () => {
+  if (!confirm("Effacer toute la liste des joueurs et l'historique ?")) return;
+  try {
+    renderPlayers(await api('POST', '/api/players/clear'));
+    toast('Historique effacé');
+  } catch (err) {
+    toast(err.message, true);
+  }
+};

@@ -20,6 +20,7 @@ const { pingServer } = require('../src/main/status');
 const { signHeaders } = require('../paper-agent/signing');
 const github = require('./github');
 const storage = require('./storage');
+const players = require('./players');
 
 const PORT = Number(process.env.PORT) || 8080;
 const LOCAL_DATA_DIR = path.join(__dirname, 'data');
@@ -480,6 +481,17 @@ async function handleApi(req, res, url) {
     });
   }
 
+  // Public: launchers report Microsoft logins and game launches (checked with Mojang, see players.js).
+  if (req.method === 'POST' && url.pathname === '/api/players/seen') {
+    const limit = failures.get(`seen:${ip}`);
+    const now = Date.now();
+    const count = limit && limit.until > now ? limit.count + 1 : 1;
+    failures.set(`seen:${ip}`, { count, until: limit && limit.until > now ? limit.until : now + 10 * 60_000 });
+    if (count > 30) throw httpError(429, 'Trop de requêtes');
+    await players.record(await readJson(req));
+    return sendJson(res, 200, { ok: true });
+  }
+
   // Public: launchers check the beta key players type in their hidden dev section.
   if (req.method === 'POST' && url.pathname === '/api/beta/check') {
     const fail = failures.get(`beta:${ip}`);
@@ -504,6 +516,13 @@ async function handleApi(req, res, url) {
   if (req.method === 'POST' && url.pathname === '/api/logout') {
     sessions.delete(token);
     return sendJson(res, 200, { ok: true }, { 'Set-Cookie': 'session=; Path=/; Max-Age=0' });
+  }
+
+  // Players who used the launcher
+  if (req.method === 'GET' && url.pathname === '/api/players') return sendJson(res, 200, players.list());
+  if (req.method === 'POST' && url.pathname === '/api/players/clear') {
+    players.clear();
+    return sendJson(res, 200, players.list());
   }
 
   const handler = api[`${req.method} ${url.pathname}`];
@@ -565,6 +584,13 @@ async function start() {
     console.warn('GITHUB_TOKEN absent: les données restent seulement sur le disque du serveur.');
   }
   ensureDefaultPack();
+  players.init({
+    dataDir: DATA_DIR,
+    secret: process.env.DATA_KEY || (PASSWORD_OK ? PASSWORD : null),
+    save: storage.configured() ? (relative, buffer) => storage.saveFile(relative, buffer) : null,
+  });
+  // Render stops the website when it sleeps or redeploys: save the latest players on GitHub first.
+  process.once('SIGTERM', () => players.flush().finally(() => process.exit(0)));
   // Old versions stored the beta key in clear text: keep only its hash.
   const pack = readPack();
   if (pack.betaKey) {

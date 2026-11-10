@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="google" content="notranslate" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https://mc-heads.net; style-src 'self'; script-src 'self'" />
     <title>All the Mod · Admin</title>
     <link rel="icon" href="logo.svg" />
     <link rel="stylesheet" href="admin.css" />
@@ -29,6 +29,7 @@
         <nav>
           <button class="nav active" data-tab="dashboard">Tableau de bord</button>
           <button class="nav" data-tab="server">Serveur</button>
+          <button class="nav" data-tab="players">Joueurs</button>
           <button class="nav" data-tab="modpack">Modpack</button>
           <button class="nav" data-tab="plugins">Plugins</button>
           <button class="nav" data-tab="editor">Fichiers du serveur</button>
@@ -263,6 +264,44 @@
         </section>
 
         <!-- Files -->
+        <!-- Players who logged in to the launcher -->
+        <section class="tab" id="tab-players" hidden>
+          <div class="row between">
+            <h1>Joueurs</h1>
+            <span class="row">
+              <button class="ghost" id="btn-players-refresh">Actualiser</button>
+              <button class="ghost" id="btn-players-clear">Effacer l'historique</button>
+            </span>
+          </div>
+          <p class="muted">
+            Chaque ouverture du launcher, connexion Microsoft et lancement du jeu (launcher 0.0.9 ou plus), vérifiés
+            auprès de Mojang. Les joueurs déjà connectés apparaissent dès qu'ils ouvrent le launcher mis à jour. La liste est chiffrée avant d'être sauvegardée sur GitHub.
+          </p>
+          <p class="card agent-error" id="players-off" hidden>
+            Ajoute ADMIN_PASSWORD (ou DATA_KEY) sur Render pour garder la liste des joueurs.
+          </p>
+          <div class="stats">
+            <div class="card stat"><span class="muted">Joueurs</span><strong id="players-count">-</strong></div>
+            <div class="card stat"><span class="muted">Actifs aujourd'hui</span><strong id="players-today">-</strong></div>
+            <div class="card stat"><span class="muted">Actifs cette semaine</span><strong id="players-week">-</strong></div>
+          </div>
+          <div class="card">
+            <table class="files players">
+              <thead>
+                <tr><th>Joueur</th><th>Dernière activité</th><th>Dernière connexion</th><th>Dernier lancement</th><th>Lancements</th><th>Launcher</th></tr>
+              </thead>
+              <tbody id="launcher-players"></tbody>
+            </table>
+            <p class="muted" id="players-empty" hidden>Personne ne s'est encore connecté avec la nouvelle version du launcher.</p>
+          </div>
+          <div class="card">
+            <h2>Activité récente</h2>
+            <table class="files players">
+              <tbody id="players-events"></tbody>
+            </table>
+          </div>
+        </section>
+
         <section class="tab" id="tab-files" hidden>
           <h1>Fichiers joueurs</h1>
           <p class="muted">

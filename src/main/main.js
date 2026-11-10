@@ -11,6 +11,7 @@ const modpack = require('./modpack');
 const { describe } = require('./progress');
 const updater = require('./updater');
 const legacy = require('./legacy');
+const presence = require('./presence');
 
 const config = require('../../launcher.config.json');
 // Version of the files actually running (they can come from an update, see src/bootstrap.js).
@@ -60,6 +61,10 @@ function createWindow() {
     win.show();
     updater.confirmCurrentVersion(VERSION); // this version starts fine: keep it
     legacy.removeOldApp(); // the old ModdedQC app, replaced by ATM Launcher
+    // A player already signed in shows up in the admin website's "Joueurs" tab when the launcher opens.
+    if (auth.loadAccount()) {
+      auth.refresh(config.azureClientId).then((account) => presence.report(SERVER_URL, account, 'open', VERSION)).catch(() => {});
+    }
   });
 
   // Maximized or not is remembered for the next start.
@@ -159,6 +164,7 @@ ipcMain.handle('check-updates-now', () => {
 
 ipcMain.handle('login', async () => {
   const account = await auth.login(config.azureClientId, win);
+  presence.report(SERVER_URL, account, 'login', VERSION); // shown in the admin website's "Joueurs" tab
   return { name: account.name, uuid: account.uuid };
 });
 
@@ -236,6 +242,7 @@ ipcMain.handle('play', async () => {
 
     status('Connexion au compte...', null);
     const account = await auth.refresh(config.azureClientId);
+    presence.report(SERVER_URL, account, 'play', VERSION);
 
     status('Lancement du jeu (le premier démarrage de NeoForge peut prendre quelques minutes)...', null);
     const server = pack.autoConnect && pack.server;
