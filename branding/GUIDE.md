@@ -124,7 +124,7 @@ Dans le dossier du **serveur** (onglet **Fichiers du serveur** du site admin, ou
 [image : banniere-description-1200x400.png]
 
 [image : section-a-propos-1200x120.png]
-All the Mod, c'est la saison 3 du serveur québécois ModdedQC : un modpack basé sur
+ATM (All the Mod), c'est la saison 3 de notre serveur québécois : un modpack basé sur
 All the Mods 10 (par l'équipe ATM), avec nos propres quêtes, réglages et ajouts.
 
 [image : section-fonctionnalites-1200x120.png]
@@ -133,7 +133,7 @@ All the Mods 10 (par l'équipe ATM), avec nos propres quêtes, réglages et ajou
 - Économie et claims sur le serveur
 
 [image : section-installation-1200x120.png]
-Télécharge le launcher ModdedQC : il installe NeoForge, Minecraft et le modpack en un clic.
+Télécharge le launcher ATM (ATM-Setup.exe) : il installe NeoForge, Minecraft et le modpack en un clic.
 
 [image : section-rejoindre-1200x120.png]
 Adresse : washday-book.gl.joinmc.link
