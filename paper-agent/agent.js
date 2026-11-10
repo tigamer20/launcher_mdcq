@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-// ATM agent: runs on the PC/VPS that hosts Paper, so the admin website (on Render) can
-// manage plugins and send console commands. No dependencies, only Node.js.
+// ATM agent: runs on the PC/VPS that hosts the Minecraft server (NeoForge or Paper), so the admin website
+// (on Render) can manage the server's mods (or plugins), edit its files and send console commands.
+// No dependencies, only Node.js.
 //
-//   AGENT_SECRET=... PAPER_DIR=/path/to/paper RCON_PASSWORD=... node agent.js
+//   AGENT_SECRET=... SERVER_DIR=/path/to/server RCON_PASSWORD=... node agent.js
 //
 // Every request must be signed with AGENT_SECRET (see signing.js). RCON stays local to this machine.
 const fs = require('fs');
@@ -15,22 +16,36 @@ const modpack = require('./publish');
 
 const PORT = Number(process.env.AGENT_PORT) || 8765;
 const SECRET = process.env.AGENT_SECRET;
-const PAPER_DIR = process.env.PAPER_DIR && path.resolve(process.env.PAPER_DIR);
-const PLUGINS_DIR = PAPER_DIR && path.join(PAPER_DIR, 'plugins');
+// SERVER_DIR: the server folder (the one with server.properties). PAPER_DIR is the old name, still accepted.
+const SERVER_DIR = (process.env.SERVER_DIR || process.env.PAPER_DIR) && path.resolve(process.env.SERVER_DIR || process.env.PAPER_DIR);
+
+// NeoForge servers keep their mods in mods/, Paper servers their plugins in plugins/.
+function detectServerType(dir) {
+  const forced = String(process.env.SERVER_TYPE || '').toLowerCase();
+  if (forced === 'neoforge' || forced === 'paper') return forced;
+  const has = (...p) => fs.existsSync(path.join(dir, ...p));
+  if (has('libraries', 'net', 'neoforged') || has('user_jvm_args.txt') || has('mods')) return 'neoforge';
+  if (has('plugins') || fs.readdirSync(dir).some((f) => /^(paper|purpur|spigot).*\.jar$/i.test(f))) return 'paper';
+  return 'neoforge';
+}
+const SERVER_TYPE = SERVER_DIR && fs.existsSync(SERVER_DIR) ? detectServerType(SERVER_DIR) : 'neoforge';
+const ADDONS = SERVER_TYPE === 'paper' ? 'plugins' : 'mods';
+const PLUGINS_DIR = SERVER_DIR && path.join(SERVER_DIR, ADDONS);
 const RCON = process.env.RCON_PASSWORD
   ? { host: process.env.RCON_HOST || '127.0.0.1', port: Number(process.env.RCON_PORT) || 25575, password: process.env.RCON_PASSWORD }
   : null;
 const MAX_UPLOAD = 200 * 1024 * 1024;
 const MAX_TEXT = 1024 * 1024;
 // Files the website can open in its editor (configs). Jars, worlds and other binary files are never edited.
-const TEXT_EXTENSIONS = new Set(['.yml', '.yaml', '.properties', '.json', '.txt', '.toml', '.conf', '.cfg', '.ini', '.md', '.sk', '.csv', '.xml']);
+// .js/.zs/.snbt/.json5: KubeJS and CraftTweaker scripts, FTB Quests and mod configs on NeoForge servers.
+const TEXT_EXTENSIONS = new Set(['.yml', '.yaml', '.properties', '.json', '.json5', '.txt', '.toml', '.conf', '.cfg', '.ini', '.md', '.sk', '.csv', '.xml', '.js', '.zs', '.snbt', '.mcmeta']);
 
 if (!SECRET || SECRET.length < 32) {
   console.error('AGENT_SECRET doit faire au moins 32 caractères (le même que sur Render).');
   process.exit(1);
 }
-if (!PAPER_DIR || !fs.existsSync(PAPER_DIR)) {
-  console.error('PAPER_DIR doit pointer vers le dossier du serveur Paper.');
+if (!SERVER_DIR || !fs.existsSync(SERVER_DIR)) {
+  console.error('SERVER_DIR doit pointer vers le dossier du serveur Minecraft (celui avec server.properties).');
   process.exit(1);
 }
 
@@ -39,11 +54,11 @@ function httpError(status, message) {
 }
 
 // ---------------------------------------------------------------------------
-// Plugins: plugins/Name.jar (enabled) or plugins/Name.jar.disabled
+// Server mods (NeoForge: mods/) or plugins (Paper: plugins/): Name.jar (enabled) or Name.jar.disabled
 // ---------------------------------------------------------------------------
 
 function pluginPath(name) {
-  if (!/^[\w .+()-]+\.jar(\.disabled)?$/.test(String(name))) throw httpError(400, 'Nom de plugin invalide (fichier .jar)');
+  if (!/^[\w .+()-]+\.jar(\.disabled)?$/.test(String(name))) throw httpError(400, 'Nom de fichier invalide (fichier .jar)');
   return path.join(PLUGINS_DIR, name);
 }
 
@@ -84,9 +99,9 @@ async function saveBody(req, dest, expectedHash) {
 
 const isEditable = (name) => TEXT_EXTENSIONS.has(path.extname(name).toLowerCase());
 
-// "plugins/Essentials/config.yml" -> absolute path inside PAPER_DIR (refuses "../" and symlinks leading outside).
+// "plugins/Essentials/config.yml" -> absolute path inside SERVER_DIR (refuses "../" and symlinks leading outside).
 function serverPath(relative) {
-  const root = fs.realpathSync(PAPER_DIR);
+  const root = fs.realpathSync(SERVER_DIR);
   const target = path.resolve(root, String(relative || '').replace(/^\/+/, ''));
   if (target !== root && !target.startsWith(root + path.sep)) throw httpError(400, 'Chemin invalide');
   if (fs.existsSync(target)) {
@@ -148,7 +163,8 @@ async function readJson(req, expectedHash) {
 // ---------------------------------------------------------------------------
 
 const routes = {
-  'GET /info': () => ({ plugins: true, rcon: Boolean(RCON), modpack: modpack.configured() }),
+  // serverType/addons: the website says "mods" for NeoForge and "plugins" for Paper.
+  'GET /info': () => ({ plugins: true, serverType: SERVER_TYPE, addons: ADDONS, rcon: Boolean(RCON), modpack: modpack.configured() }),
 
   // Publishes the client modpack (MODPACK_DIR) for the launchers; runs in the background.
   'POST /modpack/publish': async (req, url, bodyHash) => {
@@ -237,7 +253,8 @@ http
   })
   .listen(PORT, () => {
     console.log(`Agent ATM prêt sur le port ${PORT}`);
-    console.log(`Plugins: ${PLUGINS_DIR}`);
+    console.log(`Serveur ${SERVER_TYPE === 'paper' ? 'Paper' : 'NeoForge'} : ${SERVER_DIR}`);
+    console.log(`${ADDONS === 'mods' ? 'Mods' : 'Plugins'} : ${PLUGINS_DIR}`);
     console.log(`Console RCON: ${RCON ? `${RCON.host}:${RCON.port}` : 'désactivée (RCON_PASSWORD manquant)'}`);
     console.log(`Modpack: ${modpack.configured() ? process.env.MODPACK_DIR : 'désactivé (MODPACK_DIR ou GITHUB_TOKEN manquant)'}`);
   });

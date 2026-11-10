@@ -8,8 +8,9 @@ rem    Allow Node.js when Windows Defender Firewall asks, and set sleep to "Neve
 rem Never share or commit start-agent.bat: it contains your secrets.
 
 set AGENT_SECRET=paste-the-same-secret-as-on-Render
-rem The SERVER folder (All the Mods 10 server pack: the one with server.properties)
-set PAPER_DIR=C:\Minecraft\all-the-mod-server
+rem The SERVER folder (NeoForge server of All the Mods 10: the one with server.properties and mods\)
+rem The agent detects NeoForge and manages its mods\ folder (or plugins\ on a Paper server).
+set SERVER_DIR=C:\Minecraft\all-the-mod-server
 set RCON_PASSWORD=same-as-rcon.password-in-server.properties
 
 rem Modpack publishing from the admin website (Modpack tab). Optional.

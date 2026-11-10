@@ -3,7 +3,7 @@
 //
 //   ADMIN_PASSWORD=secret node admin-panel/server.js
 //
-// Optional, to control the Paper server (plugins, console, whitelist) through paper-agent/:
+// Optional, to control the Minecraft server (mods or plugins, files, console, whitelist) through paper-agent/:
 //   AGENT_URL=http://my-pc:8765/   AGENT_SECRET=same-as-the-agent
 // Behind a proxy like Render, also set TRUST_PROXY=1 (real visitor IPs for the login protection).
 // Server file editor history on GitHub: GITHUB_TOKEN=... (see admin-panel/github.js).
@@ -172,7 +172,7 @@ function listFiles(dir = FILES_DIR) {
 }
 
 // ---------------------------------------------------------------------------
-// Paper agent (runs on the Minecraft machine, see paper-agent/)
+// Server agent (runs on the Minecraft machine, NeoForge or Paper, see paper-agent/)
 // ---------------------------------------------------------------------------
 
 async function agent(method, pathWithQuery, body) {
@@ -199,7 +199,9 @@ async function agentFeatures() {
   if (!AGENT_URL) return { plugins: false, rcon: false, modpack: false, error: null };
   try {
     const info = await agent('GET', '/info');
-    return { plugins: Boolean(info.plugins), rcon: Boolean(info.rcon), modpack: Boolean(info.modpack), error: null };
+    // Older agents (Paper only) don't send serverType.
+    const serverType = info.serverType === 'neoforge' ? 'neoforge' : 'paper';
+    return { plugins: Boolean(info.plugins), serverType, rcon: Boolean(info.rcon), modpack: Boolean(info.modpack), error: null };
   } catch (err) {
     return { plugins: false, rcon: false, modpack: false, error: err.message };
   }
