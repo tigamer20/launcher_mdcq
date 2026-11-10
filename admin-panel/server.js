@@ -71,7 +71,6 @@ function ensureDefaultPack() {
       {
         name: 'All the Mod',
         season: 'Saison 3',
-        subtitle: 'Saison 3 · basé sur All the Mods 10',
         version: '1.0.0',
         versionId: '1.21.1',
         server: { host: 'exemple.gl.joinmc.link', port: 25565 },

@@ -19,6 +19,11 @@
       </div>
       <div class="window-buttons">
         <button id="btn-minimize" title="Réduire">&#8211;</button>
+        <button id="btn-fullscreen" title="Plein écran (F11)">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <path id="fullscreen-icon" d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" />
+          </svg>
+        </button>
         <button id="btn-close" class="close" title="Fermer">&#10005;</button>
       </div>
     </header>
@@ -39,10 +44,9 @@
           <span class="chip update" id="pack-update" hidden>Mise à jour disponible</span>
         </div>
         <h1 id="pack-name">All the Mod</h1>
-        <p class="subtitle" id="pack-subtitle">Saison 3 · basé sur All the Mods 10</p>
         <div class="server-line" id="server-line" hidden>
           <span class="dot"></span>
-          <span id="server-address"></span>
+          <span id="server-address" hidden></span>
           <span class="players" id="server-players"></span>
         </div>
       </section>
@@ -113,6 +117,10 @@
         <input type="checkbox" id="hide-on-launch" />
         Cacher le launcher pendant que je joue
       </label>
+      <label class="check">
+        <input type="checkbox" id="start-fullscreen" />
+        Ouvrir le launcher en plein écran (F11 pour basculer)
+      </label>
       <button id="btn-folder" class="secondary">Ouvrir le dossier du jeu</button>
       <div class="dialog-buttons">
         <button id="btn-settings-close" class="primary">Enregistrer</button>
@@ -123,6 +131,7 @@
     <dialog id="dev">
       <h2>Développeur</h2>
       <p class="muted-text">Version du launcher : <strong id="dev-version"></strong></p>
+      <p class="muted-text">Adresse du serveur : <strong id="dev-server-address">-</strong></p>
       <section class="dev-section">
         <h3>Mises à jour bêta</h3>
         <p class="muted-text">
