@@ -130,7 +130,7 @@ function minecraftError({ status, json }) {
   const detail = json.errorMessage || json.error_description || json.error || '';
   const raw = `(${status}${detail ? ` : ${detail}` : ''})`;
   if (/invalid app registration/i.test(detail)) {
-    return `Microsoft n'autorise pas encore cette application pour Minecraft ${raw}. Vérifie que l'ID approuvé dans le courriel de Microsoft est exactement AZURE_CLIENT_ID dans GitHub, puis publie une nouvelle version du launcher.`;
+    return `Microsoft n'autorise pas encore cette application pour Minecraft ${raw}. Vérifie que l'ID approuvé par Microsoft est celui de launcher.config.json, puis publie une nouvelle version du launcher.`;
   }
   if (status === 429) return `Trop de connexions d'affilée, réessaie dans quelques minutes ${raw}.`;
   if (status >= 500) return `Les serveurs de Minecraft ont un problème en ce moment, réessaie plus tard ${raw}.`;

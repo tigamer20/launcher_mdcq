@@ -145,7 +145,7 @@ The installer is built by GitHub (on a Windows machine) with `.github/workflows/
 
 **Once:** in the GitHub repository, **Settings** → **Secrets and variables** → **Actions** → **Variables** tab → add:
 - `SERVER_URL` = your Render URL, e.g. `https://atm-admin.onrender.com/`
-- `AZURE_CLIENT_ID` = the ID from step 1
+- `AZURE_CLIENT_ID` = the ID from step 1 (only a fallback: the ID approved by Microsoft is written in `launcher.config.json` and wins)
 
 **Every time you want to release a version**, push to `main` with a commit message that contains:
 
