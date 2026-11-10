@@ -6,7 +6,8 @@
 # Never share or commit start-agent.command: it contains your secrets.
 
 export AGENT_SECRET="paste-the-same-secret-as-on-Render"
-export PAPER_DIR="$HOME/Minecraft/paper"
+# The server folder (the one with server.properties). NeoForge (mods/) or Paper (plugins/) is detected.
+export SERVER_DIR="$HOME/Minecraft/server"
 export RCON_PASSWORD="same-as-rcon.password-in-server.properties"
 
 # Modpack publishing (admin website > Modpack tab). Optional.

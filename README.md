@@ -14,7 +14,7 @@ Custom Minecraft launcher + admin website for the **ATM** server (All the Mod ·
 
 - **Launcher (players):** install `ATM-Setup.exe`, log in with Microsoft, click **JOUER**. It installs the right Minecraft version and Java, downloads the files you publish (resource packs, `options.txt`...) and connects straight to the server. It shows the news, the player count and the maintenance message.
 - **Admin website (staff, on Render):** live server status, plugins, console, news, maintenance mode and player files. Changes show up in every launcher within 15 seconds.
-- **Agent (on the Paper machine):** a tiny program that lets the website manage plugins and send console commands. It only accepts requests signed with your secret.
+- **Agent (on the server's PC):** a tiny program that lets the website manage the server's mods (NeoForge) or plugins (Paper), edit its files and send console commands. It only accepts requests signed with your secret.
 
 Plugins stay on the Paper server: players run normal (vanilla) Minecraft, matching the Paper version.
 
@@ -78,20 +78,20 @@ Every push to `main` that changes the website redeploys it automatically.
 
 ### 3. Install the agent on the server machine (Windows, Mac or Linux)
 
-> **All the Mod · Saison 3 runs on a Windows PC.** On Windows: use `start-agent.example.bat` (copy it to `start-agent.bat`), set `PAPER_DIR` to the **server** folder (the All the Mods 10 *server pack*, with `server.properties`), allow **Node.js** when Windows Defender Firewall asks, forward port **8765** on the router to this PC, and in **Settings → System → Power** set sleep to **Never**, so the server and the agent stay reachable. The **Plugins** tab is for Paper servers: a NeoForge server has mods instead.
+> **All the Mod · Saison 3 runs on a Windows PC.** On Windows: use `start-agent.example.bat` (copy it to `start-agent.bat`), set `SERVER_DIR` to the **server** folder (the NeoForge server of All the Mods 10, with `server.properties` and `mods/`), allow **Node.js** when Windows Defender Firewall asks, forward port **8765** on the router to this PC, and in **Settings → System → Power** set sleep to **Never**, so the server and the agent stay reachable. The agent detects NeoForge by itself: the website's **Mods du serveur** tab then manages the server's `mods/` folder (on a Paper server it manages `plugins/`). Older setups with `PAPER_DIR` keep working.
 
 
 1. Install **Node.js 22 LTS** from <https://nodejs.org> (on a Mac, take the **macOS Installer (.pkg)**).
 2. Copy the `paper-agent/` folder from this repository to that machine (for example next to your Paper folder).
-3. In Paper's `server.properties`:
+3. In the server's `server.properties`:
    ```properties
    enable-rcon=true
    rcon.password=choose-a-password
    enforce-whitelist=true     # kicks non-whitelisted players when maintenance starts
    ```
-   Restart Paper. **Don't** open the RCON port (25575) on your router: only the agent uses it, locally.
+   Restart the server. **Don't** open the RCON port (25575) on your router: only the agent uses it, locally.
 4. Start the agent:
-   - **Mac:** in the `paper-agent` folder, duplicate `start-agent.example.command` and rename the copy `start-agent.command`. Open it with TextEdit and fill in the 3 values (`PAPER_DIR` is the folder containing `server.jar` and `plugins/`; drag that folder into a Terminal window to see its path). Then double-click `start-agent.command`.
+   - **Mac:** in the `paper-agent` folder, duplicate `start-agent.example.command` and rename the copy `start-agent.command`. Open it with TextEdit and fill in the 3 values (`SERVER_DIR` is the server folder, with `server.properties`; drag that folder into a Terminal window to see its path). Then double-click `start-agent.command`.
      - The first time, macOS may refuse to open it: **right-click** → **Open** → **Open**.
      - If macOS asks "Do you want the application node to accept incoming network connections?", click **Allow**.
      - Keep the Terminal window open. The script keeps the Mac awake while it runs.
@@ -100,7 +100,7 @@ Every push to `main` that changes the website redeploys it automatically.
    - **Windows:** copy `start-agent.example.bat` to `start-agent.bat`, fill in the 3 values, double-click it. Keep the window open.
    - **Linux:**
      ```bash
-     AGENT_SECRET=... PAPER_DIR=/home/minecraft/paper RCON_PASSWORD=... node paper-agent/agent.js
+     AGENT_SECRET=... SERVER_DIR=/home/minecraft/server RCON_PASSWORD=... node paper-agent/agent.js
      ```
      (to start it automatically, create a systemd service with these `Environment=` lines.)
 5. Make the agent reachable from Render, like you did for Minecraft's port 25565:
@@ -113,7 +113,8 @@ Every request from the website is signed with the secret, expires after 60 secon
 | Agent variable   | Required | Meaning                                                    |
 | ---------------- | -------- | ---------------------------------------------------------- |
 | `AGENT_SECRET`   | yes      | Same value as on Render (32+ characters).                  |
-| `PAPER_DIR`      | yes      | Paper folder (the one containing `plugins/`).              |
+| `SERVER_DIR`     | yes      | Server folder (with `server.properties`). `PAPER_DIR` also works. |
+| `SERVER_TYPE`    | no       | `neoforge` or `paper`, only if the detection is wrong.     |
 | `RCON_PASSWORD`  | no       | Same as `rcon.password`. Enables the console + whitelist.  |
 | `AGENT_PORT`     | no       | Default `8765`.                                            |
 | `RCON_HOST/PORT` | no       | Default `127.0.0.1` / `25575`.                             |

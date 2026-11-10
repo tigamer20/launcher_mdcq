@@ -15,7 +15,7 @@
       <form id="login-form" class="card login-card">
         <img src="logo.svg" alt="" class="login-logo" />
         <h1>All the Mod · Admin</h1>
-        <p class="muted">Gère le launcher et le serveur Paper</p>
+        <p class="muted">Gère le launcher et le serveur Minecraft</p>
         <input type="password" id="password" placeholder="Mot de passe" autocomplete="current-password" required />
         <button class="primary" type="submit">Se connecter</button>
         <p id="login-error" class="error" hidden></p>
@@ -31,7 +31,7 @@
           <button class="nav" data-tab="server">Serveur</button>
           <button class="nav" data-tab="players">Joueurs</button>
           <button class="nav" data-tab="modpack">Modpack</button>
-          <button class="nav" data-tab="plugins">Plugins</button>
+          <button class="nav" data-tab="plugins" id="nav-addons">Mods du serveur</button>
           <button class="nav" data-tab="editor">Fichiers du serveur</button>
           <button class="nav" data-tab="console">Console</button>
           <button class="nav" data-tab="news">Nouvelles</button>
@@ -59,7 +59,7 @@
               <strong id="stat-version">-</strong>
             </div>
             <div class="card stat">
-              <span class="muted">Plugins actifs</span>
+              <span class="muted" id="stat-addons-label">Mods du serveur</span>
               <strong id="stat-plugins">-</strong>
             </div>
           </div>
@@ -73,7 +73,7 @@
             <div class="row between">
               <div>
                 <h2>Mode maintenance</h2>
-                <p class="muted">Bloque le bouton JOUER dans les launchers<span id="maintenance-rcon"> et active la whitelist du serveur Paper</span>.</p>
+                <p class="muted">Bloque le bouton JOUER dans les launchers<span id="maintenance-rcon"> et active la whitelist du serveur</span>.</p>
               </div>
               <label class="switch">
                 <input type="checkbox" id="maintenance-enabled" />
@@ -105,7 +105,7 @@
             <label class="field">
               <span>Version de Minecraft</span>
               <input name="versionId" placeholder="1.21.4" required />
-              <small class="muted">La même version que ton serveur Paper.</small>
+              <small class="muted">La même version que ton serveur (1.21.1 pour All the Mods 10).</small>
             </label>
             <label class="field">
               <span>Version des fichiers</span>
@@ -265,26 +265,29 @@
           </details>
         </section>
 
-        <!-- Plugins (Paper server) -->
+        <!-- Server mods (NeoForge: mods/) or plugins (Paper: plugins/), through the agent -->
         <section class="tab" id="tab-plugins" hidden>
-          <h1>Plugins</h1>
+          <h1 id="addons-title">Mods du serveur</h1>
           <p class="card muted" id="plugins-off">
-            Pour gérer les plugins, installe l'agent ATM sur le PC du serveur Paper et ajoute
+            Pour gérer les mods du serveur, installe l'agent ATM sur le PC du serveur Minecraft et ajoute
             <code>AGENT_URL</code> et <code>AGENT_SECRET</code> sur Render (voir le README).
           </p>
           <div id="plugins-on">
             <div class="card upload">
               <label id="plugin-drop" class="drop-zone">
                 <input type="file" id="plugin-input" accept=".jar" multiple hidden />
-                <strong>Glisse un plugin (.jar) ici</strong>
-                <span class="muted">ou clique pour choisir · un plugin existant est remplacé (mise à jour)</span>
+                <strong id="addons-drop">Glisse un mod (.jar) ici</strong>
+                <span class="muted" id="addons-drop-hint">ou clique pour choisir · un mod existant avec le même nom est remplacé (mise à jour)</span>
               </label>
             </div>
             <div class="card">
-              <p class="notice">Les changements de plugins s'appliquent au prochain redémarrage du serveur Paper.</p>
+              <p class="notice" id="addons-notice">
+                Les changements s'appliquent au prochain redémarrage du serveur. Le serveur doit avoir les mêmes mods que le
+                modpack des joueurs, sauf les mods « client seulement » (minimaps, shaders, menus...) qui le feraient planter.
+              </p>
               <table class="files">
                 <thead>
-                  <tr><th>Plugin</th><th>Taille</th><th>État</th><th></th></tr>
+                  <tr><th id="addons-column">Mod</th><th>Taille</th><th>État</th><th></th></tr>
                 </thead>
                 <tbody id="plugin-list"></tbody>
               </table>
@@ -299,7 +302,7 @@
             <button id="btn-merge" class="primary">Fusionner dans main</button>
           </div>
           <p class="card muted" id="editor-off">
-            L'éditeur a besoin de l'agent ATM sur le serveur Paper (<code>AGENT_URL</code> et <code>AGENT_SECRET</code>).
+            L'éditeur a besoin de l'agent ATM sur le PC du serveur (<code>AGENT_URL</code> et <code>AGENT_SECRET</code>).
           </p>
           <p class="notice" id="editor-github">
             Chaque sauvegarde modifie le fichier sur le serveur et crée un commit sur la branche
@@ -331,8 +334,8 @@
           <div id="console-on" class="card console-card">
             <div class="row wrap">
               <button class="ghost quick" data-cmd="list">Joueurs en ligne</button>
-              <button class="ghost quick" data-cmd="plugins">Liste des plugins</button>
-              <button class="ghost quick" data-cmd="tps">TPS</button>
+              <button class="ghost quick" data-cmd="plugins" id="quick-plugins" hidden>Liste des plugins</button>
+              <button class="ghost quick" data-cmd="neoforge tps" id="quick-tps">TPS</button>
               <button class="ghost quick" data-cmd="save-all">Sauvegarder le monde</button>
             </div>
             <pre id="console-output" class="console-output"></pre>

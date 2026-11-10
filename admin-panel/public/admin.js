@@ -68,7 +68,8 @@ function render() {
   renderNews();
   renderFiles();
   $('agent-error').hidden = !features.error;
-  $('agent-error').textContent = features.error ? `Agent du serveur Paper : ${features.error}` : '';
+  $('agent-error').textContent = features.error ? `Agent du serveur : ${features.error}` : '';
+  applyServerType();
   $('console-off').hidden = features.rcon;
   $('console-on').hidden = !features.rcon;
   $('maintenance-rcon').hidden = !features.rcon;
@@ -301,17 +302,34 @@ async function deleteFile(filePath) {
   }
 }
 
-// ---------- Plugins ----------
+// ---------- Server mods (NeoForge) or plugins (Paper) ----------
+
+const isPaper = () => features.serverType === 'paper';
+const addonWord = (n = 1) => (isPaper() ? 'plugin' : 'mod') + (n > 1 ? 's' : '');
+
+// The agent says which server it manages: the website talks about mods (NeoForge) or plugins (Paper).
+function applyServerType() {
+  const paper = isPaper();
+  $('nav-addons').textContent = paper ? 'Plugins' : 'Mods du serveur';
+  $('addons-title').textContent = paper ? 'Plugins' : 'Mods du serveur';
+  $('stat-addons-label').textContent = paper ? 'Plugins actifs' : 'Mods du serveur';
+  $('addons-column').textContent = paper ? 'Plugin' : 'Mod';
+  $('addons-drop').textContent = paper ? 'Glisse un plugin (.jar) ici' : 'Glisse un mod (.jar) ici';
+  $('addons-drop-hint').textContent = `ou clique pour choisir · un ${addonWord()} existant avec le même nom est remplacé (mise à jour)`;
+  if (paper) $('addons-notice').textContent = 'Les changements de plugins s\'appliquent au prochain redémarrage du serveur Paper.';
+  $('quick-plugins').hidden = !paper;
+  $('quick-tps').dataset.cmd = paper ? 'tps' : 'neoforge tps';
+}
 
 async function uploadPlugins(list) {
   try {
     for (const file of list) {
-      if (!file.name.endsWith('.jar')) throw new Error(`${file.name} n'est pas un plugin (.jar)`);
+      if (!file.name.endsWith('.jar')) throw new Error(`${file.name} n'est pas un fichier .jar`);
       ({ plugins } = await api('PUT', `/api/plugins?name=${encodeURIComponent(file.name)}`, file, true));
     }
     renderPlugins();
     renderDashboard();
-    toast(`${list.length} plugin(s) installé(s) · redémarre le serveur pour les charger`);
+    toast(`${list.length} ${addonWord(list.length)} installé(s) · redémarre le serveur pour les charger`);
   } catch (err) {
     toast(err.message, true);
   } finally {
@@ -324,19 +342,19 @@ async function togglePlugin(name) {
     ({ plugins } = await api('POST', '/api/plugins/toggle', { name }));
     renderPlugins();
     renderDashboard();
-    toast(name.endsWith('.disabled') ? 'Plugin activé' : 'Plugin désactivé');
+    toast(name.endsWith('.disabled') ? 'Activé · redémarre le serveur' : 'Désactivé · redémarre le serveur');
   } catch (err) {
     toast(err.message, true);
   }
 }
 
 async function deletePlugin(name) {
-  if (!confirm(`Supprimer le plugin ${name}?`)) return;
+  if (!confirm(`Supprimer ${name} du serveur ?`)) return;
   try {
     ({ plugins } = await api('DELETE', `/api/plugins?name=${encodeURIComponent(name)}`));
     renderPlugins();
     renderDashboard();
-    toast('Plugin supprimé');
+    toast('Supprimé · redémarre le serveur');
   } catch (err) {
     toast(err.message, true);
   }
@@ -481,7 +499,7 @@ function confirmDiscard() {
 
 function renderBreadcrumb() {
   const parts = editor.dir ? editor.dir.split('/') : [];
-  const crumbs = [el('button', { textContent: 'paper', onclick: () => openDir('') })];
+  const crumbs = [el('button', { textContent: 'serveur', onclick: () => openDir('') })];
   parts.forEach((part, i) => {
     crumbs.push(el('span', { className: 'muted', textContent: '/' }));
     crumbs.push(el('button', { textContent: part, onclick: () => openDir(parts.slice(0, i + 1).join('/')) }));
