@@ -114,7 +114,6 @@ function renderDashboard() {
 function renderServerForm() {
   const form = $('server-form');
   form.packName.value = pack.name || '';
-  form.subtitle.value = pack.subtitle || '';
   form.season.value = pack.season || 'Saison 3';
   form.host.value = pack.server?.host || '';
   form.port.value = pack.server?.port || 25565;
@@ -237,7 +236,6 @@ $('server-form').onsubmit = async (event) => {
   try {
     ({ pack } = await api('PUT', '/api/pack', {
       name: form.packName.value,
-      subtitle: form.subtitle.value,
       season: form.season.value.trim() || 'Saison 3',
       version: form.version.value,
       versionId: form.versionId.value,

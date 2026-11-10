@@ -10,6 +10,7 @@ const minecraft = require('./minecraft');
 const modpack = require('./modpack');
 const { describe } = require('./progress');
 const updater = require('./updater');
+const legacy = require('./legacy');
 
 const config = require('../../launcher.config.json');
 // Version of the files actually running (they can come from an update, see src/bootstrap.js).
@@ -29,7 +30,7 @@ let playing = false;
 function loadSettings() {
   // All the Mods 10 needs a lot of memory: 8 Go when the PC has 16 Go or more, 6 Go otherwise.
   const ramMb = os.totalmem() >= 15 * 1024 ** 3 ? 8192 : 6144;
-  const defaults = { ramMb, hideOnLaunch: false, devTab: false, beta: { enabled: false, key: '' }, declinedBeta: null };
+  const defaults = { ramMb, hideOnLaunch: false, fullscreen: false, devTab: false, beta: { enabled: false, key: '' }, declinedBeta: null };
   try {
     return { ...defaults, ...JSON.parse(fs.readFileSync(settingsFile(), 'utf8')) };
   } catch {
@@ -55,9 +56,15 @@ function createWindow() {
   });
   win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
   win.once('ready-to-show', () => {
+    if (loadSettings().fullscreen) win.setFullScreen(true);
     win.show();
     updater.confirmCurrentVersion(VERSION); // this version starts fine: keep it
+    legacy.removeOldApp(); // the old ModdedQC app, replaced by ATM Launcher
   });
+
+  const sendFullscreen = () => win.webContents.send('fullscreen', win.isFullScreen());
+  win.on('enter-full-screen', sendFullscreen);
+  win.on('leave-full-screen', sendFullscreen);
 
   // Links in the news open in the normal web browser.
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -90,7 +97,6 @@ ipcMain.handle('pack', async () => {
     const installed = modpack.installedState(instanceDir(pack.season));
     return {
       name: pack.name,
-      subtitle: pack.subtitle,
       season: pack.season || 'Saison 3',
       version: pack.version,
       news: pack.news || [],
@@ -256,6 +262,7 @@ function finish(error) {
 
 ipcMain.on('window', (_event, action) => {
   if (action === 'minimize') win.minimize();
+  if (action === 'fullscreen') win.setFullScreen(!win.isFullScreen());
   if (action === 'close') win.close();
 });
 
@@ -296,7 +303,7 @@ async function startupUpdate() {
     let beta = settings.beta.enabled && Boolean(settings.beta.key);
     if (beta) beta = await checkBetaKey(settings.beta.key).catch(() => true); // website down: keep the player's choice
 
-    const found = await withTimeout(updater.checkForUpdates({ repo: config.updateRepo, current: VERSION, beta }), 10_000);
+    const found = await withTimeout(updater.checkForUpdates({ repo: config.updateRepo, current: VERSION, beta, force: legacy.isOldApp() }), 10_000);
     let target = null;
     if (found.beta && updater.versionOf(found.beta) !== settings.declinedBeta) {
       send({ phase: 'beta-available', version: updater.versionOf(found.beta) });

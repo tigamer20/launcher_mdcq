@@ -13,6 +13,7 @@ const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
 const { app } = require('electron');
+const legacy = require('./legacy');
 const { downloadAll, sha256File } = require('./download');
 const { isNewer } = require('./semver');
 const { progressTracker } = require('./progress');
@@ -35,7 +36,8 @@ const versionOf = (release) => release.tag_name.replace(/^v/, '');
  * Looks for newer versions. Returns { official, beta } (each a release or null).
  * beta is only filled when beta updates are on and the dev version is newer than everything else.
  */
-async function checkForUpdates({ repo, current, beta }) {
+// force: also return the latest official version when it is the current one (old ModdedQC app, see legacy.js).
+async function checkForUpdates({ repo, current, beta, force = false }) {
   if (!repo) return { official: null, beta: null };
   const releases = (await (await github(`${GITHUB_API}/repos/${repo}/releases?per_page=30`)).json()).filter(
     (r) => !r.draft && /^v\d+\.\d+\.\d+(-dev)?$/.test(r.tag_name),
@@ -43,7 +45,7 @@ async function checkForUpdates({ repo, current, beta }) {
   const official = releases.find((r) => !r.prerelease) || null;
   const dev = releases.find((r) => r.prerelease) || null;
   return {
-    official: official && isNewer(versionOf(official), current) ? official : null,
+    official: official && (force || isNewer(versionOf(official), current)) ? official : null,
     beta:
       beta && dev && isNewer(versionOf(dev), current) && (!official || isNewer(versionOf(dev), versionOf(official)))
         ? dev
@@ -101,7 +103,7 @@ async function fileUpdate(release, manifest, onProgress) {
 }
 
 // Rare case (new Electron runtime): download the full installer and run it silently.
-async function installerUpdate(release, onProgress) {
+async function installerUpdate(release, onProgress, { fresh = false } = {}) {
   const asset = (name) => release.assets.find((a) => a.name === name);
   const installer = asset(INSTALLER);
   const checksum = asset(`${INSTALLER}.sha256`);
@@ -120,7 +122,9 @@ async function installerUpdate(release, onProgress) {
     throw new Error('Mise à jour corrompue, réessaie plus tard.');
   }
   // /S = silent install, --updated = keep shortcuts, --force-run = start the launcher afterwards.
-  spawn(dest, ['--updated', '/S', '--force-run'], { detached: true, stdio: 'ignore' }).unref();
+  // A fresh install (old ModdedQC app) leaves out --updated so the ATM shortcuts are created.
+  const args = fresh ? ['/S', '--force-run'] : ['--updated', '/S', '--force-run'];
+  spawn(dest, args, { detached: true, stdio: 'ignore' }).unref();
   return 'quit';
 }
 
@@ -128,6 +132,8 @@ async function installerUpdate(release, onProgress) {
 async function installUpdate(release, onProgress) {
   onProgress({ phase: 'preparing', version: versionOf(release) });
   const manifest = await readAssetJson(release, 'app-update.json');
+  // The old ModdedQC app needs the ATM installer once to get the new name, logo and shortcuts.
+  if (legacy.isOldApp()) return installerUpdate(release, onProgress, { fresh: true });
   if (manifest && manifest.electron === process.versions.electron) return fileUpdate(release, manifest, onProgress);
   return installerUpdate(release, onProgress);
 }

@@ -148,13 +148,16 @@ async function loadPack() {
   state.modpackPublished = Boolean(pack.modpack);
   if (!state.installing) state.installed = pack.installed;
   $('pack-name').textContent = pack.name || 'All the Mod';
-  $('pack-subtitle').textContent = pack.subtitle || '';
   $('pack-season').textContent = pack.season || 'Saison 3';
   $('pack-version').textContent = pack.modpack
     ? `Modpack ${pack.modpack.version} · NeoForge ${pack.modpack.neoforge}`
     : 'Modpack bientôt disponible';
   $('pack-update').hidden = !(pack.installed && pack.modpack && pack.installedVersion !== pack.modpack.version);
-  $('server-address').textContent = pack.server?.host || '';
+  // The address is only shown in the developer mode (Ctrl+Shift+D): players just click JOUER.
+  const address = pack.server?.host ? (pack.server.port && pack.server.port !== 25565 ? `${pack.server.host}:${pack.server.port}` : pack.server.host) : '';
+  $('server-address').textContent = address;
+  $('dev-server-address').textContent = address || '-';
+  $('server-address').hidden = !state.settings?.devTab;
   $('server-line').hidden = !pack.server?.host;
   const status = pack.serverStatus;
   $('server-line').classList.toggle('offline', !status?.online);
@@ -176,6 +179,7 @@ async function init() {
   showAccount(data.account);
   // Developer section (hidden until Ctrl+Shift+D)
   $('btn-dev').hidden = !state.settings.devTab;
+  $('server-address').hidden = !state.settings.devTab;
   $('dev-version').textContent = `v${data.version}${data.version.includes('-') ? ' (bêta)' : ''}`;
   $('beta-key').value = state.settings.beta?.key || '';
   $('beta-enabled').checked = Boolean(state.settings.beta?.enabled);
@@ -188,6 +192,7 @@ async function init() {
   ram.max = Math.max(2048, Math.floor((data.maxRamMb - 2048) / 512) * 512);
   ram.value = Math.min(state.settings.ramMb, ram.max);
   $('hide-on-launch').checked = state.settings.hideOnLaunch;
+  $('start-fullscreen').checked = Boolean(state.settings.fullscreen);
   updateRamLabel();
   refreshButtons();
 
@@ -200,6 +205,12 @@ function updateRamLabel() {
 // ---------- Events ----------
 
 $('btn-minimize').onclick = () => window.launcher.minimize();
+$('btn-fullscreen').onclick = () => window.launcher.toggleFullscreen();
+// The icon shows what the button does: enter (corners out) or leave (corners in) full screen.
+window.launcher.onFullscreen((on) => {
+  $('fullscreen-icon').setAttribute('d', on ? 'M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5' : 'M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5');
+  $('btn-fullscreen').title = on ? 'Quitter le plein écran (F11)' : 'Plein écran (F11)';
+});
 $('btn-close').onclick = () => window.launcher.close();
 
 $('btn-login').onclick = async () => {
@@ -273,6 +284,7 @@ $('btn-settings-close').onclick = async () => {
   await window.launcher.saveSettings({
     ramMb: Number($('ram').value),
     hideOnLaunch: $('hide-on-launch').checked,
+    fullscreen: $('start-fullscreen').checked,
   });
   $('settings').close();
 };
@@ -289,12 +301,19 @@ window.launcher.onStatus(({ step, text, progress, detail }) => {
 
 // ---------- Developer section: Ctrl+Shift+D shows/hides it (remembered) ----------
 
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'F11') return;
+  event.preventDefault();
+  window.launcher.toggleFullscreen();
+});
+
 document.addEventListener('keydown', async (event) => {
   if (!(event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'd')) return;
   event.preventDefault();
   state.settings.devTab = !state.settings.devTab;
   await window.launcher.saveSettings({ devTab: state.settings.devTab });
   $('btn-dev').hidden = !state.settings.devTab;
+  $('server-address').hidden = !state.settings.devTab;
   if (!state.settings.devTab && $('dev').open) $('dev').close();
   showInfo(state.settings.devTab ? 'Section développeur affichée' : 'Section développeur cachée');
 });

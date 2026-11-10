@@ -2,7 +2,7 @@
   "name": "atm-launcher",
   "productName": "ATM Launcher",
   "version": "1.0.0",
-  "description": "Launcher du serveur ATM (All the Mods 10) - saison 3",
+  "description": "ATM Launcher - launcher officiel du serveur All the Mod, saison 3",
   "main": "src/bootstrap.js",
   "private": true,
   "scripts": {
