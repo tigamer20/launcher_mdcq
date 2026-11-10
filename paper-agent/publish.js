@@ -41,6 +41,7 @@ function walk(root, dir = root) {
     const relative = path.relative(root, full).split(path.sep).join('/');
     // EXCLUDE is about the instance's top-level folders/files only (a config/foo/cache folder is kept).
     if (entry.name.startsWith('.') || EXCLUDE.has(relative)) return [];
+    if (entry.name.endsWith('.disabled')) return []; // mods turned off in the CurseForge app
     if (entry.isDirectory()) return walk(root, full);
     return entry.isFile() ? [{ full, relative }] : [];
   });
