@@ -5,7 +5,7 @@
     <meta name="google" content="notranslate" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'" />
-    <title>ModdedQC Admin</title>
+    <title>All the Mod · Admin</title>
     <link rel="icon" href="logo.svg" />
     <link rel="stylesheet" href="admin.css" />
   </head>
@@ -14,7 +14,7 @@
     <section id="login-view" class="login-view" hidden>
       <form id="login-form" class="card login-card">
         <img src="logo.svg" alt="" class="login-logo" />
-        <h1>ModdedQC Admin</h1>
+        <h1>All the Mod · Admin</h1>
         <p class="muted">Gère le launcher et le serveur Paper</p>
         <input type="password" id="password" placeholder="Mot de passe" autocomplete="current-password" required />
         <button class="primary" type="submit">Se connecter</button>
@@ -25,10 +25,11 @@
     <!-- Admin app -->
     <div id="app-view" class="app" hidden>
       <aside class="sidebar">
-        <div class="brand"><img src="logo.svg" alt="" /> ModdedQC <span>Admin</span></div>
+        <div class="brand"><img src="logo.svg" alt="" /> All the Mod <span>Admin</span></div>
         <nav>
           <button class="nav active" data-tab="dashboard">Tableau de bord</button>
           <button class="nav" data-tab="server">Serveur</button>
+          <button class="nav" data-tab="modpack">Modpack</button>
           <button class="nav" data-tab="plugins">Plugins</button>
           <button class="nav" data-tab="editor">Fichiers du serveur</button>
           <button class="nav" data-tab="console">Console</button>
@@ -94,6 +95,11 @@
           <form id="server-form" class="card form-grid">
             <label class="field"><span>Nom affiché</span><input name="packName" required /></label>
             <label class="field"><span>Sous-titre</span><input name="subtitle" /></label>
+            <label class="field">
+              <span>Saison</span>
+              <input name="season" placeholder="Saison 3" />
+              <small class="muted">Affichée dans le launcher. Une nouvelle saison = un nouveau dossier de jeu propre chez les joueurs.</small>
+            </label>
             <label class="field"><span>Adresse du serveur</span><input name="host" placeholder="play.moddedqc.ca" /></label>
             <label class="field"><span>Port</span><input name="port" type="number" min="1" max="65535" /></label>
             <label class="field">
@@ -122,6 +128,44 @@
             </label>
             <div class="row end full"><button class="primary" type="submit">Enregistrer</button></div>
           </form>
+        </section>
+
+        <!-- Modpack: published from the Mac, downloaded by the launchers -->
+        <section class="tab" id="tab-modpack" hidden>
+          <h1>Modpack</h1>
+          <div class="card" id="modpack-current"></div>
+          <p class="card muted" id="modpack-off">
+            Pour publier le modpack, ajoute <code>MODPACK_DIR</code> (le dossier de l'instance client du modpack, avec
+            <code>mods/</code>, <code>config/</code>...) et <code>GITHUB_TOKEN</code> dans <code>start-agent</code> sur le Mac,
+            puis redémarre l'agent.
+          </p>
+          <form id="modpack-form" class="card form-grid">
+            <label class="field">
+              <span>Version du modpack</span>
+              <input name="version" placeholder="1.0.0" required pattern="[0-9][0-9A-Za-z.+\-]*" />
+            </label>
+            <label class="field">
+              <span>Minecraft</span>
+              <input name="minecraft" value="1.21.1" required />
+            </label>
+            <label class="field">
+              <span>NeoForge</span>
+              <input name="neoforge" placeholder="21.1.211" required />
+              <small class="muted">La version de NeoForge du modpack (dans l'instance : Profil → Version).</small>
+            </label>
+            <div class="field full">
+              <small class="muted">
+                Envoie sur GitHub les mods et configurations du dossier <code>MODPACK_DIR</code> du Mac. Seuls les fichiers
+                modifiés sont envoyés. Les launchers installent la nouvelle version au prochain clic sur JOUER.
+              </small>
+            </div>
+            <div class="row end full"><button class="primary" type="submit" id="btn-publish">Publier depuis le Mac</button></div>
+          </form>
+          <div class="card publish-progress" id="publish-progress" hidden>
+            <strong id="publish-step"></strong>
+            <div class="bar-track"><div class="bar-fill" id="publish-bar"></div></div>
+            <span class="muted" id="publish-detail"></span>
+          </div>
         </section>
 
         <!-- Plugins (Paper server) -->

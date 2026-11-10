@@ -2,7 +2,7 @@
   "name": "moddedqc-launcher",
   "productName": "ModdedQC Launcher",
   "version": "1.0.0",
-  "description": "Launcher officiel du serveur Minecraft ModdedQC",
+  "description": "Launcher du serveur All the Mod (ModdedQC) - All the Mods 10, saison 3",
   "main": "src/bootstrap.js",
   "private": true,
   "scripts": {
@@ -32,7 +32,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "ModdedQC",
+      "shortcutName": "All the Mod",
       "runAfterFinish": true,
       "artifactName": "ModdedQC-Setup.${ext}"
     },

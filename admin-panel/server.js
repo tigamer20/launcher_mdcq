@@ -69,10 +69,11 @@ function ensureDefaultPack() {
     packFile,
     JSON.stringify(
       {
-        name: 'ModdedQC',
-        subtitle: 'Serveur Minecraft du Québec',
+        name: 'All the Mod',
+        season: 'Saison 3',
+        subtitle: 'Le modpack All the Mods 10, version ModdedQC',
         version: '1.0.0',
-        versionId: '1.21.4',
+        versionId: '1.21.1',
         server: { host: 'play.moddedqc.ca', port: 25565 },
         autoConnect: true,
         maintenance: { enabled: false, message: '' },
@@ -165,12 +166,12 @@ async function agent(method, pathWithQuery, body) {
 
 // What the agent can do. Never throws: an unreachable agent just disables the tabs.
 async function agentFeatures() {
-  if (!AGENT_URL) return { plugins: false, rcon: false, error: null };
+  if (!AGENT_URL) return { plugins: false, rcon: false, modpack: false, error: null };
   try {
     const info = await agent('GET', '/info');
-    return { plugins: Boolean(info.plugins), rcon: Boolean(info.rcon), error: null };
+    return { plugins: Boolean(info.plugins), rcon: Boolean(info.rcon), modpack: Boolean(info.modpack), error: null };
   } catch (err) {
-    return { plugins: false, rcon: false, error: err.message };
+    return { plugins: false, rcon: false, modpack: false, error: err.message };
   }
 }
 
@@ -264,6 +265,36 @@ const api = {
   },
 
   // Live status of the Minecraft server (players, version...)
+  // Modpack: published from the Mac by the agent (paper-agent/publish.js), then announced to the launchers here.
+  'POST /api/modpack/publish': async (req) => {
+    const { version, minecraft, neoforge } = await readJson(req);
+    return agent('POST', '/modpack/publish', { version, minecraft, neoforge });
+  },
+
+  'GET /api/modpack/status': async () => {
+    const job = await agent('GET', '/modpack/status');
+    const result = job.result;
+    const pack = readPack();
+    // Publishing finished: launchers start using the new version (only GitHub URLs of this repository).
+    if (job.state === 'done' && result?.manifestUrl && result.manifestUrl !== pack.modpack?.manifestUrl) {
+      if (!result.manifestUrl.startsWith(`https://github.com/${github.REPO}/releases/download/modpack/`)) {
+        throw httpError(502, 'Adresse du modpack inattendue');
+      }
+      pack.modpack = {
+        version: result.version,
+        minecraft: result.minecraft,
+        neoforge: result.neoforge,
+        manifestUrl: result.manifestUrl,
+        files: result.files,
+        size: result.size,
+        publishedAt: new Date().toISOString(),
+      };
+      pack.versionId = result.minecraft;
+      await savePack(pack);
+    }
+    return { job, modpack: pack.modpack || null };
+  },
+
   'GET /api/status': async () => {
     const { server, versionId } = readPack();
     return server?.host ? pingServer(server.host, server.port, { minecraftVersion: versionId }) : { online: false };
@@ -325,7 +356,7 @@ const api = {
   'PUT /api/pack': async (req) => {
     const body = await readJson(req);
     const pack = readPack();
-    for (const key of ['name', 'subtitle', 'version', 'versionId', 'autoConnect', 'syncDirs', 'keepPlayerChanges']) {
+    for (const key of ['name', 'season', 'subtitle', 'version', 'versionId', 'autoConnect', 'syncDirs', 'keepPlayerChanges']) {
       if (key in body) pack[key] = body[key];
     }
     // betaKey: a new key replaces the old one, null removes it, empty/absent keeps it.

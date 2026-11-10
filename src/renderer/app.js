@@ -1,7 +1,17 @@
 // UI logic. Talks to the launcher through window.launcher (see src/preload.js).
 const $ = (id) => document.getElementById(id);
 
-const state = { account: null, packReady: false, maintenance: false, busy: false, settings: {} };
+const state = {
+  account: null,
+  packReady: false,
+  maintenance: false,
+  busy: false,
+  installing: false,
+  installed: false, // INSTALLER until the modpack is installed once, then JOUER
+  modpackPublished: false,
+  settings: {},
+};
+const STEPS = ['java', 'neoforge', 'minecraft', 'modpack', 'files'];
 
 // ---------- Helpers ----------
 
@@ -23,21 +33,62 @@ function showToast(message, isError) {
 const showError = (message) => showToast(message, true);
 const showInfo = (message) => showToast(message, false);
 
-function setStatus(text, progress) {
-  $('status-text').textContent = text;
-  const bar = $('progress-bar');
+function setBar(bar, progress) {
   bar.classList.toggle('indeterminate', progress == null);
   bar.style.width = progress == null ? '' : `${Math.round(progress * 100)}%`;
 }
 
-function resetStatus(text = 'Prêt à jouer') {
+function setStatus(text, progress, detail = '') {
+  $('status-text').textContent = text;
+  $('status-detail').textContent = detail;
+  setBar($('progress-bar'), progress);
+}
+
+function idleText() {
+  if (state.maintenance) return 'Le serveur est en maintenance';
+  if (!state.modpackPublished) return "Le modpack n'est pas encore publié";
+  if (!state.installed) return 'Clique sur INSTALLER pour télécharger le modpack';
+  if (!state.account) return 'Connecte-toi avec ton compte Microsoft pour jouer';
+  return 'Prêt à jouer';
+}
+
+function resetStatus(text = idleText()) {
   setStatus(text, 0);
 }
 
 function refreshButtons() {
-  $('btn-play').disabled = state.busy || !state.account || !state.packReady || state.maintenance;
-  $('btn-play').textContent = state.busy ? '...' : state.maintenance ? 'MAINTENANCE' : 'JOUER';
+  const button = $('btn-play');
+  if (state.busy) {
+    button.textContent = '...';
+    button.disabled = true;
+  } else if (state.maintenance) {
+    button.textContent = 'MAINTENANCE';
+    button.disabled = true;
+  } else if (!state.installed) {
+    // Installing doesn't need a Microsoft account: only playing does.
+    button.textContent = 'INSTALLER';
+    button.disabled = !state.packReady || !state.modpackPublished;
+  } else {
+    button.textContent = 'JOUER';
+    button.disabled = !state.packReady || !state.account;
+  }
+  button.classList.toggle('install', !state.installed);
   $('btn-login').disabled = state.busy;
+}
+
+// ---------- Installation panel ----------
+
+function showInstallPanel(visible) {
+  $('install-panel').hidden = !visible;
+  $('news-section').hidden = visible;
+}
+
+function updateSteps(current) {
+  const index = STEPS.indexOf(current);
+  document.querySelectorAll('#install-steps li').forEach((li) => {
+    const i = STEPS.indexOf(li.dataset.step);
+    li.className = current === 'done' || (index >= 0 && i < index) ? 'done' : i === index ? 'active' : '';
+  });
 }
 
 function showAccount(account) {
@@ -94,9 +145,15 @@ async function loadPack() {
 
   state.packReady = true;
   state.maintenance = Boolean(pack.maintenance);
-  $('pack-name').textContent = pack.name || 'ModdedQC';
+  state.modpackPublished = Boolean(pack.modpack);
+  if (!state.installing) state.installed = pack.installed;
+  $('pack-name').textContent = pack.name || 'All the Mod';
   $('pack-subtitle').textContent = pack.subtitle || '';
-  $('pack-version').textContent = `Minecraft ${pack.minecraft}`;
+  $('pack-season').textContent = pack.season || 'Saison 3';
+  $('pack-version').textContent = pack.modpack
+    ? `Modpack ${pack.modpack.version} · NeoForge ${pack.modpack.neoforge}`
+    : 'Modpack bientôt disponible';
+  $('pack-update').hidden = !(pack.installed && pack.modpack && pack.installedVersion !== pack.modpack.version);
   $('server-address').textContent = pack.server?.host || '';
   $('server-line').hidden = !pack.server?.host;
   const status = pack.serverStatus;
@@ -108,7 +165,7 @@ async function loadPack() {
   $('maintenance').hidden = !pack.maintenance;
   $('maintenance-message').textContent = pack.maintenance?.message || '';
   renderNews(pack.news);
-  if (!state.busy) resetStatus(state.maintenance ? 'Le serveur est en maintenance' : 'Prêt à jouer');
+  if (!state.busy) resetStatus();
   refreshButtons();
 }
 
@@ -166,7 +223,37 @@ $('btn-logout').onclick = async () => {
   showAccount(null);
 };
 
-$('btn-play').onclick = async () => {
+$('btn-play').onclick = () => (state.installed ? play() : install());
+
+// INSTALLER: downloads Java, NeoForge, Minecraft and the modpack, with the steps shown. Then the button becomes JOUER.
+async function install() {
+  state.busy = true;
+  state.installing = true;
+  refreshButtons();
+  updateSteps('java');
+  $('install-title').textContent = 'Installation du modpack';
+  showInstallPanel(true);
+  try {
+    await window.launcher.install();
+    state.installed = true;
+    updateSteps('done');
+    $('install-title').textContent = 'Installation terminée!';
+    setBar($('install-bar'), 1);
+    showInfo('Installation terminée! Tu peux maintenant jouer.');
+    setTimeout(() => showInstallPanel(false), 2500);
+  } catch (err) {
+    showInstallPanel(false);
+    showError(cleanError(err));
+  } finally {
+    state.busy = false;
+    state.installing = false;
+    refreshButtons();
+    resetStatus();
+  }
+}
+
+// JOUER: applies updates (only what changed), then starts the game and joins the server.
+async function play() {
   state.busy = true;
   refreshButtons();
   try {
@@ -177,7 +264,7 @@ $('btn-play').onclick = async () => {
     showError(cleanError(err));
     resetStatus('Erreur, réessaie');
   }
-};
+}
 
 $('btn-settings').onclick = () => $('settings').showModal();
 $('btn-folder').onclick = () => window.launcher.openFolder();
@@ -190,7 +277,15 @@ $('btn-settings-close').onclick = async () => {
   $('settings').close();
 };
 
-window.launcher.onStatus(({ text, progress }) => setStatus(text, progress));
+window.launcher.onStatus(({ step, text, progress, detail }) => {
+  setStatus(text, progress, detail || '');
+  if (state.installing) {
+    if (step) updateSteps(step);
+    $('install-text').textContent = text;
+    $('install-detail').textContent = detail || '';
+    setBar($('install-bar'), progress);
+  }
+});
 
 // ---------- Developer section: Ctrl+Shift+D shows/hides it (remembered) ----------
 

@@ -7,6 +7,8 @@ const auth = require('./auth');
 const files = require('./sync');
 const { pingServer } = require('./status');
 const minecraft = require('./minecraft');
+const modpack = require('./modpack');
+const { describe } = require('./progress');
 const updater = require('./updater');
 
 const config = require('../../launcher.config.json');
@@ -14,14 +16,20 @@ const config = require('../../launcher.config.json');
 const VERSION = require('../../package.json').version;
 // MODDEDQC_SERVER_URL lets you test against a local admin panel without editing the config.
 const SERVER_URL = process.env.MODDEDQC_SERVER_URL || config.serverUrl;
-const GAME_DIR = path.join(app.getPath('appData'), '.moddedqc');
+// Shared files (Java, Minecraft, NeoForge, assets) in ROOT; each season gets its own game folder
+// (mods, configs, saves...) in ROOT/instances/<season>, so a new season starts clean.
+const ROOT = path.join(app.getPath('appData'), '.moddedqc');
+const instanceDir = (season) =>
+  path.join(ROOT, 'instances', String(season || 'Saison 3').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'saison-3');
 const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
 
 let win;
 let playing = false;
 
 function loadSettings() {
-  const defaults = { ramMb: 4096, hideOnLaunch: false, devTab: false, beta: { enabled: false, key: '' }, declinedBeta: null };
+  // All the Mods 10 needs a lot of memory: 8 Go when the PC has 16 Go or more, 6 Go otherwise.
+  const ramMb = os.totalmem() >= 15 * 1024 ** 3 ? 8192 : 6144;
+  const defaults = { ramMb, hideOnLaunch: false, devTab: false, beta: { enabled: false, key: '' }, declinedBeta: null };
   try {
     return { ...defaults, ...JSON.parse(fs.readFileSync(settingsFile(), 'utf8')) };
   } catch {
@@ -78,16 +86,24 @@ ipcMain.handle('init', () => {
 ipcMain.handle('pack', async () => {
   try {
     const pack = await files.fetchManifest(SERVER_URL);
-    const server = pack.server?.host ? await pingServer(pack.server.host, pack.server.port, { minecraftVersion: pack.versionId }) : null;
+    const server = pack.server?.host ? await pingServer(pack.server.host, pack.server.port, { minecraftVersion: pack.modpack?.minecraft || pack.versionId }) : null;
+    const installed = modpack.installedState(instanceDir(pack.season));
     return {
       name: pack.name,
       subtitle: pack.subtitle,
+      season: pack.season || 'Saison 3',
       version: pack.version,
       news: pack.news || [],
       server: pack.server,
       minecraft: pack.versionId,
       serverStatus: server,
       maintenance: pack.maintenance?.enabled ? pack.maintenance : null,
+      modpack: pack.modpack
+        ? { version: pack.modpack.version, minecraft: pack.modpack.minecraft, neoforge: pack.modpack.neoforge, size: pack.modpack.size }
+        : null,
+      // INSTALLER until the modpack has been installed once in this season's folder, then JOUER.
+      installed: Boolean(installed),
+      installedVersion: installed?.version || null,
     };
   } catch (err) {
     return { error: `Serveur de fichiers injoignable (${err.message})` };
@@ -144,31 +160,76 @@ function saveSettings(settings) {
 
 ipcMain.handle('save-settings', (_event, settings) => saveSettings(settings));
 
-ipcMain.handle('open-folder', () => {
-  fs.mkdirSync(GAME_DIR, { recursive: true });
-  shell.openPath(GAME_DIR);
+ipcMain.handle('open-folder', async () => {
+  const pack = await files.fetchManifest(SERVER_URL).catch(() => ({}));
+  const dir = instanceDir(pack.season);
+  fs.mkdirSync(dir, { recursive: true });
+  shell.openPath(dir);
 });
 
+// Everything the game needs, in order: NeoForge (with Java + Minecraft), Minecraft's files, the modpack,
+// then the extra files from the admin website. Already-installed parts are only checked, so this is also
+// how updates are applied when the player clicks JOUER.
+async function prepare(pack) {
+  const send = (state) => {
+    if (state.download) state.detail = describe(state.download);
+    delete state.download;
+    win?.webContents.send('status', state);
+  };
+  const mp = pack.modpack;
+  if (!mp?.manifestUrl) throw new Error("Le modpack n'est pas encore publié. Reviens un peu plus tard!");
+  const gameDir = instanceDir(pack.season);
+  fs.mkdirSync(gameDir, { recursive: true });
+
+  send({ step: 'modpack', text: 'Lecture du modpack...', progress: null });
+  const manifest = await modpack.fetchModpackManifest(mp.manifestUrl);
+
+  const versionId = await minecraft.installNeoForge(
+    ROOT,
+    { minecraftVersion: manifest.minecraft, neoforgeVersion: manifest.neoforge },
+    send,
+  );
+  const installed = await minecraft.install(ROOT, versionId, (text, progress, download) =>
+    send({ step: 'minecraft', text, progress, download }),
+  );
+  await modpack.syncModpack(gameDir, manifest, send);
+  await files.sync(gameDir, SERVER_URL, pack, (text, progress) => send({ step: 'files', text, progress }));
+  return { installed, gameDir };
+}
+
+async function loadPackForGame() {
+  const pack = await files.fetchManifest(SERVER_URL);
+  if (pack.maintenance?.enabled) throw new Error(pack.maintenance.message || 'Le serveur est en maintenance.');
+  return pack;
+}
+
+// INSTALLER: first download of everything (no Microsoft account needed for that).
+ipcMain.handle('install', async () => {
+  if (playing) return;
+  playing = true;
+  try {
+    await prepare(await loadPackForGame());
+    win.webContents.send('status', { step: 'done', text: 'Installation terminée!', progress: 1 });
+  } finally {
+    playing = false;
+  }
+});
+
+// JOUER: apply updates if any, log in, start NeoForge and join the server.
 ipcMain.handle('play', async () => {
   if (playing) return;
   playing = true;
   try {
     const settings = loadSettings();
-    fs.mkdirSync(GAME_DIR, { recursive: true });
-
-    status('Recherche de mises à jour...', null);
-    const pack = await files.fetchManifest(SERVER_URL);
-    if (pack.maintenance?.enabled) throw new Error(pack.maintenance.message || 'Le serveur est en maintenance.');
-    await files.sync(GAME_DIR, SERVER_URL, pack, status);
+    const pack = await loadPackForGame();
+    const { installed, gameDir } = await prepare(pack);
 
     status('Connexion au compte...', null);
     const account = await auth.refresh(config.azureClientId);
 
-    const installed = await minecraft.install(GAME_DIR, pack.versionId, status);
-
-    status('Lancement du jeu...', null);
+    status('Lancement du jeu (le premier démarrage de NeoForge peut prendre quelques minutes)...', null);
     const server = pack.autoConnect && pack.server;
-    const child = minecraft.launch(GAME_DIR, installed, { account, ramMb: settings.ramMb, server });
+    const child = minecraft.launch(ROOT, installed, { account, ramMb: settings.ramMb, server, gameDir });
 
     win.webContents.send('game-started');
     if (settings.hideOnLaunch) win.hide();
@@ -183,6 +244,7 @@ ipcMain.handle('play', async () => {
     throw err;
   }
 });
+
 
 function finish(error) {
   playing = false;

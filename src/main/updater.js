@@ -15,6 +15,7 @@ const { spawn } = require('child_process');
 const { app } = require('electron');
 const { downloadAll, sha256File } = require('./download');
 const { isNewer } = require('./semver');
+const { progressTracker } = require('./progress');
 
 const INSTALLER = 'ModdedQC-Setup.exe';
 const RUNNING_ROOT = path.join(__dirname, '..', '..');
@@ -50,18 +51,6 @@ async function checkForUpdates({ repo, current, beta }) {
   };
 }
 
-// Turns byte counts into speed and remaining time (averaged over the last few seconds).
-function progressTracker(onProgress, info) {
-  const samples = [];
-  return ({ done, total }) => {
-    const now = Date.now();
-    samples.push({ now, done });
-    while (samples.length > 2 && now - samples[0].now > 3000) samples.shift();
-    const first = samples[0];
-    const speed = now > first.now ? ((done - first.done) * 1000) / (now - first.now) : 0;
-    onProgress({ ...info, phase: 'downloading', bytesDone: done, bytesTotal: total, speed, eta: speed > 0 ? (total - done) / speed : null });
-  };
-}
 
 async function readAssetJson(release, name) {
   const asset = release.assets.find((a) => a.name === name);

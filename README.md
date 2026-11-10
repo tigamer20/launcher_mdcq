@@ -115,6 +115,28 @@ Every request from the website is signed with the secret, expires after 60 secon
 | `AGENT_PORT`     | no       | Default `8765`.                                            |
 | `RCON_HOST/PORT` | no       | Default `127.0.0.1` / `25575`.                             |
 
+### Publish the modpack (All the Mod · Saison 3)
+
+The launcher installs **NeoForge** and a **custom modpack based on All the Mods 10** (Minecraft 1.21.1).
+
+**On the Mac (once):** in `start-agent.command`, set:
+- `MODPACK_DIR`: the **client** instance of your modpack (the folder with `mods/`, `config/`, `kubejs/`...), for example your CurseForge instance;
+- `GITHUB_TOKEN`: a GitHub token with **Contents: Read and write** on this repository (the same kind as on Render).
+
+Restart the agent: its window shows `Modpack: <folder>`.
+
+**Each time you change the modpack:**
+1. Change the mods and configs in that instance on the Mac (test it there first).
+2. Admin website → **Modpack** tab → type the new version (e.g. `1.0.1`), check **Minecraft** (`1.21.1`) and **NeoForge** (the version of your instance, e.g. `21.1.211`) → **Publier depuis le Mac**.
+3. The Mac sends **only the changed files** to the `modpack` release on GitHub (a pre-release, separate from the launcher's versions). The first time, the whole modpack is uploaded, which can take a while.
+4. When it says *Modpack x publié*, every launcher gets it at the next click on **JOUER**. Players only download what changed.
+
+What is sent: everything in the instance except the player's own data (`saves`, `logs`, `screenshots`, `journeymap`, `servers.dat`...). Mods and files over 1 MB are sent one by one; small files (configs, scripts) go in one zip. `options.txt` and a few personal settings are only installed the first time, never overwritten.
+
+**What players see:** the first time, **INSTALLER** downloads Java, NeoForge, Minecraft and the modpack with the steps, progress, speed and time remaining (5 to 20 minutes). After that the button is **JOUER**: it applies updates, starts NeoForge and joins the server. Each season gets its own game folder (`.moddedqc/instances/saison-3`), set by the **Saison** field in the **Serveur** tab.
+
+> The modpack files are public on GitHub (the repository is public). Many mods allow redistribution in a modpack, but some don't: check the licenses of the mods you add.
+
 ### 4. Publish the launcher (and its updates)
 
 The installer is built by GitHub (on a Windows machine) with `.github/workflows/release.yml`.

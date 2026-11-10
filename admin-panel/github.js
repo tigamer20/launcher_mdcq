@@ -99,7 +99,8 @@ function isNewer(a, b) {
 
 /** Latest official and dev versions + how many saved changes wait on the admin branch. */
 async function status() {
-  const releases = (await gh('GET', '/releases?per_page=50')) || [];
+  // Only the launcher's versions (v1.2.0, v1.2.0-dev), not the "modpack" release that holds the modpack files.
+  const releases = ((await gh('GET', '/releases?per_page=50')) || []).filter((r) => /^v\d+\.\d+\.\d+(-dev)?$/.test(r.tag_name));
   const official = releases.find((r) => !r.prerelease && !r.draft);
   const dev = releases.find((r) => r.prerelease && !r.draft);
   const branch = await gh('GET', `/git/ref/heads/${BRANCH}`);

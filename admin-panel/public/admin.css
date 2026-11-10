@@ -5,8 +5,8 @@
   --border: rgba(255, 255, 255, 0.08);
   --text: #e8ebf2;
   --muted: #8a93a8;
-  --accent: #3b82f6;
-  --accent-2: #22d3ee;
+  --accent: #8b5cf6;
+  --accent-2: #fbbf24;
   --danger: #ef4444;
   --warning: #f59e0b;
   --success: #22c55e;
@@ -696,4 +696,37 @@ dialog::backdrop {
   color: #fca5a5;
   border-color: rgba(239, 68, 68, 0.4);
   font-size: 14px;
+}
+
+/* ---------- Modpack ---------- */
+.publish-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bar-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 0.3s;
+}
+
+.modpack-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.modpack-facts strong {
+  display: block;
+  font-size: 18px;
 }
