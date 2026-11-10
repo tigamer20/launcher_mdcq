@@ -736,3 +736,166 @@ dialog::backdrop {
 .files.players td:nth-child(2) { color: inherit; }
 .player { display: flex; align-items: center; gap: 10px; font-weight: 600; }
 .player img { border-radius: 4px; image-rendering: pixelated; }
+
+/* ---------- Modpack editor ---------- */
+.file-button {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ed-import h2 {
+  margin-bottom: 6px;
+}
+
+.ed-import .publish-progress {
+  margin-top: 16px;
+}
+
+#ed-main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ed-publish {
+  align-items: flex-end;
+}
+
+.ed-publish .field {
+  width: 160px;
+}
+
+.ed-pending {
+  flex: 1;
+  min-width: 240px;
+  font-size: 14px;
+}
+
+.ed-pending strong {
+  display: block;
+  font-size: 16px;
+  margin-bottom: 2px;
+}
+
+.ed-tabs {
+  gap: 8px;
+}
+
+.ed-tab {
+  padding: 8px 16px;
+  border-radius: 999px;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.ed-tab.active {
+  color: var(--text);
+  background: var(--panel-2);
+  border-color: var(--accent);
+}
+
+.ed-add input {
+  flex: 1;
+  min-width: 260px;
+}
+
+.ed-filter {
+  margin-top: 14px;
+}
+
+.ed-filter input {
+  max-width: 340px;
+}
+
+.ed-table td:first-child {
+  font-family: inherit;
+  word-break: normal;
+}
+
+.ed-table td:nth-child(2) {
+  font-family: Consolas, Menlo, monospace;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.ed-table tr.disabled td {
+  opacity: 0.45;
+}
+
+.ed-table tr.disabled td:last-child {
+  opacity: 1;
+}
+
+.ed-table td:last-child {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.ed-table td:last-child button,
+.ed-table td:last-child label {
+  padding: 5px 10px;
+  font-size: 13px;
+  margin-left: 4px;
+}
+
+.ed-table a {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.ed-table a:hover {
+  color: var(--accent-2);
+}
+
+.badge.warn {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+.dir-list .state {
+  color: #fbbf24;
+  font-size: 12px;
+  margin-left: 6px;
+}
+
+#ed-version-select {
+  width: 100%;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+
+dialog#ed-version-dialog {
+  width: 560px;
+}
+
+.ed-legacy summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.ed-legacy[open] summary {
+  margin-bottom: 16px;
+}
+
+.ed-legacy > .card {
+  margin-top: 12px;
+}
+
+.primary:disabled,
+.ghost:disabled,
+input[type='file']:disabled + span {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+#ed-missing {
+  margin-bottom: 14px;
+}
