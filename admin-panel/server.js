@@ -549,6 +549,9 @@ const server = http.createServer(async (req, res) => {
 
 // Startup: get the data back from GitHub (Render's free plan erased it), then start serving.
 async function start() {
+  // Default data first: on a first start (or Render's free plan wiping the disk) it is what goes into the new branch.
+  // When the branch exists, GitHub's data replaces it.
+  ensureDefaultPack();
   if (storage.configured()) {
     try {
       const result = await storage.restore(DATA_DIR);

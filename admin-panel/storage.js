@@ -11,6 +11,7 @@ const FOLDER = 'data'; // inside the branch: data/pack.json, data/files/...
 const MAX_FILE = 95 * 1024 * 1024; // GitHub refuses files over 100 MB
 
 const shas = new Map(); // relative path -> blob sha on GitHub (needed to update/delete a file)
+let dataRoot = null; // the website's data folder (set by restore)
 const repoPath = (relative) => `${FOLDER}/${relative}`.split('/').map(encodeURIComponent).join('/');
 
 // GitHub refuses two changes to the same branch at the same time: save one after the other.
@@ -34,6 +35,7 @@ function walk(dir) {
  * If the branch doesn't exist yet, creates it with the local data. Returns 'restored' or 'created'.
  */
 async function restore(dataDir) {
+  dataRoot = dataDir;
   const ref = await github.gh('GET', `/git/ref/heads/${BRANCH}`);
   if (!ref) {
     await createBranch(dataDir);
@@ -67,9 +69,31 @@ async function createBranch(dataDir) {
     entries.push({ path: `${FOLDER}/${relative}`, mode: '100644', type: 'blob', sha: blob.sha });
     shas.set(relative, blob.sha);
   }
+  // GitHub refuses an empty tree: keep a small note in the branch when there is no data yet.
+  if (!entries.length) {
+    const note = await github.gh('POST', '/git/blobs', { content: 'Données du site admin (pack.json, fichiers joueurs).\n', encoding: 'utf-8' });
+    entries.push({ path: `${FOLDER}/.keep`, mode: '100644', type: 'blob', sha: note.sha });
+  }
   const tree = await github.gh('POST', '/git/trees', { tree: entries });
   const commit = await github.gh('POST', '/git/commits', { message: 'Données du site admin', tree: tree.sha, parents: [] });
   await github.gh('POST', '/git/refs', { ref: `refs/heads/${BRANCH}`, sha: commit.sha });
+}
+
+// The branch is missing (its creation failed at startup, or it was deleted): create it from the local data.
+async function ensureBranch() {
+  if (await github.gh('GET', `/git/ref/heads/${BRANCH}`)) return false;
+  if (!dataRoot) throw new Error(`la branche ${BRANCH} n'existe pas sur GitHub`);
+  shas.clear();
+  await createBranch(dataRoot);
+  return true;
+}
+
+// GitHub answers 404 (null) when the branch doesn't exist or the token can't see the repository.
+async function put(relative, body) {
+  const result = await github.gh('PUT', `/contents/${repoPath(relative)}`, body);
+  if (result?.content) return result;
+  if (await ensureBranch()) return { content: { sha: shas.get(relative) } }; // the new branch already has this file
+  throw new Error(`GitHub a refusé l'enregistrement de ${relative} (vérifie que GITHUB_TOKEN a « Contents: Read and write » sur ${github.REPO})`);
 }
 
 /** Saves one data file (e.g. "pack.json" or "files/resourcepacks/pack.zip") on GitHub. */
@@ -80,15 +104,15 @@ function saveFile(relative, buffer) {
     if (shas.has(relative)) body.sha = shas.get(relative);
     let result;
     try {
-      result = await github.gh('PUT', `/contents/${repoPath(relative)}`, body);
+      result = await put(relative, body);
     } catch {
       // Our copy of the file's sha was out of date: ask GitHub for the current one and retry once.
       const current = await github.gh('GET', `/contents/${repoPath(relative)}?ref=${BRANCH}`);
       if (current?.sha) body.sha = current.sha;
       else delete body.sha;
-      result = await github.gh('PUT', `/contents/${repoPath(relative)}`, body);
+      result = await put(relative, body);
     }
-    shas.set(relative, result.content.sha);
+    if (result.content.sha) shas.set(relative, result.content.sha);
   });
 }
 
