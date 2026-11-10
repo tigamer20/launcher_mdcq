@@ -104,7 +104,12 @@ async function postJson(url, body) {
     body: JSON.stringify(body),
   });
   const text = await res.text();
-  const json = text ? JSON.parse(text) : {};
+  let json = {};
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    json = { errorMessage: text.slice(0, 200) };
+  }
   return { ok: res.ok, status: res.status, json };
 }
 
@@ -119,6 +124,18 @@ const XSTS_ERRORS = {
   2148916237: 'Ce compte doit être vérifié comme adulte (Corée du Sud).',
   2148916238: "Ce compte est un compte enfant: il doit être ajouté à une famille Microsoft par un adulte.",
 };
+
+// Minecraft's answer when it refuses the login, explained (the code and message help to find the cause).
+function minecraftError({ status, json }) {
+  const detail = json.errorMessage || json.error_description || json.error || '';
+  const raw = `(${status}${detail ? ` : ${detail}` : ''})`;
+  if (/invalid app registration/i.test(detail)) {
+    return `Microsoft n'autorise pas encore cette application pour Minecraft ${raw}. Vérifie que l'ID approuvé dans le courriel de Microsoft est exactement AZURE_CLIENT_ID dans GitHub, puis publie une nouvelle version du launcher.`;
+  }
+  if (status === 429) return `Trop de connexions d'affilée, réessaie dans quelques minutes ${raw}.`;
+  if (status >= 500) return `Les serveurs de Minecraft ont un problème en ce moment, réessaie plus tard ${raw}.`;
+  return `Connexion aux serveurs Minecraft impossible ${raw}.`;
+}
 
 async function minecraftLogin(msAccessToken) {
   const xbl = await postJson('https://user.auth.xboxlive.com/user/authenticate', {
@@ -139,13 +156,13 @@ async function minecraftLogin(msAccessToken) {
   const mc = await postJson('https://api.minecraftservices.com/authentication/login_with_xbox', {
     identityToken: `XBL3.0 x=${userHash};${xsts.json.Token}`,
   });
-  if (!mc.ok) throw new Error('Connexion aux serveurs Minecraft impossible.');
+  if (!mc.ok) throw new Error(minecraftError(mc));
 
   const res = await fetch('https://api.minecraftservices.com/minecraft/profile', {
     headers: { Authorization: `Bearer ${mc.json.access_token}` },
   });
   if (res.status === 404) throw new Error("Ce compte ne possède pas Minecraft Java Edition.");
-  if (!res.ok) throw new Error('Impossible de lire le profil Minecraft.');
+  if (!res.ok) throw new Error(`Impossible de lire le profil Minecraft (${res.status}).`);
   const profile = await res.json();
 
   return { name: profile.name, uuid: profile.id, accessToken: mc.json.access_token };
