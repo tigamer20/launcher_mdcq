@@ -730,3 +730,9 @@ dialog::backdrop {
   display: block;
   font-size: 18px;
 }
+
+/* ---------- Players ---------- */
+.files.players td:first-child { font-family: inherit; word-break: normal; }
+.files.players td:nth-child(2) { color: inherit; }
+.player { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+.player img { border-radius: 4px; image-rendering: pixelated; }
