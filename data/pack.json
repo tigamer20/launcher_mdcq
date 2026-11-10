@@ -1,0 +1,20 @@
+{
+  "name": "All the Mod",
+  "season": "Saison 3",
+  "version": "1.0.0",
+  "versionId": "1.21.1",
+  "server": {
+    "host": "exemple.gl.joinmc.link",
+    "port": 25565
+  },
+  "autoConnect": true,
+  "maintenance": {
+    "enabled": false,
+    "message": ""
+  },
+  "syncDirs": [],
+  "keepPlayerChanges": [
+    "options.txt"
+  ],
+  "news": []
+}
