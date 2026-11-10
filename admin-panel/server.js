@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ModdedQC admin website + file server for the launcher. No dependencies, only Node.js.
+// ATM admin website + file server for the launcher. No dependencies, only Node.js.
 //
 //   ADMIN_PASSWORD=secret node admin-panel/server.js
 //
@@ -71,10 +71,10 @@ function ensureDefaultPack() {
       {
         name: 'All the Mod',
         season: 'Saison 3',
-        subtitle: 'Le modpack All the Mods 10, version ModdedQC',
+        subtitle: 'Saison 3 · basé sur All the Mods 10',
         version: '1.0.0',
         versionId: '1.21.1',
-        server: { host: 'play.moddedqc.ca', port: 25565 },
+        server: { host: 'exemple.gl.joinmc.link', port: 25565 },
         autoConnect: true,
         maintenance: { enabled: false, message: '' },
         syncDirs: [],

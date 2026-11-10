@@ -18,7 +18,7 @@ async function gh(method, url, body) {
     headers: {
       Authorization: `Bearer ${TOKEN}`,
       Accept: 'application/vnd.github+json',
-      'User-Agent': 'ModdedQC-Admin',
+      'User-Agent': 'ATM-Admin',
       ...(body ? { 'Content-Type': 'application/json' } : {}),
     },
     body: body && JSON.stringify(body),

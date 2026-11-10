@@ -1,8 +1,8 @@
 {
-  "name": "moddedqc-launcher",
-  "productName": "ModdedQC Launcher",
+  "name": "atm-launcher",
+  "productName": "ATM Launcher",
   "version": "1.0.0",
-  "description": "Launcher du serveur All the Mod (ModdedQC) - All the Mods 10, saison 3",
+  "description": "Launcher du serveur ATM (All the Mods 10) - saison 3",
   "main": "src/bootstrap.js",
   "private": true,
   "scripts": {
@@ -12,8 +12,8 @@
     "dist:win": "electron-builder --win --publish never"
   },
   "build": {
-    "appId": "ca.moddedqc.launcher",
-    "productName": "ModdedQC Launcher",
+    "appId": "qc.atm.launcher",
+    "productName": "ATM Launcher",
     "files": [
       "src/**/*",
       "launcher.config.json"
@@ -32,9 +32,9 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "All the Mod",
+      "shortcutName": "ATM",
       "runAfterFinish": true,
-      "artifactName": "ModdedQC-Setup.${ext}"
+      "artifactName": "ATM-Setup.${ext}"
     },
     "mac": {
       "target": "dmg",

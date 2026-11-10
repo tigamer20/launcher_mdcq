@@ -3,7 +3,7 @@
 // Each release (built by .github/workflows/release.yml) contains:
 //   app-update.json            list of the launcher's files with their SHA-256
 //   <sha256> assets            the files themselves, named by their hash
-//   ModdedQC-Setup.exe(.sha256) the full installer, for new players
+//   ATM-Setup.exe(.sha256) the full installer, for new players
 //
 // Normal update: only the files whose hash changed are downloaded into <userData>/app/<version>/,
 // then the launcher restarts on them (see src/bootstrap.js). Nothing to install.
@@ -17,14 +17,14 @@ const { downloadAll, sha256File } = require('./download');
 const { isNewer } = require('./semver');
 const { progressTracker } = require('./progress');
 
-const INSTALLER = 'ModdedQC-Setup.exe';
+const INSTALLER = 'ATM-Setup.exe';
 const RUNNING_ROOT = path.join(__dirname, '..', '..');
 const updatesDir = () => path.join(app.getPath('userData'), 'app');
-// MODDEDQC_GITHUB_API lets you test updates against a fake GitHub (like MODDEDQC_SERVER_URL for the website).
-const GITHUB_API = process.env.MODDEDQC_GITHUB_API || 'https://api.github.com';
+// ATM_GITHUB_API lets you test updates against a fake GitHub (like ATM_SERVER_URL for the website).
+const GITHUB_API = process.env.ATM_GITHUB_API || 'https://api.github.com';
 
 async function github(url) {
-  const res = await fetch(url, { headers: { 'User-Agent': 'ModdedQC-Launcher', Accept: 'application/vnd.github+json' } });
+  const res = await fetch(url, { headers: { 'User-Agent': 'ATM-Launcher', Accept: 'application/vnd.github+json' } });
   if (!res.ok) throw new Error(`GitHub HTTP ${res.status}`);
   return res;
 }
@@ -106,11 +106,11 @@ async function installerUpdate(release, onProgress) {
   const installer = asset(INSTALLER);
   const checksum = asset(`${INSTALLER}.sha256`);
   if (process.platform !== 'win32' || !installer || !checksum) {
-    throw new Error('Cette mise à jour doit être installée à la main depuis le site de ModdedQC.');
+    throw new Error('Cette mise à jour doit être installée à la main depuis la page de téléchargement du launcher ATM.');
   }
   const version = versionOf(release);
   const expected = (await (await github(checksum.browser_download_url)).text()).trim().split(/\s+/)[0].toLowerCase();
-  const dest = path.join(os.tmpdir(), `ModdedQC-Setup-${version}.exe`);
+  const dest = path.join(os.tmpdir(), `ATM-Setup-${version}.exe`);
   fs.rmSync(dest, { force: true });
   const info = { version, channel: release.prerelease ? 'beta' : 'official', filesChanged: 1, filesTotal: 1, fullInstaller: true };
   await downloadAll([{ url: installer.browser_download_url, dest, size: installer.size }], progressTracker(onProgress, info));

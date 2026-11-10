@@ -1,5 +1,5 @@
 {
-  "serverUrl": "https://files.moddedqc.ca/",
+  "serverUrl": "https://ton-site-admin.onrender.com/",
   "azureClientId": "PUT-YOUR-AZURE-CLIENT-ID-HERE",
   "updateRepo": "tigamer20/launcher_mdcq"
 }

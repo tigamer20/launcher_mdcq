@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-rem ModdedQC agent for Windows (All the Mod server).
+rem ATM agent for Windows (All the Mod server).
 rem 1. Install Node.js 22 LTS (https://nodejs.org).
 rem 2. Copy this file to start-agent.bat (same folder) and fill in the values below.
 rem 3. Double-click start-agent.bat. Leave the window open while the Minecraft server runs.

@@ -1,5 +1,5 @@
 #!/bin/bash
-# ModdedQC agent for macOS.
+# ATM agent for macOS.
 # 1. Copy this file to start-agent.command (same folder) and fill in the values below.
 # 2. Double-click start-agent.command in Finder. Leave the Terminal window open while the server runs.
 #    (first time: right-click > Open, because macOS blocks scripts it doesn't know)

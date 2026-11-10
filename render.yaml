@@ -1,8 +1,8 @@
-# Render Blueprint for the ModdedQC admin website (also serves the files the launcher downloads).
+# Render Blueprint for the ATM admin website (also serves the files the launcher downloads).
 # Render dashboard > New > Blueprint > pick this repository. See README "Héberger le site sur Render".
 services:
   - type: web
-    name: moddedqc-admin
+    name: atm-admin
     runtime: node
     plan: free # data is kept in the GitHub repository (branch admin-data), so no paid disk is needed
     region: virginia # closest Render region to Québec

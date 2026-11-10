@@ -100,7 +100,7 @@
               <input name="season" placeholder="Saison 3" />
               <small class="muted">Affichée dans le launcher. Une nouvelle saison = un nouveau dossier de jeu propre chez les joueurs.</small>
             </label>
-            <label class="field"><span>Adresse du serveur</span><input name="host" placeholder="play.moddedqc.ca" /></label>
+            <label class="field"><span>Adresse du serveur</span><input name="host" placeholder="exemple.gl.joinmc.link" /></label>
             <label class="field"><span>Port</span><input name="port" type="number" min="1" max="65535" /></label>
             <label class="field">
               <span>Version de Minecraft</span>
@@ -177,7 +177,7 @@
         <section class="tab" id="tab-plugins" hidden>
           <h1>Plugins</h1>
           <p class="card muted" id="plugins-off">
-            Pour gérer les plugins, installe l'agent ModdedQC sur le PC du serveur Paper et ajoute
+            Pour gérer les plugins, installe l'agent ATM sur le PC du serveur Paper et ajoute
             <code>AGENT_URL</code> et <code>AGENT_SECRET</code> sur Render (voir le README).
           </p>
           <div id="plugins-on">
@@ -207,7 +207,7 @@
             <button id="btn-merge" class="primary">Fusionner dans main</button>
           </div>
           <p class="card muted" id="editor-off">
-            L'éditeur a besoin de l'agent ModdedQC sur le serveur Paper (<code>AGENT_URL</code> et <code>AGENT_SECRET</code>).
+            L'éditeur a besoin de l'agent ATM sur le serveur Paper (<code>AGENT_URL</code> et <code>AGENT_SECRET</code>).
           </p>
           <p class="notice" id="editor-github">
             Chaque sauvegarde modifie le fichier sur le serveur et crée un commit sur la branche
@@ -234,7 +234,7 @@
           <h1>Console</h1>
           <p class="card muted" id="console-off">
             Pour utiliser la console, active RCON dans <code>server.properties</code> (<code>enable-rcon=true</code>)
-            et lance l'agent ModdedQC avec <code>RCON_PASSWORD=...</code> (voir le README).
+            et lance l'agent ATM avec <code>RCON_PASSWORD=...</code> (voir le README).
           </p>
           <div id="console-on" class="card console-card">
             <div class="row wrap">

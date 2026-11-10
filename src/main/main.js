@@ -14,11 +14,11 @@ const updater = require('./updater');
 const config = require('../../launcher.config.json');
 // Version of the files actually running (they can come from an update, see src/bootstrap.js).
 const VERSION = require('../../package.json').version;
-// MODDEDQC_SERVER_URL lets you test against a local admin panel without editing the config.
-const SERVER_URL = process.env.MODDEDQC_SERVER_URL || config.serverUrl;
+// ATM_SERVER_URL lets you test against a local admin panel without editing the config.
+const SERVER_URL = process.env.ATM_SERVER_URL || config.serverUrl;
 // Shared files (Java, Minecraft, NeoForge, assets) in ROOT; each season gets its own game folder
 // (mods, configs, saves...) in ROOT/instances/<season>, so a new season starts clean.
-const ROOT = path.join(app.getPath('appData'), '.moddedqc');
+const ROOT = path.join(app.getPath('appData'), '.atm');
 const instanceDir = (season) =>
   path.join(ROOT, 'instances', String(season || 'Saison 3').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'saison-3');
 const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
@@ -285,7 +285,7 @@ const withTimeout = (promise, ms) =>
 
 /** Returns true when the launcher is restarting (or the installer took over). */
 async function startupUpdate() {
-  if (!app.isPackaged && !process.env.MODDEDQC_FORCE_UPDATER) return false; // "npm start": no updates
+  if (!app.isPackaged && !process.env.ATM_FORCE_UPDATER) return false; // "npm start": no updates
   const splash = createUpdateWindow();
   await new Promise((resolve) => splash.webContents.once('did-finish-load', resolve));
   const send = (state) => !splash.isDestroyed() && splash.webContents.send('updater-state', { current: VERSION, ...state });

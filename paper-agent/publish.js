@@ -53,7 +53,7 @@ async function gh(method, url, body) {
     headers: {
       Authorization: `Bearer ${TOKEN}`,
       Accept: 'application/vnd.github+json',
-      'User-Agent': 'ModdedQC-Agent',
+      'User-Agent': 'ATM-Agent',
       ...(body ? { 'Content-Type': 'application/json' } : {}),
     },
     body: body && JSON.stringify(body),
@@ -71,7 +71,7 @@ async function upload(release, name, data) {
       Authorization: `Bearer ${TOKEN}`,
       'Content-Type': 'application/octet-stream',
       'Content-Length': String(data.length),
-      'User-Agent': 'ModdedQC-Agent',
+      'User-Agent': 'ATM-Agent',
     },
     body: data,
   });

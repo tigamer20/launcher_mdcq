@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ModdedQC agent: runs on the PC/VPS that hosts Paper, so the admin website (on Render) can
+// ATM agent: runs on the PC/VPS that hosts Paper, so the admin website (on Render) can
 // manage plugins and send console commands. No dependencies, only Node.js.
 //
 //   AGENT_SECRET=... PAPER_DIR=/path/to/paper RCON_PASSWORD=... node agent.js
@@ -236,7 +236,7 @@ http
     }
   })
   .listen(PORT, () => {
-    console.log(`Agent ModdedQC prêt sur le port ${PORT}`);
+    console.log(`Agent ATM prêt sur le port ${PORT}`);
     console.log(`Plugins: ${PLUGINS_DIR}`);
     console.log(`Console RCON: ${RCON ? `${RCON.host}:${RCON.port}` : 'désactivée (RCON_PASSWORD manquant)'}`);
     console.log(`Modpack: ${modpack.configured() ? process.env.MODPACK_DIR : 'désactivé (MODPACK_DIR ou GITHUB_TOKEN manquant)'}`);

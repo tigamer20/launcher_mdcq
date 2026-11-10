@@ -383,7 +383,7 @@ function launch(root, installed, options) {
     library_directory: path.join(root, 'libraries'),
     classpath,
     classpath_separator: CP_SEPARATOR,
-    launcher_name: 'ModdedQC',
+    launcher_name: 'ATM',
     launcher_version: '1.0.0',
     quickPlayMultiplayer: serverAddress,
     quick_play_multiplayer: serverAddress,
