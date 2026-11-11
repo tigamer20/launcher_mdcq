@@ -352,6 +352,36 @@ const api = {
   'DELETE /api/editor/file': (req, url) => editorCall(editor.deleteFile, url.searchParams.get('path')).then(() => ({ ok: true })),
   'POST /api/editor/file/revert': async (req) => editorCall(editor.revertFile, (await readJson(req)).path).then(() => ({ ok: true })),
 
+  // Hide the modpack from the players (and show it again), without losing it.
+  'POST /api/modpack/visibility': async (req) => {
+    const { hidden } = await readJson(req);
+    const pack = readPack();
+    if (hidden) pack.modpackHidden = true;
+    else delete pack.modpackHidden;
+    await savePack(pack);
+    return { pack: publicPack(pack) };
+  },
+
+  // Remove the active modpack: launchers show "pas encore publié". Its files stay on GitHub (Activer brings it back).
+  'POST /api/modpack/remove': async () => {
+    const pack = readPack();
+    delete pack.modpack;
+    delete pack.modpackHidden;
+    await savePack(pack);
+    return { pack: publicPack(pack) };
+  },
+
+  // Delete a version from GitHub (not the active one).
+  'POST /api/modpack/delete-version': async (req) => {
+    const { manifestUrl } = await readJson(req);
+    if (manifestUrl === readPack().modpack?.manifestUrl) throw httpError(400, "C'est la version active : retire-la ou active une autre version d'abord");
+    const release = await github.gh('GET', '/releases/tags/modpack');
+    const asset = (release?.assets || []).find((a) => a.browser_download_url === manifestUrl && /^modpack-.*\.json$/.test(a.name));
+    if (!asset) throw httpError(404, 'Version introuvable sur GitHub');
+    await github.gh('DELETE', `/releases/assets/${asset.id}`);
+    return { ok: true };
+  },
+
   'POST /api/modpack/activate': async (req) => {
     const { manifestUrl } = await readJson(req);
     const version = (await github.listModpackVersions()).find((v) => v.manifestUrl === manifestUrl);

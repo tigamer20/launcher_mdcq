@@ -400,6 +400,22 @@ function renderModpack() {
         ])
       : el('p', { textContent: "Aucun modpack publié : les launchers affichent « Le modpack n'est pas encore publié »." }),
   );
+  // Hide / show / remove the active modpack
+  if (mp) {
+    $('modpack-current').append(
+      el('div', { className: 'row wrap modpack-actions' }, [
+        pack.modpackHidden
+          ? el('span', { className: 'badge warn', textContent: 'Masqué : les joueurs ne le voient pas' })
+          : el('span', { className: 'badge on', textContent: 'Visible par les joueurs' }),
+        el('button', {
+          className: 'ghost',
+          textContent: pack.modpackHidden ? 'Afficher aux joueurs' : 'Masquer aux joueurs',
+          onclick: () => setModpackVisibility(!pack.modpackHidden),
+        }),
+        el('button', { className: 'danger', textContent: 'Retirer le modpack', onclick: removeModpack }),
+      ]),
+    );
+  }
   const form = $('modpack-form');
   $('modpack-off').hidden = Boolean(features.modpack);
   form.hidden = !features.modpack;
@@ -419,13 +435,53 @@ async function loadGithubVersions() {
           el('td', { textContent: `Modpack ${v.version}` }),
           el('td', { textContent: `NeoForge ${v.neoforge} · ${v.files} fichiers · ${formatSize(v.size)}` }),
           el('td', {}, [
-            v.manifestUrl === active
-              ? el('span', { className: 'badge on', textContent: 'Active' })
-              : el('button', { className: 'primary', textContent: 'Activer', onclick: () => activateVersion(v) }),
+            ...(v.manifestUrl === active
+              ? [el('span', { className: 'badge on', textContent: 'Active' })]
+              : [
+                  el('button', { className: 'primary', textContent: 'Activer', onclick: () => activateVersion(v) }),
+                  el('button', { className: 'danger', textContent: 'Supprimer', onclick: () => deleteVersion(v) }),
+                ]),
           ]),
         ]),
       ),
     );
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+async function setModpackVisibility(visible) {
+  const question = visible
+    ? 'Afficher le modpack ? Les joueurs pourront de nouveau installer et jouer.'
+    : "Masquer le modpack ? Les launchers afficheront qu'il n'est pas disponible et ne pourront plus installer ni jouer, jusqu'à ce que tu l'affiches de nouveau.";
+  if (!confirm(question)) return;
+  try {
+    ({ pack } = await api('POST', '/api/modpack/visibility', { hidden: !visible }));
+    renderModpack();
+    toast(visible ? 'Modpack visible par les joueurs' : 'Modpack masqué');
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+async function removeModpack() {
+  if (!confirm("Retirer le modpack actif ? Les launchers afficheront « pas encore publié ». Ses fichiers restent sur GitHub : « Activer » dans la liste le remet.")) return;
+  try {
+    ({ pack } = await api('POST', '/api/modpack/remove'));
+    renderModpack();
+    loadGithubVersions();
+    toast('Modpack retiré');
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+async function deleteVersion(v) {
+  if (!confirm(`Supprimer le modpack ${v.version} de GitHub ? Il ne pourra plus être activé.`)) return;
+  try {
+    await api('POST', '/api/modpack/delete-version', { manifestUrl: v.manifestUrl });
+    loadGithubVersions();
+    toast(`Modpack ${v.version} supprimé`);
   } catch (err) {
     toast(err.message, true);
   }

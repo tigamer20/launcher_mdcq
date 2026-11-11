@@ -45,6 +45,9 @@ function buildManifest(dir) {
   // The beta key (and its hash) is checked by the website (/api/beta/check): never in the public manifest.
   const { keepPlayerChanges: _, betaKey: __, betaKeyHash: ___, ...manifest } = pack;
   manifest.files = files;
+  // Modpack hidden from the admin website: launchers act as if none was published (it can be shown again).
+  if (manifest.modpackHidden) delete manifest.modpack;
+  else delete manifest.modpackHidden;
   // Write to a temp file first so the launcher never reads a half-written manifest.
   const target = path.join(dir, 'manifest.json');
   fs.writeFileSync(target + '.tmp', JSON.stringify(manifest, null, 2));
