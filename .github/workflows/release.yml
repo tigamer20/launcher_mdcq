@@ -1,4 +1,4 @@
-# Publishes a new launcher version (ATM-Setup.exe) on the Releases page.
+# Publishes a new launcher version on the Releases page: ATM-Setup.exe (Windows) and ATM-Launcher.AppImage (Linux).
 # Installed launchers find it at startup, download it and update themselves.
 #
 # How to trigger it: push to main with a commit message like
@@ -7,6 +7,9 @@
 #   [dev_update] [1.2.0] Test des nouvelles configs -> dev pre-release (v1.2.0-dev), launchers ignore it
 # The admin website's "Fusionner" button creates exactly these merge commits.
 # Or run it by hand: Actions tab > "Release launcher" > Run workflow.
+#
+# Steps: "version" reads the version once, "windows" and "linux" build at the same time, "publish" creates the
+# release with every file (so a release never exists with only one of the two).
 name: Release launcher
 
 on:
@@ -32,23 +35,27 @@ permissions:
 concurrency: release
 
 jobs:
-  release:
+  version:
     if: >-
       github.event_name == 'workflow_dispatch' ||
       contains(toJSON(github.event.commits.*.message), '[off_update]') ||
       contains(toJSON(github.event.commits.*.message), '[dev_update]')
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      name: ${{ steps.version.outputs.name }}
+      title: ${{ steps.version.outputs.title }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
       - name: Read the version from "[off_update] [x.y.z]" or "[dev_update] [x.y.z]"
         id: version
-        shell: bash
         env:
           COMMITS_JSON: ${{ toJSON(github.event.commits) }}
           MANUAL_VERSION: ${{ inputs.version }}
@@ -60,6 +67,22 @@ jobs:
           export LATEST_NAME="$(gh release view --json name --jq .name 2> /dev/null || true)"
           node tools/release-version.js
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: notes
+          path: ${{ runner.temp }}/release-notes.md
+
+  windows:
+    needs: version
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
       - run: npm ci
 
       - name: Configure the launcher
@@ -67,8 +90,8 @@ jobs:
         env:
           SERVER_URL: ${{ vars.SERVER_URL }}
           AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
-          RELEASE_VERSION: ${{ steps.version.outputs.version }}
-          RELEASE_NAME: ${{ steps.version.outputs.name }}
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+          RELEASE_NAME: ${{ needs.version.outputs.name }}
 
       - name: Build installer
         run: npx electron-builder --win --x64 --publish never
@@ -81,19 +104,71 @@ jobs:
         run: |
           node -e "const c=require('crypto'),f=require('fs');f.writeFileSync('dist/ATM-Setup.exe.sha256',c.createHash('sha256').update(f.readFileSync('dist/ATM-Setup.exe')).digest('hex')+'  ATM-Setup.exe\n')"
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            dist/ATM-Setup.exe
+            dist/ATM-Setup.exe.sha256
+            dist/app-update/*
+
+  linux:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Configure the launcher
+        run: node tools/ci-config.js
+        env:
+          SERVER_URL: ${{ vars.SERVER_URL }}
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+          RELEASE_NAME: ${{ needs.version.outputs.name }}
+
+      - name: Build AppImage
+        run: npx electron-builder --linux AppImage --x64 --publish never
+
+      - name: Checksum
+        run: (cd dist && sha256sum ATM-Launcher.AppImage > ATM-Launcher.AppImage.sha256)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: |
+            dist/ATM-Launcher.AppImage
+            dist/ATM-Launcher.AppImage.sha256
+
+  publish:
+    needs: [version, windows, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+
       - name: Publish release
-        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.version.outputs.tag }}
-          TITLE: ${{ steps.version.outputs.title }}
-          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+          TAG: ${{ needs.version.outputs.tag }}
+          TITLE: ${{ needs.version.outputs.title }}
+          PRERELEASE: ${{ needs.version.outputs.prerelease }}
         run: |
           # Dev versions are pre-releases: launchers only install the latest official release.
           EXTRA=()
           if [ "$PRERELEASE" = "true" ]; then EXTRA=(--prerelease --latest=false); fi
-          gh release create "$TAG" dist/ATM-Setup.exe dist/ATM-Setup.exe.sha256 dist/app-update/* \
+          gh release create "$TAG" out/windows/ATM-Setup.exe out/windows/ATM-Setup.exe.sha256 out/windows/app-update/* \
+            out/linux/ATM-Launcher.AppImage out/linux/ATM-Launcher.AppImage.sha256 \
             --target "$GITHUB_SHA" \
             --title "$TITLE" \
-            --notes-file "$RUNNER_TEMP/release-notes.md" \
+            --notes-file out/notes/release-notes.md \
             "${EXTRA[@]}"

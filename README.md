@@ -26,6 +26,17 @@ Open the file and follow the installer. It creates an **ATM** shortcut on the de
 
 > Windows may show "Windows protected your PC" because the installer isn't signed with a paid certificate. Click **More info** → **Run anyway**.
 
+**Linux:** **<https://github.com/tigamer20/launcher_mdcq/releases/latest/download/ATM-Launcher.AppImage>**
+
+Make it executable, then start it (no installation needed):
+
+```bash
+chmod +x ATM-Launcher.AppImage
+./ATM-Launcher.AppImage
+```
+
+(or right-click → **Properties** → **Permissions** → *Allow executing file as program*, then double-click it). It updates itself like the Windows version. Some distributions need FUSE for AppImages (`sudo apt install libfuse2` on Ubuntu 22.04, `libfuse2t64` on 24.04).
+
 ---
 
 ## Setup (staff), in this order
