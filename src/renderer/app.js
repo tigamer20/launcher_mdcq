@@ -105,6 +105,7 @@ function refreshButtons() {
 function showInstallPanel(visible) {
   $('install-panel').hidden = !visible;
   $('news-section').hidden = visible;
+  if (!visible) updateNewsMore();
 }
 
 function updateSteps(current) {
@@ -126,7 +127,12 @@ function showAccount(account) {
   refreshButtons();
 }
 
+let shownNews = null; // the news last drawn: the list is only redrawn when it changes (checked every 15 s)
+
 function renderNews(news) {
+  const key = JSON.stringify(news);
+  if (key === shownNews) return;
+  shownNews = key;
   const list = $('news-list');
   list.replaceChildren();
   if (!news.length) {
@@ -136,23 +142,54 @@ function renderNews(news) {
   for (const item of news) {
     const card = document.createElement('article');
     card.className = 'news-card';
+    card.title = 'Cliquer pour lire en plein écran';
     const title = document.createElement('h3');
     title.textContent = item.title;
     const date = document.createElement('time');
     date.textContent = item.date || '';
     const body = document.createElement('p');
+    body.className = 'news-text clamped';
     body.textContent = item.body || '';
-    card.append(title, date, body);
+    const more = document.createElement('button');
+    more.className = 'news-more';
+    more.textContent = 'Afficher plus';
+    more.hidden = true;
+    card.append(title, date, body, more);
     if (item.url?.startsWith('https://')) {
       const link = document.createElement('a');
       link.href = item.url;
       link.target = '_blank';
       link.textContent = 'En savoir plus →';
+      link.onclick = (event) => event.stopPropagation(); // opens the link, not the full screen
       card.append(link);
     }
+    card.onclick = () => openNews(item);
     list.append(card);
   }
+  updateNewsMore();
 }
+
+// "Afficher plus" only on the news whose text is cut (more than 6 lines at the current window size).
+function updateNewsMore() {
+  for (const body of document.querySelectorAll('.news-card p.clamped')) {
+    if (!body.clientHeight) continue; // the news are hidden (installation panel): checked again when shown
+    body.parentElement.querySelector('.news-more').hidden = body.scrollHeight <= body.clientHeight + 1;
+  }
+}
+
+function openNews(item) {
+  $('news-viewer-title').textContent = item.title || '';
+  $('news-viewer-date').textContent = item.date || '';
+  $('news-viewer-body').textContent = item.body || '';
+  const link = $('news-viewer-link');
+  link.hidden = !item.url?.startsWith('https://');
+  if (!link.hidden) link.href = item.url;
+  $('news-viewer').showModal();
+  $('news-viewer').scrollTop = 0;
+}
+
+$('btn-news-close').onclick = () => $('news-viewer').close();
+window.addEventListener('resize', updateNewsMore);
 
 // ---------- Startup ----------
 
