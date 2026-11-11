@@ -213,9 +213,10 @@ async function prepare(pack) {
   return { installed, gameDir };
 }
 
-async function loadPackForGame() {
+// allowMaintenance: the developer section can still start the game (without the server) to test the modpack.
+async function loadPackForGame({ allowMaintenance = false } = {}) {
   const pack = await files.fetchManifest(SERVER_URL);
-  if (pack.maintenance?.enabled) throw new Error(pack.maintenance.message || 'Le serveur est en maintenance.');
+  if (pack.maintenance?.enabled && !allowMaintenance) throw new Error(pack.maintenance.message || 'Le serveur est en maintenance.');
   return pack;
 }
 
@@ -232,12 +233,14 @@ ipcMain.handle('install', async () => {
 });
 
 // JOUER: apply updates if any, log in, start NeoForge and join the server.
-ipcMain.handle('play', async () => {
+// { noServer: true } (developer section): same, but the game stays on its title screen.
+ipcMain.handle('play', async (_event, options = {}) => {
   if (playing) return;
   playing = true;
+  const noServer = Boolean(options?.noServer);
   try {
     const settings = loadSettings();
-    const pack = await loadPackForGame();
+    const pack = await loadPackForGame({ allowMaintenance: noServer });
     const { installed, gameDir } = await prepare(pack);
 
     status('Connexion au compte...', null);
@@ -245,7 +248,7 @@ ipcMain.handle('play', async () => {
     presence.report(SERVER_URL, account, 'play', VERSION);
 
     status('Lancement du jeu (le premier démarrage de NeoForge peut prendre quelques minutes)...', null);
-    const server = pack.autoConnect && pack.server;
+    const server = !noServer && pack.autoConnect && pack.server;
     const child = minecraft.launch(ROOT, installed, { account, ramMb: settings.ramMb, server, gameDir });
 
     win.webContents.send('game-started');

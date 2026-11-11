@@ -9,7 +9,7 @@ contextBridge.exposeInMainWorld('launcher', {
   checkUpdatesNow: () => ipcRenderer.invoke('check-updates-now'),
   login: () => ipcRenderer.invoke('login'),
   logout: () => ipcRenderer.invoke('logout'),
-  play: () => ipcRenderer.invoke('play'),
+  play: (options) => ipcRenderer.invoke('play', options),
   install: () => ipcRenderer.invoke('install'),
   saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
   openFolder: () => ipcRenderer.invoke('open-folder'),

@@ -74,6 +74,16 @@ function refreshButtons() {
   }
   button.classList.toggle('install', !state.installed);
   $('btn-login').disabled = state.busy;
+  // Developer section: start the game without the server (also during a maintenance)
+  const offlineBlocker = state.busy
+    ? 'Patiente, une opération est en cours.'
+    : !state.installed
+      ? "Installe d'abord le modpack (bouton INSTALLER)."
+      : !state.account
+        ? 'Connecte-toi avec ton compte Microsoft.'
+        : '';
+  $('btn-play-offline').disabled = Boolean(offlineBlocker);
+  $('play-offline-hint').textContent = offlineBlocker;
 }
 
 // ---------- Installation panel ----------
@@ -263,11 +273,12 @@ async function install() {
 }
 
 // JOUER: applies updates (only what changed), then starts the game and joins the server.
-async function play() {
+// play({ noServer: true }) from the developer section: the game stays on its title screen.
+async function play(options) {
   state.busy = true;
   refreshButtons();
   try {
-    await window.launcher.play();
+    await window.launcher.play(options);
   } catch (err) {
     state.busy = false;
     refreshButtons();
@@ -311,6 +322,10 @@ document.addEventListener('keydown', async (event) => {
 });
 
 $('btn-dev').onclick = () => $('dev').showModal();
+$('btn-play-offline').onclick = () => {
+  $('dev').close();
+  play({ noServer: true });
+};
 $('btn-dev-close').onclick = () => $('dev').close();
 
 $('btn-beta-check').onclick = async () => {
