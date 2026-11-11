@@ -23,14 +23,5 @@
       "body": "Bonjour,\nbienvenue dans la version bêta du launcher de All the mods!\nIl s'agit d'une version bêta donc il peux y avoir des bugs. Si vous en trouvez, veuillez écrire à tony_quebec sur Discord!!\n\nMerci et bon jeu!"
     }
   ],
-  "betaKeyHash": "f93f260586a52c0e68b0520968308ad41d3f2b6d7dabda69f4b35d74e14c9989",
-  "modpack": {
-    "version": "8.2",
-    "minecraft": "1.21.1",
-    "neoforge": "21.1.247",
-    "manifestUrl": "https://github.com/tigamer20/launcher_mdcq/releases/download/modpack/modpack-8.2.json",
-    "files": 3443,
-    "size": 203660280,
-    "publishedAt": "2026-11-11T20:34:13.183Z"
-  }
+  "betaKeyHash": "f93f260586a52c0e68b0520968308ad41d3f2b6d7dabda69f4b35d74e14c9989"
 }
