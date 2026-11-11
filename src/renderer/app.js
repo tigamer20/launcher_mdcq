@@ -52,7 +52,7 @@ function idleText() {
   if (!state.installed) return 'Clique sur INSTALLER pour télécharger le modpack';
   if (state.updateAvailable) return 'Mise à jour du modpack disponible : clique sur INSTALLER';
   if (!state.account) return 'Connecte-toi avec ton compte Microsoft pour jouer';
-  if (state.serverOffline) return 'Le serveur est hors ligne : tu peux jouer en solo en attendant';
+  if (state.serverOffline) return 'Serveur hors ligne · jeu en solo disponible';
   return 'Prêt à jouer';
 }
 
@@ -93,6 +93,8 @@ function refreshButtons() {
   const arrow = $('btn-play-menu');
   arrow.hidden = button.textContent !== 'JOUER';
   arrow.disabled = button.disabled;
+  // Server offline, JOUER EN SOLO shown: say why the server can't be joined.
+  $('offline-notice').hidden = state.playMode !== 'solo' || state.busy;
   $('btn-play-solo').disabled = button.disabled;
   if (arrow.hidden || arrow.disabled) closePlayMenu();
   $('btn-login').disabled = state.busy;
@@ -202,6 +204,27 @@ window.addEventListener('resize', updateNewsMore);
 
 // ---------- Startup ----------
 
+// The Minecraft server's status (online, players). Only "offline" when it could be checked and answered so
+// (no address configured: never blocked).
+function showServerStatus(status) {
+  state.serverOffline = Boolean(state.serverHost && status && !status.online);
+  $('server-line').classList.toggle('offline', !status?.online);
+  $('server-players').textContent = status?.online
+    ? `En ligne · ${status.players.online}/${status.players.max} joueurs`
+    : 'Hors ligne';
+  $('server-players').title = status?.online ? '' : status?.reason || '';
+}
+
+// Every 10 seconds, between the full checks: the launcher pings the Minecraft server itself.
+async function checkServer() {
+  if (!state.packReady || !state.serverHost) return;
+  const status = await window.launcher.serverStatus();
+  if (!status) return;
+  showServerStatus(status);
+  if (!state.busy) resetStatus();
+  refreshButtons();
+}
+
 // Shows the server info from manifest.json (name, news, maintenance...).
 async function loadPack() {
   const pack = await window.launcher.pack();
@@ -217,8 +240,7 @@ async function loadPack() {
   state.maintenance = Boolean(pack.maintenance);
   state.modpackPublished = Boolean(pack.modpack);
   state.modpackHidden = Boolean(pack.modpackHidden);
-  // Only when the server could be checked and answered "offline" (no address configured: never blocked)
-  state.serverOffline = Boolean(pack.server?.host && pack.serverStatus && !pack.serverStatus.online);
+  state.serverHost = pack.server?.host || '';
   if (!state.installing) state.installed = pack.installed;
   $('pack-name').textContent = pack.name || 'All the Mod';
   $('pack-season').textContent = pack.season || 'Saison 3';
@@ -236,12 +258,7 @@ async function loadPack() {
   $('dev-server-address').textContent = address || '-';
   $('server-address').hidden = !state.settings?.devTab;
   $('server-line').hidden = !pack.server?.host;
-  const status = pack.serverStatus;
-  $('server-line').classList.toggle('offline', !status?.online);
-  $('server-players').textContent = status?.online
-    ? `En ligne · ${status.players.online}/${status.players.max} joueurs`
-    : 'Hors ligne';
-  $('server-players').title = status?.online ? '' : status?.reason || '';
+  showServerStatus(pack.serverStatus);
   $('maintenance').hidden = !pack.maintenance;
   $('maintenance-message').textContent = pack.maintenance?.message || '';
   renderNews(pack.news);
@@ -523,8 +540,10 @@ window.launcher.onGameClosed((error) => {
   loadPack();
 });
 
-// Check the server for changes (news, maintenance...) every 15 seconds and when the window gets focus.
+// Check the website for changes (news, maintenance...) every 15 seconds and when the window gets focus,
+// and the Minecraft server's status every 10 seconds.
 setInterval(loadPack, 15000);
+setInterval(checkServer, 10000);
 window.addEventListener('focus', loadPack);
 
 init().catch((err) => showError(cleanError(err)));
