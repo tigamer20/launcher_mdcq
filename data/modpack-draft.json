@@ -4269,7 +4269,7 @@
    "fileName": "moreoverlays-1.24.2-mc1.21.1-neoforge.jar",
    "sha1": "21e8bd61c5e146a9574266015d3f64621c2d9e18",
    "size": 112984,
-   "url": null,
+   "url": "https://github.com/tigamer20/launcher_mdcq/releases/download/modpack/editor-21e8bd61c5e146a9574266015d3f64621c2d9e18.jar",
    "enabled": true
   },
   {
@@ -10671,5 +10671,5 @@
  "deleted": [],
  "edits": [],
  "unpublished": true,
- "updatedAt": "2026-11-11T21:19:50.682Z"
+ "updatedAt": "2026-11-11T21:20:12.279Z"
 }
