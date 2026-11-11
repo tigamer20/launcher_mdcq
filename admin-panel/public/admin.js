@@ -945,6 +945,30 @@ async function uploadJar(file, id) {
   }
 }
 
+// Several .jar files: sent one after the other (never at the same time), so the website's memory stays low
+// on Render's free plan (512 MB). Each file goes through the disk in 8 MB pieces, then to GitHub as a stream.
+async function uploadJars(list) {
+  const jars = [...list].filter((f) => /\.jar$/i.test(f.name));
+  const skipped = list.length - jars.length;
+  if (!jars.length) return toast('Choisis des fichiers .jar', true);
+  const failed = [];
+  for (const [i, file] of jars.entries()) {
+    const label = `${i + 1}/${jars.length} · ${file.name}`;
+    try {
+      const uploadId = await sendInPieces(file, (done, total) => edProgress(`Envoi ${label}`, Math.round(done / 1048576), Math.round(total / 1048576)));
+      edProgress(`Envoi sur GitHub ${label}`, i + 1, jars.length);
+      await api('POST', '/api/editor/mods/upload', { uploadId, fileName: file.name });
+    } catch (err) {
+      failed.push(`${file.name} (${err.message})`);
+    }
+  }
+  edProgress('');
+  await loadEditor();
+  const added = jars.length - failed.length;
+  if (failed.length) toast(`${added} mod(s) ajouté(s), ${failed.length} en échec : ${failed.join(' · ')}`, true);
+  else toast(`${added} mod(s) ajouté(s)${skipped ? ` (${skipped} fichier(s) ignoré(s) : pas des .jar)` : ''}`);
+}
+
 async function chooseVersion(mod) {
   ed.versionMod = mod;
   $('ed-version-title').textContent = mod.name;
@@ -1001,7 +1025,12 @@ $('btn-ed-add').onclick = async () => {
   }
 };
 
-$('ed-jar-file').onchange = (event) => event.target.files[0] && uploadJar(event.target.files[0], null);
+$('ed-jar-file').onchange = (event) => {
+  const files = [...event.target.files];
+  event.target.value = '';
+  if (files.length) uploadJars(files);
+};
+setupDropZone($('ed-mods'), (files) => uploadJars([...files]));
 $('ed-mod-filter').oninput = renderMods;
 
 // Import and publish run in the background on the website: follow them.

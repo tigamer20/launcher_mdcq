@@ -914,3 +914,12 @@ input[type='file']:disabled + span {
 #modpack-versions td:last-child > * + * {
   margin-left: 6px;
 }
+
+#ed-mods.dragging {
+  outline: 2px dashed var(--accent);
+  outline-offset: -6px;
+}
+
+.ed-drop-hint {
+  margin-bottom: 10px;
+}
