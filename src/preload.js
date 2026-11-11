@@ -23,4 +23,6 @@ contextBridge.exposeInMainWorld('launcher', {
   onStatus: (fn) => ipcRenderer.on('status', (_e, data) => fn(data)),
   onGameStarted: (fn) => ipcRenderer.on('game-started', () => fn()),
   onGameClosed: (fn) => ipcRenderer.on('game-closed', (_e, error) => fn(error)),
+  onLoggedOut: (fn) => ipcRenderer.on('logged-out', (_e, message) => fn(message)),
+  onLauncherUpdate: (fn) => ipcRenderer.on('launcher-update', (_e, update) => fn(update)),
 });

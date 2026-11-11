@@ -15,7 +15,7 @@ const FILE = 'players.enc';
 const MAX_EVENTS = 300; // recent activity kept in the history
 const GITHUB_DELAY = 2 * 60_000; // at most one GitHub commit every 2 minutes
 
-let data = { players: {}, events: [] };
+let data = { players: {}, events: [], revoked: {} }; // revoked: uuid -> time an admin logged that account out
 let file = null;
 let key = null;
 let persist = null; // (relativePath, buffer) => Promise, saves on GitHub
@@ -42,7 +42,7 @@ function init({ dataDir, secret, save }) {
   persist = save;
   if (!key || !fs.existsSync(file)) return;
   try {
-    data = JSON.parse(decrypt(fs.readFileSync(file)));
+    data = { revoked: {}, ...JSON.parse(decrypt(fs.readFileSync(file))) };
   } catch {
     console.warn('Liste des joueurs illisible (mot de passe changé ?) : une nouvelle liste commence.');
   }
@@ -87,6 +87,11 @@ async function record({ name, serverId, event, version }) {
 
   const profile = await verify(name, serverId).catch(() => null);
   if (!profile) throw fail(403, 'Compte non vérifié par Mojang');
+  // Logged out by an admin: only a new Microsoft login brings the player back in the list.
+  if (data.revoked[profile.id]) {
+    if (event !== 'login') throw fail(403, 'Compte déconnecté par un administrateur');
+    delete data.revoked[profile.id];
+  }
 
   const at = new Date(now).toISOString();
   const launcherVersion = /^[0-9][0-9A-Za-z.+-]{0,30}$/.test(String(version)) ? String(version) : null;
@@ -113,9 +118,28 @@ function list() {
   return { enabled: Boolean(key), players, events: data.events.slice(0, 100), labels: EVENTS };
 }
 
-function clear() {
-  data = { players: {}, events: [] };
+/** "Effacer l'historique": only the recent activity, the players stay. */
+function clearHistory() {
+  data.events = [];
   save();
 }
 
-module.exports = { init, record, list, clear, flush, FILE };
+/**
+ * The ✕ next to a player: removes them from the list and logs their account out of the launcher
+ * (the launcher asks sessionStatus() regularly). A new Microsoft login brings them back.
+ */
+function remove(uuid) {
+  const id = String(uuid || '');
+  if (!data.players[id]) throw Object.assign(new Error('Joueur introuvable'), { status: 404 });
+  delete data.players[id];
+  data.revoked[id] = new Date().toISOString();
+  save();
+}
+
+/** For the launcher: was this account logged out by an admin after `since` (ms, when it logged in)? */
+function sessionStatus(uuid, since) {
+  const revokedAt = data.revoked[String(uuid || '').replace(/-/g, '')];
+  return { loggedOut: Boolean(revokedAt && Date.parse(revokedAt) > (Number(since) || 0)) };
+}
+
+module.exports = { init, record, list, clearHistory, remove, sessionStatus, flush, FILE };

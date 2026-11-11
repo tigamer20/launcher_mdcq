@@ -736,6 +736,20 @@ dialog::backdrop {
 .files.players td:nth-child(2) { color: inherit; }
 .player { display: flex; align-items: center; gap: 10px; font-weight: 600; }
 .player img { border-radius: 4px; image-rendering: pixelated; }
+.player-remove {
+  margin-left: 2px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 20px;
+  cursor: pointer;
+  opacity: 0.5;
+}
+tr:hover .player-remove { opacity: 1; }
+.player-remove:hover { color: #f87171; background: rgba(239, 68, 68, 0.12); }
 
 /* ---------- Modpack editor ---------- */
 .file-button {

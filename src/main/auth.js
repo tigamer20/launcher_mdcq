@@ -25,10 +25,11 @@ function loadAccount() {
   }
 }
 
-function saveAccount({ name, uuid, refreshToken }) {
+// loginAt: when the player logged in with Microsoft (an admin can log the account out after that, see presence.js).
+function saveAccount({ name, uuid, refreshToken, loginAt }) {
   const data = safeStorage.isEncryptionAvailable()
-    ? { name, uuid, refreshToken: safeStorage.encryptString(refreshToken).toString('base64') }
-    : { name, uuid, refreshToken, plain: true };
+    ? { name, uuid, loginAt, refreshToken: safeStorage.encryptString(refreshToken).toString('base64') }
+    : { name, uuid, loginAt, refreshToken, plain: true };
   fs.writeFileSync(accountFile(), JSON.stringify(data), { mode: 0o600 });
 }
 
@@ -184,7 +185,7 @@ async function login(clientId, parentWindow) {
     scope: SCOPE,
   });
   const account = await minecraftLogin(tokens.access_token);
-  saveAccount({ ...account, refreshToken: tokens.refresh_token });
+  saveAccount({ ...account, refreshToken: tokens.refresh_token, loginAt: Date.now() });
   return account;
 }
 
@@ -201,7 +202,7 @@ async function refresh(clientId) {
     throw new Error('Ta session a expiré, reconnecte-toi.');
   });
   const account = await minecraftLogin(tokens.access_token);
-  saveAccount({ ...account, refreshToken: tokens.refresh_token || saved.refreshToken });
+  saveAccount({ ...account, refreshToken: tokens.refresh_token || saved.refreshToken, loginAt: saved.loginAt });
   return account;
 }
 
