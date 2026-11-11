@@ -4535,7 +4535,7 @@
    "fileName": "notenoughanimations-neoforge-1.12.4-mc1.21.1.jar",
    "sha1": "b509863deaa27890f8db600f612966a07490a6cd",
    "size": 1939625,
-   "url": null,
+   "url": "https://github.com/tigamer20/launcher_mdcq/releases/download/modpack/editor-b509863deaa27890f8db600f612966a07490a6cd.jar",
    "enabled": true
   },
   {
@@ -10671,5 +10671,5 @@
  "deleted": [],
  "edits": [],
  "unpublished": true,
- "updatedAt": "2026-11-11T21:20:12.279Z"
+ "updatedAt": "2026-11-11T21:20:26.371Z"
 }
