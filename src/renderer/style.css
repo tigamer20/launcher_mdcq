@@ -4,7 +4,13 @@
   --border: rgba(255, 255, 255, 0.08);
   --text: #e8ebf2;
   --muted: #8a93a8;
+  /* Colour palette: changed by Paramètres > Couleurs (see THEMES in app.js) */
   --accent: #8b5cf6;
+  --accent-mid: #7c3aed;
+  --accent-dark: #6d28d9;
+  --accent-rgb: 139, 92, 246;
+  --accent-soft: #c4b5fd;
+  --accent-2-rgb: 251, 191, 36;
   --accent-2: #fbbf24;
   --danger: #ef4444;
   --success: #22c55e;
@@ -23,8 +29,8 @@ body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at 15% 20%, rgba(139, 92, 246, 0.25), transparent 45%),
-    radial-gradient(circle at 85% 90%, rgba(251, 191, 36, 0.15), transparent 40%),
+    radial-gradient(circle at 15% 20%, rgba(var(--accent-rgb), 0.25), transparent 45%),
+    radial-gradient(circle at 85% 90%, rgba(var(--accent-2-rgb), 0.15), transparent 40%),
     var(--bg);
   user-select: none;
   overflow: hidden;
@@ -80,9 +86,9 @@ button:disabled {
   -webkit-app-region: no-drag;
   padding: 2px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(139, 92, 246, 0.45);
-  background: rgba(139, 92, 246, 0.12);
-  color: #c4b5fd;
+  border: 1px solid rgba(var(--accent-rgb), 0.45);
+  background: rgba(var(--accent-rgb), 0.12);
+  color: var(--accent-soft);
   font-size: 11px;
   font-weight: 500;
   cursor: pointer;
@@ -90,7 +96,7 @@ button:disabled {
 }
 
 .launcher-update:hover {
-  background: rgba(139, 92, 246, 0.28);
+  background: rgba(var(--accent-rgb), 0.28);
   color: var(--text);
 }
 
@@ -174,9 +180,9 @@ main {
   padding: 4px 12px;
   border-radius: 999px;
   font-size: 13px;
-  background: rgba(139, 92, 246, 0.15);
-  border: 1px solid rgba(139, 92, 246, 0.4);
-  color: #ddd6fe;
+  background: rgba(var(--accent-rgb), 0.15);
+  border: 1px solid rgba(var(--accent-rgb), 0.4);
+  color: var(--accent-soft);
 }
 
 .server-line {
@@ -299,7 +305,7 @@ main {
 }
 
 .news-card:hover {
-  border-color: rgba(139, 92, 246, 0.5);
+  border-color: rgba(var(--accent-rgb), 0.5);
 }
 
 /* The text keeps the line breaks and blank lines typed on the admin website. */
@@ -522,14 +528,14 @@ dialog.news-viewer[open] {
   font-size: 20px;
   font-weight: 800;
   letter-spacing: 2px;
-  background: linear-gradient(135deg, var(--accent), #6d28d9);
-  box-shadow: 0 8px 30px rgba(139, 92, 246, 0.4);
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  box-shadow: 0 8px 30px rgba(var(--accent-rgb), 0.4);
   transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .play:not(:disabled):hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 36px rgba(139, 92, 246, 0.55);
+  box-shadow: 0 12px 36px rgba(var(--accent-rgb), 0.55);
 }
 
 .secondary,
@@ -675,7 +681,7 @@ dialog input[type='text'] {
 .hero-logo {
   width: 96px;
   height: 96px;
-  filter: drop-shadow(0 10px 30px rgba(139, 92, 246, 0.45));
+  filter: drop-shadow(0 10px 30px rgba(var(--accent-rgb), 0.45));
 }
 
 .chips {
@@ -726,8 +732,8 @@ dialog input[type='text'] {
   height: 56px;
   border-radius: 0 14px 14px 0;
   border-left: 1px solid rgba(255, 255, 255, 0.18);
-  background: linear-gradient(135deg, #7c3aed, #6d28d9);
-  box-shadow: 0 8px 30px rgba(139, 92, 246, 0.4);
+  background: linear-gradient(135deg, var(--accent-mid), var(--accent-dark));
+  box-shadow: 0 8px 30px rgba(var(--accent-rgb), 0.4);
   color: var(--text);
   display: flex;
   align-items: center;
@@ -735,7 +741,7 @@ dialog input[type='text'] {
 }
 
 .play-arrow:hover:not(:disabled) {
-  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  background: linear-gradient(135deg, var(--accent), var(--accent-mid));
 }
 
 .play-arrow.open svg {
@@ -767,7 +773,7 @@ dialog input[type='text'] {
 }
 
 .play-menu button:hover:not(:disabled) {
-  background: rgba(139, 92, 246, 0.18);
+  background: rgba(var(--accent-rgb), 0.18);
 }
 
 .play-menu button:disabled {
@@ -934,4 +940,109 @@ dialog input[type='text'] {
 
 .news-viewer .news-author {
   font-size: 13px;
+}
+
+/* ---------- Colour palettes (Paramètres) ---------- */
+.theme-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.theme-swatch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 6px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.theme-swatch i {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+}
+
+.theme-swatch:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.theme-swatch.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.theme-custom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.theme-custom input {
+  width: 32px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.theme-custom.active {
+  color: var(--text);
+}
+
+/* ---------- New launcher version: thin info banner under the title bar ---------- */
+.update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 5px 40px;
+  position: relative;
+  border-top: 1px solid rgba(var(--accent-rgb), 0.2);
+  border-bottom: 1px solid rgba(var(--accent-rgb), 0.2);
+  background: rgba(var(--accent-rgb), 0.08);
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.update-banner .link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent-soft);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.update-banner .link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.update-banner .link:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.update-banner .close-banner {
+  position: absolute;
+  right: 12px;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.update-banner .close-banner:hover {
+  color: var(--text);
 }

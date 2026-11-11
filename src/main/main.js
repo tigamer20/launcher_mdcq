@@ -213,7 +213,7 @@ ipcMain.handle('check-updates-now', () => {
   app.exit(0); // the startup update window installs the new version
 });
 
-// While the launcher stays open, look for a new launcher version every 15 minutes. When there is one, the window
+// While the launcher stays open, look for a new launcher version: 5 minutes after opening, then every 8 minutes. When there is one, the window
 // shows a small "Redémarrer" button next to the version (the update itself happens at the restart).
 let announcedUpdate = null;
 async function lookForLauncherUpdate() {
@@ -459,7 +459,11 @@ app.whenReady().then(async () => {
   if (await startupUpdate()) return;
   createWindow();
   startingUp = false;
-  setInterval(lookForLauncherUpdate, 15 * 60_000);
+  // First 5 minutes after opening (the startup already installed what was out), then every 8 minutes.
+  setTimeout(() => {
+    lookForLauncherUpdate();
+    setInterval(lookForLauncherUpdate, 8 * 60_000);
+  }, 5 * 60_000);
 });
 app.on('before-quit', () => discord.stop());
 app.on('window-all-closed', () => {

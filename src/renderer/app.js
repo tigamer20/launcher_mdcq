@@ -62,6 +62,7 @@ function resetStatus(text = idleText()) {
 
 function refreshButtons() {
   $('btn-launcher-update').disabled = state.busy; // no restart while the game or an installation runs
+  $('btn-update-now').disabled = state.busy;
   const button = $('btn-play');
   if (state.busy) {
     button.textContent = '...';
@@ -300,6 +301,8 @@ async function init() {
   ram.value = Math.min(state.settings.ramMb, ram.max);
   $('hide-on-launch').checked = state.settings.hideOnLaunch;
   $('discord-status').checked = state.settings.discordStatus !== false;
+  applyTheme(state.settings.theme);
+  renderThemes();
   updateRamLabel();
   refreshButtons();
 
@@ -531,15 +534,24 @@ window.launcher.onLoggedOut((message) => {
   showInfo(message);
 });
 
-// A new launcher version came out while the launcher is open: a small button next to the version number.
+// A new launcher version came out while the launcher is open: a thin info banner under the title bar.
+// Hidden with ✕, a small button next to the version number stays until the restart.
 window.launcher.onLauncherUpdate(({ version }) => {
   const button = $('btn-launcher-update');
   button.textContent = `v${version} disponible · Redémarrer`;
   button.title = 'Redémarre le launcher pour installer la nouvelle version';
-  button.hidden = false;
+  $('update-banner-text').textContent = `La version ${version} du launcher est disponible.`;
+  $('update-banner').hidden = false;
+  button.hidden = true;
   refreshButtons();
 });
-$('btn-launcher-update').onclick = () => window.launcher.checkUpdatesNow();
+const restartForUpdate = () => window.launcher.checkUpdatesNow();
+$('btn-launcher-update').onclick = restartForUpdate;
+$('btn-update-now').onclick = restartForUpdate;
+$('btn-update-later').onclick = () => {
+  $('update-banner').hidden = true;
+  $('btn-launcher-update').hidden = false;
+};
 
 window.launcher.onGameClosed((error) => {
   state.busy = false;
@@ -554,5 +566,71 @@ window.launcher.onGameClosed((error) => {
 setInterval(loadPack, 15000);
 setInterval(checkServer, 10000);
 window.addEventListener('focus', loadPack);
+
+// ---------- Colour palettes (Paramètres > Couleurs du launcher) ----------
+
+// accent: buttons, links, glows. accent2: the second colour (title, progress bar, background glow).
+const THEMES = {
+  violet: { name: 'Violet', accent: '#8b5cf6', accent2: '#fbbf24' },
+  bleu: { name: 'Océan', accent: '#3b82f6', accent2: '#22d3ee' },
+  vert: { name: 'Émeraude', accent: '#10b981', accent2: '#a3e635' },
+  rouge: { name: 'Braise', accent: '#ef4444', accent2: '#fb923c' },
+  rose: { name: 'Rose', accent: '#ec4899', accent2: '#c084fc' },
+  cyan: { name: 'Glace', accent: '#06b6d4', accent2: '#e0f2fe' },
+};
+
+const hexRgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+// Mixes a colour with black (amount < 0) or white (amount > 0).
+function shade(hex, amount) {
+  const target = amount < 0 ? 0 : 255;
+  const mixed = hexRgb(hex).map((c) => Math.round(c + (target - c) * Math.abs(amount)));
+  return `#${mixed.map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** theme: { palette: 'violet' | 'bleu' | ... | 'custom', color: '#rrggbb' } (saved in the settings). */
+function applyTheme(theme = {}) {
+  const custom = theme.palette === 'custom' && /^#[0-9a-f]{6}$/i.test(theme.color || '');
+  const { accent, accent2 } = custom ? { accent: theme.color, accent2: '#fbbf24' } : THEMES[theme.palette] || THEMES.violet;
+  const root = document.documentElement.style;
+  root.setProperty('--accent', accent);
+  root.setProperty('--accent-mid', shade(accent, -0.12));
+  root.setProperty('--accent-dark', shade(accent, -0.25));
+  root.setProperty('--accent-rgb', hexRgb(accent).join(', '));
+  root.setProperty('--accent-soft', shade(accent, 0.6));
+  root.setProperty('--accent-2', accent2);
+  root.setProperty('--accent-2-rgb', hexRgb(accent2).join(', '));
+}
+
+function renderThemes() {
+  const current = state.settings.theme?.palette || 'violet';
+  $('theme-list').replaceChildren(
+    ...Object.entries(THEMES).map(([key, theme]) => {
+      const button = document.createElement('button');
+      button.className = `theme-swatch${key === current ? ' active' : ''}`;
+      button.title = theme.name;
+      const dot = document.createElement('i');
+      dot.style.background = `linear-gradient(135deg, ${theme.accent} 50%, ${theme.accent2} 50%)`;
+      button.append(dot, theme.name);
+      button.onclick = () => setTheme({ palette: key });
+      return button;
+    }),
+  );
+  $('theme-color').value = state.settings.theme?.color || '#8b5cf6';
+  $('theme-color').parentElement.classList.toggle('active', current === 'custom');
+}
+
+// Applied right away and remembered.
+function setTheme(theme) {
+  state.settings.theme = theme;
+  applyTheme(theme);
+  renderThemes();
+  window.launcher.saveSettings({ theme });
+}
+
+$('theme-color').oninput = (event) => {
+  state.settings.theme = { palette: 'custom', color: event.target.value };
+  applyTheme(state.settings.theme);
+};
+$('theme-color').onchange = (event) => setTheme({ palette: 'custom', color: event.target.value });
 
 init().catch((err) => showError(cleanError(err)));
