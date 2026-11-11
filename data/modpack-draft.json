@@ -1427,7 +1427,7 @@
    "fileName": "tombstone-neoforge-1.21.1-9.5.4.jar",
    "sha1": "001d9a07c6f414773663309aa6a3a03f968e2d47",
    "size": 2521532,
-   "url": null,
+   "url": "https://github.com/tigamer20/launcher_mdcq/releases/download/modpack/editor-001d9a07c6f414773663309aa6a3a03f968e2d47.jar",
    "enabled": true
   },
   {
@@ -10671,5 +10671,5 @@
  "deleted": [],
  "edits": [],
  "unpublished": true,
- "updatedAt": "2026-11-11T21:17:58.140Z"
+ "updatedAt": "2026-11-11T21:19:21.443Z"
 }
