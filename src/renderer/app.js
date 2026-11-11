@@ -46,9 +46,11 @@ function setStatus(text, progress, detail = '') {
 
 function idleText() {
   if (state.maintenance) return 'Le serveur est en maintenance';
+  if (state.modpackHidden) return "Le modpack n'est pas disponible pour le moment";
   if (!state.modpackPublished) return "Le modpack n'est pas encore publié";
   if (!state.installed) return 'Clique sur INSTALLER pour télécharger le modpack';
   if (!state.account) return 'Connecte-toi avec ton compte Microsoft pour jouer';
+  if (state.serverOffline) return 'Le serveur est hors ligne : JOUER revient dès qu’il redémarre';
   return 'Prêt à jouer';
 }
 
@@ -68,6 +70,14 @@ function refreshButtons() {
     // Installing doesn't need a Microsoft account: only playing does.
     button.textContent = 'INSTALLER';
     button.disabled = !state.packReady || !state.modpackPublished;
+  } else if (!state.modpackPublished) {
+    // removed or hidden on the admin website
+    button.textContent = 'INDISPONIBLE';
+    button.disabled = true;
+  } else if (state.serverOffline) {
+    // JOUER connects straight to the server: no point while it's offline (checked every 15 seconds)
+    button.textContent = 'HORS LIGNE';
+    button.disabled = true;
   } else {
     button.textContent = 'JOUER';
     button.disabled = !state.packReady || !state.account;
@@ -156,12 +166,17 @@ async function loadPack() {
   state.packReady = true;
   state.maintenance = Boolean(pack.maintenance);
   state.modpackPublished = Boolean(pack.modpack);
+  state.modpackHidden = Boolean(pack.modpackHidden);
+  // Only when the server could be checked and answered "offline" (no address configured: never blocked)
+  state.serverOffline = Boolean(pack.server?.host && pack.serverStatus && !pack.serverStatus.online);
   if (!state.installing) state.installed = pack.installed;
   $('pack-name').textContent = pack.name || 'All the Mod';
   $('pack-season').textContent = pack.season || 'Saison 3';
   $('pack-version').textContent = pack.modpack
     ? `Modpack ${pack.modpack.version} · NeoForge ${pack.modpack.neoforge}`
-    : 'Modpack bientôt disponible';
+    : pack.modpackHidden
+      ? 'Modpack indisponible'
+      : 'Modpack bientôt disponible';
   $('pack-update').hidden = !(pack.installed && pack.modpack && pack.installedVersion !== pack.modpack.version);
   // The address is only shown in the developer mode (Ctrl+Shift+D): players just click JOUER.
   const address = pack.server?.host ? (pack.server.port && pack.server.port !== 25565 ? `${pack.server.host}:${pack.server.port}` : pack.server.host) : '';

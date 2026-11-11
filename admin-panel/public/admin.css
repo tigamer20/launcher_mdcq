@@ -899,3 +899,18 @@ input[type='file']:disabled + span {
 #ed-missing {
   margin-bottom: 14px;
 }
+
+.modpack-actions {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+#modpack-versions td:last-child {
+  white-space: nowrap;
+  text-align: right;
+}
+
+#modpack-versions td:last-child > * + * {
+  margin-left: 6px;
+}

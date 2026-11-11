@@ -114,6 +114,7 @@ ipcMain.handle('pack', async () => {
       minecraft: pack.versionId,
       serverStatus: server,
       maintenance: pack.maintenance?.enabled ? pack.maintenance : null,
+      modpackHidden: Boolean(pack.modpackHidden), // hidden from the admin website
       modpack: pack.modpack
         ? { version: pack.modpack.version, minecraft: pack.modpack.minecraft, neoforge: pack.modpack.neoforge, size: pack.modpack.size }
         : null,
