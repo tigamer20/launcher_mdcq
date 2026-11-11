@@ -118,6 +118,8 @@ async function status() {
   const compare = branch ? await gh('GET', `/compare/${BASE}...${BRANCH}`) : null;
   return {
     official: official ? official.tag_name.replace(/^v/, '') : null,
+    // release name of the latest official version: "v1.0.0 - Sweet Minecraft Treat" -> "Sweet Minecraft Treat"
+    officialName: / - (.+)$/.exec(official?.name || '')?.[1] || null,
     dev: dev ? dev.tag_name.replace(/^v/, '') : null,
     pending: compare ? compare.ahead_by : 0,
     tags: releases.map((r) => r.tag_name),
@@ -128,8 +130,9 @@ async function status() {
  * Opens a pull request admin-website -> main and merges it.
  * The merge title "[off_update] [x.y.z]" or "[dev_update] [x.y.z]" starts the release workflow.
  */
-async function mergeToMain(channel, version) {
+async function mergeToMain(channel, version, name) {
   if (!['dev', 'official'].includes(channel)) throw new Error('Choisis Dev ou Officielle');
+  const newName = String(name || '').replace(/[\[\]\r\n"]/g, '').trim().slice(0, 60);
   if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('Version invalide, format attendu: 1.2.0');
   const current = await status();
   if (!current.pending) throw new Error('Aucune modification à fusionner');
@@ -149,7 +152,8 @@ async function mergeToMain(channel, version) {
   });
   await gh('PUT', `/pulls/${pr.number}/merge`, {
     merge_method: 'merge',
-    commit_title: `[${marker}] [${version}] Fichiers du serveur (site admin)`,
+    // [name: X] renames the release (the release workflow keeps the previous name otherwise)
+    commit_title: `[${marker}] [${version}]${newName ? ` [name: ${newName}]` : ''} Fichiers du serveur (site admin)`,
   });
   // Start the next batch of changes from the new main.
   await gh('DELETE', `/git/refs/heads/${BRANCH}`);

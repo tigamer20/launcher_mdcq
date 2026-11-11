@@ -28,17 +28,17 @@ window.updater.onState((state) => {
       $('subtitle').textContent = 'Connexion à GitHub...';
       break;
     case 'beta-available':
-      $('title').textContent = `Bêta ${state.version} disponible`;
+      $('title').textContent = `Bêta ${state.label || state.version} disponible`;
       $('subtitle').textContent = 'Une nouvelle version bêta est sortie. Tu peux la tester ou rester sur la version publique.';
       break;
     case 'preparing':
-      $('title').textContent = `Mise à jour ${state.version}`;
+      $('title').textContent = `Mise à jour ${state.label || state.version}`;
       $('subtitle').textContent = 'Préparation...';
       $('bar').classList.add('indeterminate');
       break;
     case 'downloading': {
       const pct = state.bytesTotal ? (state.bytesDone / state.bytesTotal) * 100 : 0;
-      $('title').textContent = `Mise à jour ${channelLabel(state.channel)} ${state.version}`;
+      $('title').textContent = `Mise à jour ${channelLabel(state.channel)} ${state.label || state.version}`;
       $('subtitle').textContent = state.fullInstaller
         ? 'Téléchargement de la nouvelle version complète'
         : 'Téléchargement des fichiers modifiés';
@@ -54,7 +54,7 @@ window.updater.onState((state) => {
       break;
     }
     case 'installing':
-      $('title').textContent = `Installation de la version ${state.version}`;
+      $('title').textContent = `Installation de la version ${state.label || state.version}`;
       $('subtitle').textContent = 'Vérification des fichiers...';
       $('bar').classList.remove('indeterminate');
       $('bar').style.width = '100%';
@@ -63,7 +63,7 @@ window.updater.onState((state) => {
       break;
     case 'restarting':
       $('title').textContent = 'Redémarrage';
-      $('subtitle').textContent = `Lancement de la version ${state.version}...`;
+      $('subtitle').textContent = `Lancement de la version ${state.label || state.version}...`;
       break;
     case 'error':
       $('title').textContent = 'Mise à jour impossible';

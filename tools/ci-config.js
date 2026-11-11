@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const { SERVER_URL, RELEASE_VERSION, GITHUB_REPOSITORY } = process.env;
+const { SERVER_URL, RELEASE_VERSION, RELEASE_NAME, GITHUB_REPOSITORY } = process.env;
 
 // The Azure app ID approved by Microsoft for Minecraft is kept in launcher.config.json (it is not a secret:
 // every installed launcher contains it). It wins over the AZURE_CLIENT_ID variable, which is only a fallback.
@@ -32,6 +32,7 @@ if (RELEASE_VERSION) {
   const pkgFile = path.join(root, 'package.json');
   const pkg = JSON.parse(fs.readFileSync(pkgFile, 'utf8'));
   pkg.version = RELEASE_VERSION;
+  if (RELEASE_NAME) pkg.releaseName = RELEASE_NAME; // shown in the launcher: "v1.0.0 - Sweet Minecraft Treat"
   fs.writeFileSync(pkgFile, JSON.stringify(pkg, null, 2) + '\n');
 }
 console.log(`Launcher ${RELEASE_VERSION || ''} configuré pour ${SERVER_URL} (application Azure ${AZURE_CLIENT_ID})`);

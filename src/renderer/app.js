@@ -93,6 +93,7 @@ function refreshButtons() {
         ? 'Connecte-toi avec ton compte Microsoft.'
         : '';
   $('btn-play-offline').disabled = Boolean(offlineBlocker);
+  $('btn-delete-modpack').disabled = state.busy || !state.installed;
   $('play-offline-hint').textContent = offlineBlocker;
 }
 
@@ -199,13 +200,17 @@ async function loadPack() {
 
 async function init() {
   const data = await window.launcher.init();
-  $('app-version').textContent = `v${data.version}`;
+  // "v1.0.0 - SMT" in the title bar (full name on hover), "v1.0.0 - Sweet Minecraft Treat" in the developer section
+  const fullName = data.releaseName ? `v${data.version} - ${data.releaseName}` : `v${data.version}`;
+  const shortName = data.releaseName ? data.releaseName.split(/\s+/).map((w) => w[0]).join('').toUpperCase() : '';
+  $('app-version').textContent = shortName ? `v${data.version} - ${shortName}` : `v${data.version}`;
+  $('app-version').title = fullName;
   state.settings = data.settings;
   showAccount(data.account);
   // Developer section (hidden until Ctrl+Shift+D)
   $('btn-dev').hidden = !state.settings.devTab;
   $('server-address').hidden = !state.settings.devTab;
-  $('dev-version').textContent = `v${data.version}${data.version.includes('-') ? ' (bêta)' : ''}`;
+  $('dev-version').textContent = `${fullName}${data.version.includes('-') ? ' (bêta)' : ''}`;
   $('beta-key').value = state.settings.beta?.key || '';
   $('beta-enabled').checked = Boolean(state.settings.beta?.enabled);
   $('beta-enabled').disabled = !state.settings.beta?.key;
@@ -331,6 +336,22 @@ async function play(options) {
 
 $('btn-settings').onclick = () => $('settings').showModal();
 $('btn-folder').onclick = () => window.launcher.openFolder();
+$('btn-delete-modpack').onclick = async () => {
+  const keepPersonal = $('delete-keep').checked;
+  const question = keepPersonal
+    ? 'Supprimer le modpack installé ? Tes mondes, captures d\'écran et réglages sont gardés.'
+    : 'Supprimer le modpack installé ET tes mondes, captures d\'écran et réglages ? Ce ne peut pas être annulé.';
+  if (!confirm(question)) return;
+  try {
+    await window.launcher.deleteModpack({ keepPersonal });
+    $('settings').close();
+    state.installed = false;
+    showInfo('Modpack supprimé. Clique sur INSTALLER pour le réinstaller.');
+    await loadPack();
+  } catch (err) {
+    showError(cleanError(err));
+  }
+};
 $('ram').oninput = updateRamLabel;
 $('btn-settings-close').onclick = async () => {
   await window.launcher.saveSettings({
