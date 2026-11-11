@@ -22,6 +22,7 @@ const github = require('./github');
 const storage = require('./storage');
 const players = require('./players');
 const editor = require('./modpack-editor');
+const accounts = require('./accounts');
 
 const PORT = Number(process.env.PORT) || 8080;
 const LOCAL_DATA_DIR = path.join(__dirname, 'data');
@@ -175,7 +176,7 @@ function listFiles(dir = FILES_DIR) {
 // Server agent (runs on the Minecraft machine, NeoForge or Paper, see paper-agent/)
 // ---------------------------------------------------------------------------
 
-async function agent(method, pathWithQuery, body) {
+async function agent(method, pathWithQuery, body, timeoutMs = 60_000) {
   if (!AGENT_URL || !AGENT_SECRET) throw httpError(400, 'Agent non configuré (AGENT_URL et AGENT_SECRET)');
   const data = body === undefined ? Buffer.alloc(0) : Buffer.isBuffer(body) ? body : Buffer.from(JSON.stringify(body));
   let res;
@@ -184,7 +185,7 @@ async function agent(method, pathWithQuery, body) {
       method,
       headers: { 'Content-Type': 'application/octet-stream', ...signHeaders(AGENT_SECRET, method, pathWithQuery, data) },
       body: data.length ? data : undefined,
-      signal: AbortSignal.timeout(60_000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   } catch {
     throw httpError(502, 'Agent injoignable: vérifie qu\'il tourne sur le PC du serveur et que le port est ouvert');
@@ -198,7 +199,7 @@ async function agent(method, pathWithQuery, body) {
 async function agentFeatures() {
   if (!AGENT_URL) return { plugins: false, rcon: false, modpack: false, error: null };
   try {
-    const info = await agent('GET', '/info');
+    const info = await agent('GET', '/info', undefined, 8000);
     // Older agents (Paper only) don't send serverType.
     const serverType = info.serverType === 'neoforge' ? 'neoforge' : 'paper';
     return { plugins: Boolean(info.plugins), serverType, rcon: Boolean(info.rcon), modpack: Boolean(info.modpack), error: null };
@@ -222,22 +223,39 @@ async function readBuffer(req, limit) {
 // Login sessions (cookie) with protection against password guessing
 // ---------------------------------------------------------------------------
 
-const sessions = new Map(); // token -> expiry time
+const sessions = new Map(); // token -> { expiry, name }
 const failures = new Map(); // ip -> { count, until }
 
-function checkPassword(given) {
-  if (!PASSWORD_OK) return false;
-  const a = crypto.createHash('sha256').update(String(given)).digest();
-  const b = crypto.createHash('sha256').update(PASSWORD).digest();
-  return crypto.timingSafeEqual(a, b);
-}
-
+// The logged-in session: { token, user } (user = { name, owner, permissions }), or null.
+// Looked up on every request, so a deleted account or a changed permission applies right away.
 function getSession(req) {
   const match = /(?:^|;\s*)session=([a-f0-9]{64})/.exec(req.headers.cookie || '');
-  const expiry = match && sessions.get(match[1]);
-  if (!expiry || expiry < Date.now()) return null;
-  return match[1];
+  const session = match && sessions.get(match[1]);
+  if (!session || session.expiry < Date.now()) return null;
+  const user = accounts.user(session.name);
+  if (!user) {
+    sessions.delete(match[1]);
+    return null;
+  }
+  return { token: match[1], user };
 }
+
+// Which permission each part of the API needs (see accounts.js). Not listed: open to every account.
+const PERMISSION_RULES = [
+  [/^\/api\/(modpack|editor)\//, 'modpack'],
+  [/^\/api\/editor$/, 'modpack'],
+  [/^\/api\/console$/, 'console'],
+  [/^\/api\/server-files?$/, 'serverFiles'],
+  [/^\/api\/(versions|merge)$/, 'launcher'],
+  [/^\/api\/plugins(\/|$)/, 'plugins'],
+  [/^\/api\/pack$/, 'server'],
+  [/^\/api\/news$/, 'news'],
+  [/^\/api\/maintenance$/, 'maintenance'],
+  [/^\/api\/files$/, 'files'],
+  [/^\/api\/players(\/|$)/, 'players'],
+  [/^\/api\/accounts$/, 'accounts'],
+];
+const permissionFor = (pathname) => PERMISSION_RULES.find(([pattern]) => pattern.test(pathname))?.[1] || null;
 
 // ---------------------------------------------------------------------------
 // HTTP helpers
@@ -290,10 +308,36 @@ function sendFile(res, file, cache = 'no-cache') {
 // ---------------------------------------------------------------------------
 
 const api = {
-  'GET /api/state': async () => {
+  // Answers right away (the menu shows at once); what the server agent can do comes from /api/agent,
+  // which can take a few seconds when the agent's PC is off or far away.
+  'GET /api/state': async (req, url, user) => ({
+    pack: publicPack(readPack()),
+    files: listFiles(),
+    plugins: [],
+    features: { plugins: false, rcon: false, modpack: false, agent: Boolean(AGENT_URL), github: github.configured() },
+    me: user,
+    permissions: accounts.PERMISSIONS,
+  }),
+
+  'GET /api/agent': async () => {
     const features = await agentFeatures();
-    const plugins = features.plugins ? (await agent('GET', '/plugins')).plugins : [];
-    return { pack: publicPack(readPack()), files: listFiles(), plugins, features: { ...features, github: github.configured() } };
+    const plugins = features.plugins ? (await agent('GET', '/plugins').catch(() => ({ plugins: [] }))).plugins : [];
+    return { features: { ...features, agent: Boolean(AGENT_URL), github: github.configured() }, plugins };
+  },
+
+  // Accounts tab: create accounts and choose what each one can do.
+  'GET /api/accounts': () => accounts.list(),
+  'POST /api/accounts': async (req, url, user) => accounts.create(user.name, await readJson(req)),
+  'PUT /api/accounts': async (req, url, user) => accounts.update(user.name, await readJson(req)),
+  'DELETE /api/accounts': async (req, url, user) => {
+    const result = await accounts.remove(user.name, url.searchParams.get('name'));
+    return result;
+  },
+  // Every account (but the owner's) can change its own password.
+  'POST /api/me/password': async (req, url, user) => {
+    const { current, password } = await readJson(req);
+    await accounts.changeOwnPassword(user.name, current, password);
+    return { ok: true };
   },
 
   // Live status of the Minecraft server (players, version...)
@@ -536,16 +580,17 @@ async function handleApi(req, res, url) {
     const fail = failures.get(ip);
     if (!PASSWORD_OK) throw httpError(503, 'ADMIN_PASSWORD n\'est pas configuré sur le serveur (8 caractères minimum).');
     if (fail && fail.until > Date.now()) throw httpError(429, 'Trop d\'essais. Réessaie dans quelques minutes.');
-    const { password } = await readJson(req);
-    if (!checkPassword(password)) {
+    const { username, password } = await readJson(req);
+    const name = await accounts.login(username, password);
+    if (!name) {
       const count = (fail?.count || 0) + 1;
       failures.set(ip, { count, until: count >= 5 ? Date.now() + 10 * 60_000 : 0 });
       await new Promise((r) => setTimeout(r, 1000));
-      throw httpError(401, 'Mot de passe incorrect');
+      throw httpError(401, 'Nom d\'utilisateur ou mot de passe incorrect');
     }
     failures.delete(ip);
     const token = crypto.randomBytes(32).toString('hex');
-    sessions.set(token, Date.now() + SESSION_HOURS * 3600_000);
+    sessions.set(token, { expiry: Date.now() + SESSION_HOURS * 3600_000, name });
     const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
     return sendJson(res, 200, { ok: true }, {
       'Set-Cookie': `session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${SESSION_HOURS * 3600}${secure}`,
@@ -579,14 +624,20 @@ async function handleApi(req, res, url) {
     return sendJson(res, 200, { valid });
   }
 
-  const token = getSession(req);
-  if (!token) throw httpError(401, 'Connexion requise');
+  const session = getSession(req);
+  if (!session) throw httpError(401, 'Connexion requise');
+  const { token, user } = session;
   // Blocks requests made by other websites (CSRF): browsers can't add this header cross-site.
   if (req.method !== 'GET' && req.headers['x-admin'] !== '1') throw httpError(403, 'Requête refusée');
 
   if (req.method === 'POST' && url.pathname === '/api/logout') {
     sessions.delete(token);
     return sendJson(res, 200, { ok: true }, { 'Set-Cookie': 'session=; Path=/; Max-Age=0' });
+  }
+
+  const needed = permissionFor(url.pathname);
+  if (needed && !user.permissions.includes(needed)) {
+    throw httpError(403, `Ton compte n'a pas la permission « ${accounts.PERMISSIONS[needed]} »`);
   }
 
   // Players who used the launcher
@@ -598,7 +649,7 @@ async function handleApi(req, res, url) {
 
   const handler = api[`${req.method} ${url.pathname}`];
   if (!handler) throw httpError(404, 'Introuvable');
-  sendJson(res, 200, await handler(req, url));
+  sendJson(res, 200, await handler(req, url, user));
 }
 
 // ---------------------------------------------------------------------------
@@ -673,6 +724,12 @@ async function start() {
     save: storage.configured() ? (relative, buffer) => storage.saveFile(relative, buffer) : null,
   });
   editor.init({ dataDir: DATA_DIR, storage, activate: activateModpack });
+  accounts.init({
+    dataDir: DATA_DIR,
+    secret: process.env.DATA_KEY || (PASSWORD_OK ? PASSWORD : null),
+    password: PASSWORD_OK ? PASSWORD : null,
+    save: storage.configured() ? (relative, buffer) => storage.saveFile(relative, buffer) : null,
+  });
   // Render stops the website when it sleeps or redeploys: save the latest players on GitHub first.
   process.once('SIGTERM', () => players.flush().finally(() => process.exit(0)));
   // Old versions stored the beta key in clear text: keep only its hash.

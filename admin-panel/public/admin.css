@@ -923,3 +923,46 @@ input[type='file']:disabled + span {
 .ed-drop-hint {
   margin-bottom: 10px;
 }
+
+/* ---------- Accounts ---------- */
+.me {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  font-size: 13px;
+}
+
+.me button {
+  margin-top: 4px;
+}
+
+.account-form,
+.account {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.account-form .row input {
+  flex: 1;
+  min-width: 180px;
+}
+
+.account .badge {
+  margin-left: 10px;
+}
+
+.perm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px 16px;
+  font-size: 14px;
+}
+
+.perm-grid input:disabled + * ,
+.perm-grid label:has(input:disabled) {
+  opacity: 0.55;
+}

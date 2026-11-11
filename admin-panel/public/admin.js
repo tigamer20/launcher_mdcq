@@ -6,6 +6,9 @@ let files = [];
 let plugins = [];
 let features = {};
 let serverStatus = null;
+let me = { name: '', owner: false, permissions: [] }; // the logged-in account
+let permissionNames = {}; // permission -> label, from the server
+const can = (permission) => me.permissions.includes(permission);
 
 // ---------- Helpers ----------
 
@@ -49,16 +52,46 @@ function el(tag, props = {}, children = []) {
 function showLogin() {
   $('app-view').hidden = true;
   $('login-view').hidden = false;
-  $('password').focus();
+  ($('username').value ? $('password') : $('username')).focus();
 }
 
 async function showApp() {
   const state = await api('GET', '/api/state');
-  ({ pack, files, plugins, features } = state);
+  ({ pack, files, plugins, features, me } = state);
+  permissionNames = state.permissions;
+  features.checking = features.agent; // what the server agent can do arrives a bit later (loadAgent)
   $('login-view').hidden = true;
   $('app-view').hidden = false;
+  applyPermissions();
   render();
   refreshStatus();
+  loadAgent();
+}
+
+// The server agent runs on the Minecraft PC: asking it can take a few seconds, so the menu doesn't wait for it.
+async function loadAgent() {
+  if (!features.agent) return;
+  try {
+    const result = await api('GET', '/api/agent');
+    features = result.features;
+    plugins = result.plugins;
+  } catch (err) {
+    features = { ...features, checking: false, error: err.message };
+  }
+  render();
+  // A tab opened while the agent was being checked: load what it needed now.
+  const active = document.querySelector('.nav.active')?.dataset.tab;
+  if (active === 'editor' || active === 'modpack') document.querySelector('.nav.active').click();
+}
+
+// Only the tabs and buttons this account is allowed to use.
+function applyPermissions() {
+  $('me-name').textContent = me.name;
+  $('btn-my-password').hidden = me.owner;
+  document.querySelectorAll('.nav[data-perm]').forEach((button) => (button.hidden = !can(button.dataset.perm)));
+  $('maintenance-card').hidden = !can('maintenance');
+  const active = document.querySelector('.nav.active');
+  if (active?.hidden) document.querySelector('.nav[data-tab="dashboard"]').click();
 }
 
 function render() {
@@ -67,8 +100,10 @@ function render() {
   renderPlugins();
   renderNews();
   renderFiles();
-  $('agent-error').hidden = !features.error;
-  $('agent-error').textContent = features.error ? `Agent du serveur : ${features.error}` : '';
+  $('agent-error').hidden = !features.error && !features.checking;
+  $('agent-error').textContent = features.checking
+    ? 'Connexion à l\'agent du serveur...'
+    : features.error ? `Agent du serveur : ${features.error}` : '';
   applyServerType();
   $('console-off').hidden = features.rcon;
   $('console-on').hidden = !features.rcon;
@@ -77,7 +112,7 @@ function render() {
   $('editor-off').hidden = features.plugins;
   $('editor-on').hidden = !features.plugins;
   $('editor-github').hidden = !features.github;
-  $('btn-merge').hidden = !features.github;
+  $('btn-merge').hidden = !features.github || !can('launcher');
 }
 
 // Live server status (players, version), refreshed every 10 seconds.
@@ -185,7 +220,7 @@ $('login-form').onsubmit = async (event) => {
   event.preventDefault();
   $('login-error').hidden = true;
   try {
-    await api('POST', '/api/login', { password: $('password').value });
+    await api('POST', '/api/login', { username: $('username').value.trim(), password: $('password').value });
     $('password').value = '';
     await showApp();
   } catch (err) {
@@ -204,6 +239,7 @@ document.querySelectorAll('.nav').forEach((button) => {
     document.querySelectorAll('.nav').forEach((b) => b.classList.toggle('active', b === button));
     document.querySelectorAll('.tab').forEach((tab) => (tab.hidden = tab.id !== `tab-${button.dataset.tab}`));
     if (button.dataset.tab === 'players') loadPlayers();
+    if (button.dataset.tab === 'accounts') loadAccounts();
     if (button.dataset.tab === 'modpack') {
       loadEditor();
       if (features.modpack) followPublish();
@@ -626,7 +662,7 @@ async function saveFile() {
 }
 
 async function refreshPending() {
-  if (!features.github) return;
+  if (!features.github || !can('launcher')) return;
   try {
     const { pending } = await api('GET', '/api/versions');
     $('pending-count').textContent = pending ? `${pending} modification(s) en attente de fusion.` : 'Aucune modification en attente.';
@@ -1228,5 +1264,117 @@ $('ed-file-upload').onchange = async (event) => {
     toast(err.message, true);
   } finally {
     edProgress('');
+  }
+};
+
+// ---------- Accounts ----------
+
+// Checkboxes for the permissions; the ones this account doesn't have can't be given.
+function permissionBoxes(checked = []) {
+  return Object.entries(permissionNames).map(([key, label]) =>
+    el('label', { className: 'check' }, [
+      el('input', { type: 'checkbox', value: key, checked: checked.includes(key), disabled: !can(key) }),
+      ` ${label}`,
+    ]),
+  );
+}
+
+const checkedPermissions = (container) => [...container.querySelectorAll('input[type=checkbox]:checked')].map((b) => b.value);
+
+function renderAccounts({ owner, accounts }) {
+  $('account-form-perms').replaceChildren(...permissionBoxes());
+  const ownerCard = el('div', { className: 'card account' }, [
+    el('div', { className: 'row between' }, [
+      el('div', {}, [el('strong', { textContent: owner }), el('span', { className: 'badge on', textContent: 'Propriétaire · tout' })]),
+    ]),
+  ]);
+  const cards = accounts.map((account) => {
+    const perms = el('div', { className: 'perm-grid' }, permissionBoxes(account.permissions));
+    const self = account.name.toLowerCase() === me.name.toLowerCase();
+    if (self) perms.querySelectorAll('input').forEach((box) => (box.disabled = true));
+    const created = account.createdAt ? `Créé le ${new Date(account.createdAt).toLocaleDateString('fr-CA')} par ${account.createdBy}` : '';
+    return el('div', { className: 'card account' }, [
+      el('div', { className: 'row between' }, [
+        el('div', {}, [el('strong', { textContent: account.name }), el('small', { className: 'muted', textContent: ` ${created}` })]),
+        el('div', { className: 'row' }, [
+          el('button', { className: 'ghost small', textContent: 'Nouveau mot de passe', onclick: () => resetAccountPassword(account.name) }),
+          ...(self ? [] : [el('button', { className: 'danger', textContent: 'Supprimer', onclick: () => deleteAccount(account.name) })]),
+        ]),
+      ]),
+      perms,
+      ...(self
+        ? [el('p', { className: 'muted', textContent: 'C\'est ton compte : un autre compte avec la permission « Comptes » peut changer tes permissions.' })]
+        : [el('div', { className: 'row end' }, [
+            el('button', { className: 'primary', textContent: 'Enregistrer les permissions', onclick: () => saveAccount(account.name, checkedPermissions(perms)) }),
+          ])]),
+    ]);
+  });
+  $('account-list').replaceChildren(ownerCard, ...cards);
+}
+
+async function loadAccounts() {
+  try {
+    renderAccounts(await api('GET', '/api/accounts'));
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+$('account-form').onsubmit = async (event) => {
+  event.preventDefault();
+  const form = event.target;
+  try {
+    renderAccounts(await api('POST', '/api/accounts', {
+      name: form.name.value.trim(),
+      password: form.password.value,
+      permissions: checkedPermissions($('account-form-perms')),
+    }));
+    toast(`Compte ${form.name.value.trim()} créé`);
+    form.reset();
+  } catch (err) {
+    toast(err.message, true);
+  }
+};
+
+async function saveAccount(name, permissions) {
+  try {
+    renderAccounts(await api('PUT', '/api/accounts', { name, permissions }));
+    toast(`Permissions de ${name} enregistrées`);
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+async function resetAccountPassword(name) {
+  const password = prompt(`Nouveau mot de passe pour ${name} (8 caractères minimum) :`);
+  if (!password) return;
+  try {
+    renderAccounts(await api('PUT', '/api/accounts', { name, password }));
+    toast(`Mot de passe de ${name} changé`);
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+async function deleteAccount(name) {
+  if (!confirm(`Supprimer le compte ${name} ? Il sera déconnecté tout de suite.`)) return;
+  try {
+    renderAccounts(await api('DELETE', `/api/accounts?name=${encodeURIComponent(name)}`));
+    toast(`Compte ${name} supprimé`);
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+$('btn-my-password').onclick = async () => {
+  const current = prompt('Mot de passe actuel :');
+  if (!current) return;
+  const password = prompt('Nouveau mot de passe (8 caractères minimum) :');
+  if (!password) return;
+  try {
+    await api('POST', '/api/me/password', { current, password });
+    toast('Mot de passe changé');
+  } catch (err) {
+    toast(err.message, true);
   }
 };

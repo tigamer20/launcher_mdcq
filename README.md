@@ -64,10 +64,11 @@ This repository contains a `render.yaml` file, so Render sets everything up for 
 3. Render asks for 3 values:
    | Variable         | Value                                                                   |
    | ---------------- | ----------------------------------------------------------------------- |
-   | `ADMIN_PASSWORD` | Password to log in to the website (8+ characters).                      |
+   | `ADMIN_PASSWORD` | Password of the owner account `admin` (8+ characters).                  |
    | `AGENT_SECRET`   | The secret from step 1.                                                 |
    | `AGENT_URL`      | Address of the agent from step 3, e.g. `http://203.0.113.10:8765/`. You can leave it empty for now and add it later in **Environment**. |
 4. Wait for the deploy to finish. Your website is at `https://atm-admin.onrender.com/admin/` (Render shows the exact URL; you can add your own domain in **Settings** → **Custom Domains**).
+5. Log in as **`admin`** with `ADMIN_PASSWORD`. In the **Comptes** tab you can create accounts for your team and tick what each one can do (maintenance, news, modpack, console...). They only see those tabs; the dashboard is open to everyone. Accounts with the **Comptes** permission can create accounts too, but never give a permission they don't have. The account list is saved encrypted (key from `DATA_KEY` or `ADMIN_PASSWORD`): changing that password means creating the accounts again.
 
 **Cost: free.** Render's free plan erases the website's files on every restart, so the website keeps its data (server address, news, maintenance, beta key, player files) in the **`admin-data` branch of this repository**: it restores everything from there at startup and saves every change there right away. This needs `GITHUB_TOKEN` (see "Server file editor" below, the same token is used).
 - The beta key is only stored as a SHA-256 fingerprint, never in clear text (the repository is public).

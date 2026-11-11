@@ -182,6 +182,17 @@
       </div>
     </dialog>
 
+    <!-- A news item in full screen: "Afficher plus" or a click on the news -->
+    <dialog id="news-viewer" class="news-viewer">
+      <button id="btn-news-close" class="news-viewer-close" title="Fermer (Échap)">✕</button>
+      <article>
+        <h2 id="news-viewer-title"></h2>
+        <time id="news-viewer-date"></time>
+        <p id="news-viewer-body" class="news-text"></p>
+        <a id="news-viewer-link" target="_blank" hidden>En savoir plus →</a>
+      </article>
+    </dialog>
+
     <div id="toast" class="toast" hidden></div>
 
     <script src="app.js"></script>
