@@ -16,6 +16,7 @@
         <img src="logo.svg" alt="" class="login-logo" />
         <h1>All the Mod · Admin</h1>
         <p class="muted">Gère le launcher et le serveur Minecraft</p>
+        <input id="username" placeholder="Nom d'utilisateur" autocomplete="username" autocapitalize="off" spellcheck="false" />
         <input type="password" id="password" placeholder="Mot de passe" autocomplete="current-password" required />
         <button class="primary" type="submit">Se connecter</button>
         <p id="login-error" class="error" hidden></p>
@@ -28,15 +29,20 @@
         <div class="brand"><img src="logo.svg" alt="" /> All the Mod <span>Admin</span></div>
         <nav>
           <button class="nav active" data-tab="dashboard">Tableau de bord</button>
-          <button class="nav" data-tab="server">Serveur</button>
-          <button class="nav" data-tab="players">Joueurs</button>
-          <button class="nav" data-tab="modpack">Modpack</button>
-          <button class="nav" data-tab="plugins" id="nav-addons">Mods du serveur</button>
-          <button class="nav" data-tab="editor">Fichiers du serveur</button>
-          <button class="nav" data-tab="console">Console</button>
-          <button class="nav" data-tab="news">Nouvelles</button>
-          <button class="nav" data-tab="files">Fichiers joueurs</button>
+          <button class="nav" data-tab="server" data-perm="server">Serveur</button>
+          <button class="nav" data-tab="players" data-perm="players">Joueurs</button>
+          <button class="nav" data-tab="modpack" data-perm="modpack">Modpack</button>
+          <button class="nav" data-tab="plugins" data-perm="plugins" id="nav-addons">Mods du serveur</button>
+          <button class="nav" data-tab="editor" data-perm="serverFiles">Fichiers du serveur</button>
+          <button class="nav" data-tab="console" data-perm="console">Console</button>
+          <button class="nav" data-tab="news" data-perm="news">Nouvelles</button>
+          <button class="nav" data-tab="files" data-perm="files">Fichiers joueurs</button>
+          <button class="nav" data-tab="accounts" data-perm="accounts">Comptes</button>
         </nav>
+        <div class="me">
+          <span class="muted">Connecté :</span> <strong id="me-name"></strong>
+          <button id="btn-my-password" class="ghost small" hidden>Changer mon mot de passe</button>
+        </div>
         <button id="btn-logout" class="ghost">Déconnexion</button>
       </aside>
 
@@ -345,6 +351,25 @@
               <button class="primary" type="submit">Envoyer</button>
             </form>
           </div>
+        </section>
+
+        <!-- Accounts: who can log in to this website, and what each account can do -->
+        <section class="tab" id="tab-accounts" hidden>
+          <h1>Comptes</h1>
+          <p class="muted">
+            Le compte <strong>admin</strong> (mot de passe ADMIN_PASSWORD) peut tout faire. Les autres comptes ne voient que
+            les onglets cochés. Le tableau de bord est visible par tous.
+          </p>
+          <form id="account-form" class="card account-form">
+            <h2>Nouveau compte</h2>
+            <div class="row">
+              <input name="name" placeholder="Nom d'utilisateur" autocomplete="off" autocapitalize="off" spellcheck="false" required />
+              <input name="password" type="password" placeholder="Mot de passe (8 caractères min.)" autocomplete="new-password" required minlength="8" />
+            </div>
+            <div class="perm-grid" id="account-form-perms"></div>
+            <div class="row end"><button class="primary" type="submit">Créer le compte</button></div>
+          </form>
+          <div id="account-list" class="account-list"></div>
         </section>
 
         <!-- News -->
