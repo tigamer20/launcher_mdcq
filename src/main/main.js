@@ -118,6 +118,20 @@ ipcMain.handle('init', () => {
 });
 
 // Called at startup and every 15 seconds so changes made on the admin website show up quickly.
+// The Minecraft server's address from the last pack read: its status is checked on its own every 10 seconds
+// (server-status below), straight from this PC, even when the website is slow or asleep.
+let lastServer = null;
+
+async function serverStatus() {
+  if (!lastServer?.host) return null;
+  const status = await pingServer(lastServer.host, lastServer.port, { minecraftVersion: lastServer.minecraftVersion });
+  discordState.players = status?.online ? status.players : null;
+  updateDiscord();
+  return status;
+}
+
+ipcMain.handle('server-status', () => serverStatus().catch(() => null));
+
 // An admin can log a player's account out from the website (✕ in the "Joueurs" tab): checked every minute.
 let lastKickCheck = 0;
 async function checkLoggedOut() {
@@ -135,11 +149,10 @@ ipcMain.handle('pack', async () => {
   }
   try {
     const pack = await files.fetchManifest(SERVER_URL);
-    const server = pack.server?.host ? await pingServer(pack.server.host, pack.server.port, { minecraftVersion: pack.modpack?.minecraft || pack.versionId }) : null;
-    const installed = modpack.installedState(instanceDir(pack.season));
+    lastServer = pack.server?.host ? { ...pack.server, minecraftVersion: pack.modpack?.minecraft || pack.versionId } : null;
     discordState.season = pack.season || 'Saison 3';
-    discordState.players = server?.online ? server.players : null;
-    updateDiscord();
+    const server = await serverStatus();
+    const installed = modpack.installedState(instanceDir(pack.season));
     return {
       name: pack.name,
       season: pack.season || 'Saison 3',

@@ -4,6 +4,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('launcher', {
   init: () => ipcRenderer.invoke('init'),
   pack: () => ipcRenderer.invoke('pack'),
+  serverStatus: () => ipcRenderer.invoke('server-status'),
   betaCheckKey: (key) => ipcRenderer.invoke('beta-check-key', key),
   betaSet: (beta) => ipcRenderer.invoke('beta-set', beta),
   checkUpdatesNow: () => ipcRenderer.invoke('check-updates-now'),
