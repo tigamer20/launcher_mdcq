@@ -1042,6 +1042,17 @@
    "enabled": true
   },
   {
+   "id": "file-ba7fd171500afb1a20106cd5c9d62917a2cc11b1",
+   "source": "file",
+   "folder": "mods",
+   "enabled": true,
+   "name": "cc-tweaked-1.21.1-forge-1.119.0",
+   "fileName": "cc-tweaked-1.21.1-forge-1.119.0.jar",
+   "sha1": "ba7fd171500afb1a20106cd5c9d62917a2cc11b1",
+   "size": 3125991,
+   "url": "https://github.com/tigamer20/launcher_mdcq/releases/download/modpack/editor-ba7fd171500afb1a20106cd5c9d62917a2cc11b1.jar"
+  },
+  {
    "id": "file-d992be398f5d28df278aa790b71dbf29f60ca5b4",
    "source": "file",
    "name": "cc-tweaked-1.21.1-forge-1.120.0",
@@ -10684,7 +10695,7 @@
  },
  "deleted": [],
  "edits": [],
- "unpublished": false,
- "updatedAt": "2026-11-11T21:59:12.419Z",
+ "unpublished": true,
+ "updatedAt": "2026-11-11T23:21:26.462Z",
  "publishedAt": "2026-11-11T21:59:10.045Z"
 }
