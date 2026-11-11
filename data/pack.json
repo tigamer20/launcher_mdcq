@@ -10,7 +10,7 @@
   "autoConnect": true,
   "maintenance": {
     "enabled": false,
-    "message": "Testing du modpack en cours!"
+    "message": "Testing du serveur en cours! De retour sous peu!"
   },
   "syncDirs": [],
   "keepPlayerChanges": [
