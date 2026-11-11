@@ -1,9 +1,9 @@
 {
- "name": "All the Mods 10 - Saison 3",
- "version": "8.1",
+ "name": "All the Mods 10 - Saison 3 V0.5",
+ "version": "8.0",
  "minecraft": "1.21.1",
  "neoforge": "21.1.247",
- "importedAt": "2026-11-11T17:22:25.292Z",
+ "importedAt": "2026-11-11T20:33:57.837Z",
  "mods": [
   {
    "id": "cf-322506",
@@ -45,6 +45,34 @@
    "sha1": "af656a33be2cbd217ea08986ad2cdd76f6bbfe1c",
    "size": 546928,
    "url": "https://edge.forgecdn.net/files/8123/288/ComplementaryUnbound_r5.8.1.zip",
+   "enabled": true
+  },
+  {
+   "id": "cf-411045",
+   "source": "curseforge",
+   "projectId": 411045,
+   "fileId": 6775278,
+   "name": "Get It Together, Drops!",
+   "link": "https://www.curseforge.com/minecraft/mc-mods/get-it-together-drops",
+   "folder": "mods",
+   "fileName": "getittogetherdrops-neoforge-1.21.5-1.4.jar",
+   "sha1": "ead940a50f69313802960c497e252acd3956334f",
+   "size": 8825,
+   "url": "https://edge.forgecdn.net/files/6775/278/getittogetherdrops-neoforge-1.21.5-1.4.jar",
+   "enabled": true
+  },
+  {
+   "id": "cf-656346",
+   "source": "curseforge",
+   "projectId": 656346,
+   "fileId": 7084444,
+   "name": "Load My F***ing Tags",
+   "link": "https://www.curseforge.com/minecraft/mc-mods/lmft",
+   "folder": "mods",
+   "fileName": "lmft-1.1.1+1.21.9-neoforge.jar",
+   "sha1": "492d597ca216f9d099be112e77a9a5c7ed138770",
+   "size": 78624,
+   "url": "https://edge.forgecdn.net/files/7084/444/lmft-1.1.1%2B1.21.9-neoforge.jar",
    "enabled": true
   },
   {
@@ -3685,7 +3713,6 @@
  },
  "deleted": [],
  "edits": [],
- "unpublished": false,
- "updatedAt": "2026-11-11T17:22:46.226Z",
- "publishedAt": "2026-11-11T17:22:43.514Z"
+ "unpublished": true,
+ "updatedAt": "2026-11-11T20:33:57.837Z"
 }
