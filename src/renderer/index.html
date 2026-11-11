@@ -108,7 +108,19 @@
           />
         </svg>
       </button>
-      <button id="btn-play" class="play" disabled>INSTALLER</button>
+      <div class="play-group" id="play-group">
+        <button id="btn-play" class="play" disabled>INSTALLER</button>
+        <!-- Arrow: other ways to play (solo). Only shown when JOUER is available and the server is online. -->
+        <button id="btn-play-menu" class="play-arrow" title="Autres façons de jouer" hidden>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 15l6-6 6 6" /></svg>
+        </button>
+        <div id="play-menu" class="play-menu" hidden>
+          <button id="btn-play-solo">
+            <strong>Jouer en solo</strong>
+            <small>Ouvre le jeu sans te connecter au serveur</small>
+          </button>
+        </div>
+      </div>
     </footer>
 
     <!-- Settings dialog -->

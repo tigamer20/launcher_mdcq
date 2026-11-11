@@ -52,7 +52,7 @@ function idleText() {
   if (!state.installed) return 'Clique sur INSTALLER pour télécharger le modpack';
   if (state.updateAvailable) return 'Mise à jour du modpack disponible : clique sur INSTALLER';
   if (!state.account) return 'Connecte-toi avec ton compte Microsoft pour jouer';
-  if (state.serverOffline) return 'Le serveur est hors ligne : JOUER revient dès qu’il redémarre';
+  if (state.serverOffline) return 'Le serveur est hors ligne : tu peux jouer en solo en attendant';
   return 'Prêt à jouer';
 }
 
@@ -79,14 +79,22 @@ function refreshButtons() {
     button.textContent = 'INDISPONIBLE';
     button.disabled = true;
   } else if (state.serverOffline) {
-    // JOUER connects straight to the server: no point while it's offline (checked every 15 seconds)
-    button.textContent = 'HORS LIGNE';
-    button.disabled = true;
+    // The server is offline (checked every 15 seconds): the game can still be played alone.
+    button.textContent = 'JOUER EN SOLO';
+    button.disabled = !state.packReady || !state.account;
   } else {
     button.textContent = 'JOUER';
     button.disabled = !state.packReady || !state.account;
   }
+  state.playMode = button.textContent === 'JOUER EN SOLO' ? 'solo' : 'server';
+  button.classList.toggle('solo', state.playMode === 'solo');
   button.classList.toggle('install', !state.installed || state.updateAvailable);
+  // The arrow (Jouer en solo) only next to JOUER: not while installing, in maintenance or with the server offline.
+  const arrow = $('btn-play-menu');
+  arrow.hidden = button.textContent !== 'JOUER';
+  arrow.disabled = button.disabled;
+  $('btn-play-solo').disabled = button.disabled;
+  if (arrow.hidden || arrow.disabled) closePlayMenu();
   $('btn-login').disabled = state.busy;
   // Developer section: start the game without the server (also during a maintenance)
   const offlineBlocker = state.busy
@@ -307,7 +315,32 @@ $('btn-logout').onclick = async () => {
   showAccount(null);
 };
 
-$('btn-play').onclick = () => (state.installed && !state.updateAvailable ? play() : install());
+$('btn-play').onclick = () => {
+  if (!state.installed || state.updateAvailable) return install();
+  play(state.playMode === 'solo' ? { noServer: true } : undefined);
+};
+
+// Arrow next to JOUER: a small menu with "Jouer en solo" (the game opens on its title screen).
+function closePlayMenu() {
+  $('play-menu').hidden = true;
+  $('btn-play-menu').classList.remove('open');
+}
+$('btn-play-menu').onclick = (event) => {
+  event.stopPropagation();
+  const open = $('play-menu').hidden;
+  $('play-menu').hidden = !open;
+  $('btn-play-menu').classList.toggle('open', open);
+};
+$('btn-play-solo').onclick = () => {
+  closePlayMenu();
+  play({ noServer: true });
+};
+document.addEventListener('click', (event) => {
+  if (!$('play-group').contains(event.target)) closePlayMenu();
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closePlayMenu();
+});
 
 // INSTALLER: downloads Java, NeoForge, Minecraft and the modpack, with the steps shown. Then the button becomes JOUER.
 async function install() {

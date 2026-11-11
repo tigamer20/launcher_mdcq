@@ -658,6 +658,81 @@ dialog input[type='text'] {
   font-variant-numeric: tabular-nums;
 }
 
+/* JOUER + its arrow, drawn as one button */
+.play-group {
+  position: relative;
+  display: flex;
+}
+
+.play-group:has(.play-arrow:not([hidden])) .play {
+  width: 156px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.play.solo {
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+
+.play-arrow {
+  width: 44px;
+  height: 56px;
+  border-radius: 0 14px 14px 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.18);
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  box-shadow: 0 8px 30px rgba(139, 92, 246, 0.4);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.play-arrow:hover:not(:disabled) {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+}
+
+.play-arrow.open svg {
+  transform: rotate(180deg);
+}
+
+.play-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  width: 260px;
+  padding: 6px;
+  border-radius: 12px;
+  background: #1b2030;
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+}
+
+.play-menu button {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.play-menu button:hover:not(:disabled) {
+  background: rgba(139, 92, 246, 0.18);
+}
+
+.play-menu button:disabled {
+  opacity: 0.5;
+}
+
+.play-menu small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .play.install {
   background: linear-gradient(135deg, #f59e0b, #d97706);
   box-shadow: 0 8px 30px rgba(245, 158, 11, 0.35);
