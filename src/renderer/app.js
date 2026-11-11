@@ -8,6 +8,7 @@ const state = {
   busy: false,
   installing: false,
   installed: false, // INSTALLER until the modpack is installed once, then JOUER
+  updateAvailable: false, // a newer modpack version is active on the website: INSTALLER again
   modpackPublished: false,
   settings: {},
 };
@@ -49,6 +50,7 @@ function idleText() {
   if (state.modpackHidden) return "Le modpack n'est pas disponible pour le moment";
   if (!state.modpackPublished) return "Le modpack n'est pas encore publié";
   if (!state.installed) return 'Clique sur INSTALLER pour télécharger le modpack';
+  if (state.updateAvailable) return 'Mise à jour du modpack disponible : clique sur INSTALLER';
   if (!state.account) return 'Connecte-toi avec ton compte Microsoft pour jouer';
   if (state.serverOffline) return 'Le serveur est hors ligne : JOUER revient dès qu’il redémarre';
   return 'Prêt à jouer';
@@ -66,8 +68,9 @@ function refreshButtons() {
   } else if (state.maintenance) {
     button.textContent = 'MAINTENANCE';
     button.disabled = true;
-  } else if (!state.installed) {
-    // Installing doesn't need a Microsoft account: only playing does.
+  } else if (!state.installed || state.updateAvailable) {
+    // Installing doesn't need a Microsoft account: only playing does. A modpack update comes before everything
+    // but a maintenance, even when the server is offline, so players are ready when it comes back.
     button.textContent = 'INSTALLER';
     button.disabled = !state.packReady || !state.modpackPublished;
   } else if (!state.modpackPublished) {
@@ -82,7 +85,7 @@ function refreshButtons() {
     button.textContent = 'JOUER';
     button.disabled = !state.packReady || !state.account;
   }
-  button.classList.toggle('install', !state.installed);
+  button.classList.toggle('install', !state.installed || state.updateAvailable);
   $('btn-login').disabled = state.busy;
   // Developer section: start the game without the server (also during a maintenance)
   const offlineBlocker = state.busy
@@ -178,7 +181,9 @@ async function loadPack() {
     : pack.modpackHidden
       ? 'Modpack indisponible'
       : 'Modpack bientôt disponible';
-  $('pack-update').hidden = !(pack.installed && pack.modpack && pack.installedVersion !== pack.modpack.version);
+  const updateAvailable = Boolean(pack.installed && pack.modpack && pack.installedVersion !== pack.modpack.version);
+  if (!state.installing) state.updateAvailable = updateAvailable;
+  $('pack-update').hidden = !updateAvailable;
   // The address is only shown in the developer mode (Ctrl+Shift+D): players just click JOUER.
   const address = pack.server?.host ? (pack.server.port && pack.server.port !== 25565 ? `${pack.server.host}:${pack.server.port}` : pack.server.host) : '';
   $('server-address').textContent = address;
@@ -264,23 +269,25 @@ $('btn-logout').onclick = async () => {
   showAccount(null);
 };
 
-$('btn-play').onclick = () => (state.installed ? play() : install());
+$('btn-play').onclick = () => (state.installed && !state.updateAvailable ? play() : install());
 
 // INSTALLER: downloads Java, NeoForge, Minecraft and the modpack, with the steps shown. Then the button becomes JOUER.
 async function install() {
+  const updating = state.installed;
   state.busy = true;
   state.installing = true;
   refreshButtons();
   updateSteps('java');
-  $('install-title').textContent = 'Installation du modpack';
+  $('install-title').textContent = updating ? 'Mise à jour du modpack' : 'Installation du modpack';
   showInstallPanel(true);
   try {
     await window.launcher.install();
     state.installed = true;
+    state.updateAvailable = false;
     updateSteps('done');
-    $('install-title').textContent = 'Installation terminée!';
+    $('install-title').textContent = updating ? 'Mise à jour terminée!' : 'Installation terminée!';
     setBar($('install-bar'), 1);
-    showInfo('Installation terminée! Tu peux maintenant jouer.');
+    showInfo(updating ? 'Modpack à jour! Tu peux maintenant jouer.' : 'Installation terminée! Tu peux maintenant jouer.');
     setTimeout(() => showInstallPanel(false), 2500);
   } catch (err) {
     showInstallPanel(false);
@@ -294,6 +301,7 @@ async function install() {
     state.installing = false;
     refreshButtons();
     resetStatus();
+    loadPack().catch(() => {}); // the installed version changed: JOUER comes back right away
   }
 }
 
