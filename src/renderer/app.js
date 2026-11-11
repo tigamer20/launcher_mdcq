@@ -158,6 +158,10 @@ function renderNews(news) {
     title.textContent = item.title;
     const date = document.createElement('time');
     date.textContent = item.date || '';
+    const author = document.createElement('span');
+    author.className = 'news-author';
+    author.textContent = item.author ? `Auteur : ${item.author}` : '';
+    author.hidden = !item.author;
     const body = document.createElement('p');
     body.className = 'news-text clamped';
     body.textContent = item.body || '';
@@ -165,7 +169,10 @@ function renderNews(news) {
     more.className = 'news-more';
     more.textContent = 'Afficher plus';
     more.hidden = true;
-    card.append(title, date, body, more);
+    const meta = document.createElement('div');
+    meta.className = 'news-meta';
+    meta.append(date, author);
+    card.append(title, meta, body, more);
     if (item.url?.startsWith('https://')) {
       const link = document.createElement('a');
       link.href = item.url;
@@ -191,6 +198,8 @@ function updateNewsMore() {
 function openNews(item) {
   $('news-viewer-title').textContent = item.title || '';
   $('news-viewer-date').textContent = item.date || '';
+  $('news-viewer-author').textContent = item.author ? `Auteur : ${item.author}` : '';
+  $('news-viewer-author').hidden = !item.author;
   $('news-viewer-body').textContent = item.body || '';
   const link = $('news-viewer-link');
   link.hidden = !item.url?.startsWith('https://');

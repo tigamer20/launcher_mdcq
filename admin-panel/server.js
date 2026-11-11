@@ -506,16 +506,24 @@ const api = {
     return { pack: publicPack(pack) };
   },
 
-  'PUT /api/news': async (req) => {
+  // Each news keeps an id and its author: the account that wrote it (editing it later doesn't change the author).
+  'PUT /api/news': async (req, url, user) => {
     const { news } = await readJson(req);
     if (!Array.isArray(news)) throw httpError(400, 'Liste de nouvelles invalide');
     const pack = readPack();
-    pack.news = news.map((n) => ({
-      title: String(n.title || ''),
-      date: String(n.date || ''),
-      body: String(n.body || ''),
-      ...(n.url ? { url: String(n.url) } : {}),
-    }));
+    const existing = new Map((pack.news || []).filter((n) => n.id).map((n) => [n.id, n]));
+    pack.news = news.map((n) => {
+      const previous = existing.get(String(n.id || ''));
+      const author = previous ? previous.author : user.name;
+      return {
+        id: previous ? previous.id : crypto.randomBytes(6).toString('hex'),
+        title: String(n.title || ''),
+        date: String(n.date || ''),
+        body: String(n.body || ''),
+        ...(author ? { author } : {}),
+        ...(n.url ? { url: String(n.url) } : {}),
+      };
+    });
     await savePack(pack);
     return { pack: publicPack(pack) };
   },
@@ -751,6 +759,11 @@ async function start() {
   process.once('SIGTERM', () => players.flush().finally(() => process.exit(0)));
   // Old versions stored the beta key in clear text: keep only its hash.
   const pack = readPack();
+  // News written before authors existed get an id (their author stays unknown), so editing them keeps it that way.
+  if ((pack.news || []).some((n) => !n.id)) {
+    pack.news = pack.news.map((n) => (n.id ? n : { id: crypto.randomBytes(6).toString('hex'), ...n }));
+    await savePack(pack).catch((err) => console.error(err.message));
+  }
   if (pack.betaKey) {
     pack.betaKeyHash = hashKey(pack.betaKey);
     delete pack.betaKey;

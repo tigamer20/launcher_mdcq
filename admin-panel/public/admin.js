@@ -164,7 +164,10 @@ function renderServerForm() {
 }
 
 function newsItem(item = {}) {
+  // New news: written by the logged-in account. Existing ones keep their author.
+  const author = item.id ? item.author || 'inconnu' : me.name;
   const card = el('div', { className: 'card news-item' }, [
+    el('p', { className: 'news-author muted', textContent: `Auteur : ${author}` }),
     el('input', { className: 'news-title', placeholder: 'Titre', value: item.title || '' }),
     el('input', { className: 'news-date', type: 'date', value: item.date || new Date().toISOString().slice(0, 10) }),
     el('textarea', { className: 'news-body', placeholder: 'Texte de la nouvelle', value: item.body || '' }),
@@ -173,6 +176,7 @@ function newsItem(item = {}) {
       el('button', { className: 'danger', textContent: 'Supprimer', onclick: () => card.remove() }),
     ]),
   ]);
+  card.dataset.id = item.id || '';
   return card;
 }
 
@@ -294,6 +298,7 @@ $('btn-add-news').onclick = () => $('news-editor').prepend(newsItem());
 
 $('btn-save-news').onclick = async () => {
   const news = [...document.querySelectorAll('.news-item')].map((card) => ({
+    id: card.dataset.id || undefined,
     title: card.querySelector('.news-title').value,
     date: card.querySelector('.news-date').value,
     body: card.querySelector('.news-body').value,
@@ -301,6 +306,7 @@ $('btn-save-news').onclick = async () => {
   }));
   try {
     ({ pack } = await api('PUT', '/api/news', { news }));
+    renderNews(); // the new news now have their id and author
     toast('Nouvelles publiées');
   } catch (err) {
     toast(err.message, true);
