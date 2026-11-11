@@ -7,7 +7,8 @@ const path = require('path');
 const crypto = require('crypto');
 
 const CLIENT_ID = '1570189924924264498'; // Discord Developer Portal > application "ATM Launcher"
-const LARGE_IMAGE = 'logo'; // Rich Presence > Art Assets: an image uploaded with this name
+// The launcher's icon, straight from GitHub: Discord shows images from a link, so nothing has to be uploaded to Discord.
+const LARGE_IMAGE = 'https://raw.githubusercontent.com/tigamer20/launcher_mdcq/main/build/icon.png';
 const RETRY_MS = 20_000; // Discord started after the launcher: try again regularly
 
 const OP = { HANDSHAKE: 0, FRAME: 1, CLOSE: 2, PING: 3, PONG: 4 };
