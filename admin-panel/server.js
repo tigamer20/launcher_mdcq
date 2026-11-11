@@ -608,6 +608,17 @@ async function handleApi(req, res, url) {
     return sendJson(res, 200, { ok: true });
   }
 
+  // Public: launchers ask regularly whether an admin logged their account out (✕ in the Joueurs tab).
+  if (req.method === 'POST' && url.pathname === '/api/players/session') {
+    const limit = failures.get(`session:${ip}`);
+    const now = Date.now();
+    const count = limit && limit.until > now ? limit.count + 1 : 1;
+    failures.set(`session:${ip}`, { count, until: limit && limit.until > now ? limit.until : now + 10 * 60_000 });
+    if (count > 120) throw httpError(429, 'Trop de requêtes');
+    const { uuid, since } = await readJson(req);
+    return sendJson(res, 200, players.sessionStatus(uuid, since));
+  }
+
   // Public: launchers check the beta key players type in their hidden dev section.
   if (req.method === 'POST' && url.pathname === '/api/beta/check') {
     const fail = failures.get(`beta:${ip}`);
@@ -642,8 +653,14 @@ async function handleApi(req, res, url) {
 
   // Players who used the launcher
   if (req.method === 'GET' && url.pathname === '/api/players') return sendJson(res, 200, players.list());
+  // "Effacer l'historique": the recent activity only, the players stay.
   if (req.method === 'POST' && url.pathname === '/api/players/clear') {
-    players.clear();
+    players.clearHistory();
+    return sendJson(res, 200, players.list());
+  }
+  // ✕ next to a player: removed from the list and logged out of the launcher.
+  if (req.method === 'POST' && url.pathname === '/api/players/remove') {
+    players.remove((await readJson(req)).uuid);
     return sendJson(res, 200, players.list());
   }
 

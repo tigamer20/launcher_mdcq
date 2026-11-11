@@ -28,4 +28,23 @@ async function report(serverUrl, account, event, version) {
   }
 }
 
-module.exports = { report };
+/**
+ * Asks the website whether an admin logged this account out (✕ in the "Joueurs" tab) since it logged in.
+ * Any error (website asleep, offline...) answers false: never logs a player out by mistake.
+ */
+async function loggedOut(serverUrl, account) {
+  try {
+    if (!serverUrl || !account?.uuid) return false;
+    const res = await fetch(new URL('api/players/session', serverUrl), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uuid: account.uuid, since: account.loginAt || 0 }),
+      signal: AbortSignal.timeout(8000),
+    });
+    return res.ok && (await res.json()).loggedOut === true;
+  } catch {
+    return false;
+  }
+}
+
+module.exports = { report, loggedOut };

@@ -61,6 +61,7 @@ function resetStatus(text = idleText()) {
 }
 
 function refreshButtons() {
+  $('btn-launcher-update').disabled = state.busy; // no restart while the game or an installation runs
   const button = $('btn-play');
   if (state.busy) {
     button.textContent = '...';
@@ -463,6 +464,23 @@ $('beta-enabled').onchange = async () => {
 $('btn-check-updates').onclick = () => window.launcher.checkUpdatesNow();
 
 window.launcher.onGameStarted(() => setStatus('Bon jeu! Minecraft est lancé.', 1));
+
+// An admin logged this account out (✕ in the website's "Joueurs" tab).
+window.launcher.onLoggedOut((message) => {
+  showAccount(null);
+  if (!state.busy) resetStatus(); // "Connecte-toi avec ton compte Microsoft pour jouer"
+  showInfo(message);
+});
+
+// A new launcher version came out while the launcher is open: a small button next to the version number.
+window.launcher.onLauncherUpdate(({ version }) => {
+  const button = $('btn-launcher-update');
+  button.textContent = `v${version} disponible · Redémarrer`;
+  button.title = 'Redémarre le launcher pour installer la nouvelle version';
+  button.hidden = false;
+  refreshButtons();
+});
+$('btn-launcher-update').onclick = () => window.launcher.checkUpdatesNow();
 
 window.launcher.onGameClosed((error) => {
   state.busy = false;

@@ -784,13 +784,27 @@ showApp().catch(showLogin);
 const dateFormat = new Intl.DateTimeFormat('fr-CA', { dateStyle: 'medium', timeStyle: 'short' });
 const when = (iso) => (iso ? dateFormat.format(new Date(iso)) : '-');
 
-function playerCell(name, uuid) {
+// removable: a ✕ that removes the player from the list and logs their account out of the launcher
+function playerCell(name, uuid, removable = false) {
   return el('td', {}, [
     el('span', { className: 'player' }, [
       el('img', { src: `https://mc-heads.net/avatar/${encodeURIComponent(uuid)}/24`, alt: '', width: 24, height: 24 }),
       el('span', { textContent: name }),
+      ...(removable
+        ? [el('button', { className: 'player-remove', textContent: '✕', title: 'Déconnecter ce compte du launcher et le retirer de la liste', onclick: () => removePlayer(name, uuid) })]
+        : []),
     ]),
   ]);
+}
+
+async function removePlayer(name, uuid) {
+  if (!confirm(`Déconnecter ${name} du launcher et le retirer de la liste ?\nIl devra se reconnecter avec son compte Microsoft pour jouer.`)) return;
+  try {
+    renderPlayers(await api('POST', '/api/players/remove', { uuid }));
+    toast(`${name} déconnecté du launcher`);
+  } catch (err) {
+    toast(err.message, true);
+  }
 }
 
 function renderPlayers(data) {
@@ -804,7 +818,7 @@ function renderPlayers(data) {
   $('launcher-players').replaceChildren(
     ...data.players.map((p) =>
       el('tr', {}, [
-        playerCell(p.name, p.uuid),
+        playerCell(p.name, p.uuid, true),
         el('td', { textContent: when(p.lastSeen) }),
         el('td', { textContent: when(p.lastLogin) }),
         el('td', { textContent: when(p.lastPlay) }),
@@ -835,7 +849,7 @@ async function loadPlayers() {
 
 $('btn-players-refresh').onclick = loadPlayers;
 $('btn-players-clear').onclick = async () => {
-  if (!confirm("Effacer toute la liste des joueurs et l'historique ?")) return;
+  if (!confirm("Effacer l'historique des activités ? La liste des joueurs est gardée.")) return;
   try {
     renderPlayers(await api('POST', '/api/players/clear'));
     toast('Historique effacé');

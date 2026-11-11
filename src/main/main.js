@@ -118,7 +118,21 @@ ipcMain.handle('init', () => {
 });
 
 // Called at startup and every 15 seconds so changes made on the admin website show up quickly.
+// An admin can log a player's account out from the website (✕ in the "Joueurs" tab): checked every minute.
+let lastKickCheck = 0;
+async function checkLoggedOut() {
+  const account = auth.loadAccount();
+  if (!account || !(await presence.loggedOut(SERVER_URL, account))) return false;
+  auth.logout();
+  win?.webContents.send('logged-out', 'Ton compte a été déconnecté par un administrateur. Reconnecte-toi pour jouer.');
+  return true;
+}
+
 ipcMain.handle('pack', async () => {
+  if (Date.now() - lastKickCheck > 60_000) {
+    lastKickCheck = Date.now();
+    checkLoggedOut();
+  }
   try {
     const pack = await files.fetchManifest(SERVER_URL);
     const server = pack.server?.host ? await pingServer(pack.server.host, pack.server.port, { minecraftVersion: pack.modpack?.minecraft || pack.versionId }) : null;
@@ -181,9 +195,28 @@ ipcMain.handle('beta-set', (_event, beta) => {
 
 // "Vérifier les mises à jour": restart through the update window.
 ipcMain.handle('check-updates-now', () => {
+  if (playing) return; // never close the launcher while the game or an installation runs
   app.relaunch();
-  app.exit(0);
+  app.exit(0); // the startup update window installs the new version
 });
+
+// While the launcher stays open, look for a new launcher version every 15 minutes. When there is one, the window
+// shows a small "Redémarrer" button next to the version (the update itself happens at the restart).
+let announcedUpdate = null;
+async function lookForLauncherUpdate() {
+  if (!app.isPackaged && !process.env.ATM_FORCE_UPDATER) return;
+  try {
+    const settings = loadSettings();
+    const beta = settings.beta.enabled && Boolean(settings.beta.key);
+    const found = await updater.checkForUpdates({ repo: config.updateRepo, current: VERSION, beta });
+    const target = found.beta && updater.versionOf(found.beta) !== settings.declinedBeta ? found.beta : found.official;
+    if (!target || updater.versionOf(target) === announcedUpdate) return;
+    announcedUpdate = updater.versionOf(target);
+    win?.webContents.send('launcher-update', { version: announcedUpdate, label: updater.labelOf(target) });
+  } catch {
+    // GitHub unreachable: try again next time
+  }
+}
 
 ipcMain.handle('login', async () => {
   const account = await auth.login(config.azureClientId, win);
@@ -300,6 +333,7 @@ ipcMain.handle('play', async (_event, options = {}) => {
     const { installed, gameDir } = await prepare(pack);
 
     status('Connexion au compte...', null);
+    if (await checkLoggedOut()) throw new Error('Ton compte a été déconnecté par un administrateur. Reconnecte-toi pour jouer.');
     const account = await auth.refresh(config.azureClientId);
     presence.report(SERVER_URL, account, 'play', VERSION);
 
@@ -412,6 +446,7 @@ app.whenReady().then(async () => {
   if (await startupUpdate()) return;
   createWindow();
   startingUp = false;
+  setInterval(lookForLauncherUpdate, 15 * 60_000);
 });
 app.on('before-quit', () => discord.stop());
 app.on('window-all-closed', () => {
