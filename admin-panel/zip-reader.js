@@ -2,6 +2,8 @@
 // (a CurseForge export can weigh hundreds of MB, Render's free plan has 512 MB of RAM).
 const fs = require('fs');
 const zlib = require('zlib');
+const crypto = require('crypto');
+const { pipeline } = require('stream/promises');
 
 function readAt(fd, position, length) {
   const buf = Buffer.alloc(length);
@@ -33,7 +35,10 @@ function zip64Values(extra, wanted) {
   return {};
 }
 
-/** Opens a ZIP file. Returns { entries: [{ name, size }], read(entry) -> Buffer, close() }. */
+/**
+ * Opens a ZIP file. Returns { entries: [{ name, size }], read(entry) -> Buffer, extract(entry, dest) -> { sha1, size },
+ * close() }. extract() streams the file to disk: use it for big files.
+ */
 function openZip(file) {
   const fd = fs.openSync(file, 'r');
   try {
@@ -80,15 +85,38 @@ function openZip(file) {
       if (!name.endsWith('/')) entries.push({ name, size, compressedSize, method, offset });
     }
 
+    const dataStart = (entry) => {
+      const header = readAt(fd, entry.offset, 30);
+      return entry.offset + 30 + header.readUInt16LE(26) + header.readUInt16LE(28);
+    };
     return {
       entries,
       read(entry) {
-        const header = readAt(fd, entry.offset, 30);
-        const start = entry.offset + 30 + header.readUInt16LE(26) + header.readUInt16LE(28);
-        const data = readAt(fd, start, entry.compressedSize);
+        const data = readAt(fd, dataStart(entry), entry.compressedSize);
         if (entry.method === 0) return data;
         if (entry.method === 8) return zlib.inflateRawSync(data);
         throw new Error(`Compression ZIP non supportée (${entry.method}) pour ${entry.name}`);
+      },
+      async extract(entry, dest) {
+        if (entry.method !== 0 && entry.method !== 8) throw new Error(`Compression ZIP non supportée (${entry.method}) pour ${entry.name}`);
+        const hash = crypto.createHash('sha1');
+        let size = 0;
+        const count = async function* (source) {
+          for await (const chunk of source) {
+            hash.update(chunk);
+            size += chunk.length;
+            yield chunk;
+          }
+        };
+        if (!entry.compressedSize) {
+          fs.writeFileSync(dest, '');
+        } else {
+          const start = dataStart(entry);
+          const input = fs.createReadStream(file, { start, end: start + entry.compressedSize - 1 });
+          const steps = entry.method === 8 ? [input, zlib.createInflateRaw(), count] : [input, count];
+          await pipeline(...steps, fs.createWriteStream(dest));
+        }
+        return { sha1: hash.digest('hex'), size };
       },
       close: () => fs.closeSync(fd),
     };
