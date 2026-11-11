@@ -5,6 +5,7 @@
   "releaseName": "Sweet Minecraft Treat",
   "description": "ATM Launcher - launcher officiel du serveur All the Mod, saison 3",
   "main": "src/bootstrap.js",
+  "desktopName": "atm-launcher.desktop",
   "private": true,
   "scripts": {
     "start": "electron .",
@@ -43,7 +44,11 @@
     },
     "linux": {
       "target": "AppImage",
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "category": "Game",
+      "artifactName": "ATM-Launcher.${ext}",
+      "synopsis": "Launcher du serveur All the Mod",
+      "syncDesktopName": true
     }
   },
   "devDependencies": {
