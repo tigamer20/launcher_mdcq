@@ -448,6 +448,11 @@
           <span>Nouvelle version</span>
           <input id="merge-version" placeholder="1.2.0" pattern="\d+\.\d+\.\d+" required />
         </label>
+        <label class="field">
+          <span>Nom de la version (facultatif)</span>
+          <input id="merge-name" maxlength="60" placeholder="Laisser vide pour garder le nom actuel" />
+          <small class="muted" id="merge-name-hint"></small>
+        </label>
         <p id="merge-error" class="error" hidden></p>
         <div class="row end">
           <button type="button" id="btn-merge-cancel" class="ghost">Annuler</button>

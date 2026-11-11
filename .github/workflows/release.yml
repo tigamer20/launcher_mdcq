@@ -3,6 +3,7 @@
 #
 # How to trigger it: push to main with a commit message like
 #   [off_update] [1.2.0] Nouveau fond d'écran      -> official release, every launcher updates
+#   [off_update] [2.0.0] [name: Nouveau Nom] ...    -> same, and the release name changes (kept for the next ones)
 #   [dev_update] [1.2.0] Test des nouvelles configs -> dev pre-release (v1.2.0-dev), launchers ignore it
 # The admin website's "Fusionner" button creates exactly these merge commits.
 # Or run it by hand: Actions tab > "Release launcher" > Run workflow.
@@ -16,6 +17,9 @@ on:
       version:
         description: Version (ex. 1.2.0)
         required: true
+      name:
+        description: Nouveau nom de version (vide = garder le nom actuel)
+        required: false
       channel:
         description: Type de version
         type: choice
@@ -49,9 +53,11 @@ jobs:
           COMMITS_JSON: ${{ toJSON(github.event.commits) }}
           MANUAL_VERSION: ${{ inputs.version }}
           MANUAL_CHANNEL: ${{ inputs.channel }}
+          MANUAL_NAME: ${{ inputs.name }}
           GH_TOKEN: ${{ github.token }}
         run: |
           export LATEST_TAG="$(gh release view --json tagName --jq .tagName 2> /dev/null || true)"
+          export LATEST_NAME="$(gh release view --json name --jq .name 2> /dev/null || true)"
           node tools/release-version.js
 
       - run: npm ci
@@ -62,6 +68,7 @@ jobs:
           SERVER_URL: ${{ vars.SERVER_URL }}
           AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          RELEASE_NAME: ${{ steps.version.outputs.name }}
 
       - name: Build installer
         run: npx electron-builder --win --x64 --publish never

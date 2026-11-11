@@ -2,6 +2,7 @@
   "name": "atm-launcher",
   "productName": "ATM Launcher",
   "version": "1.0.0",
+  "releaseName": "Sweet Minecraft Treat",
   "description": "ATM Launcher - launcher officiel du serveur All the Mod, saison 3",
   "main": "src/bootstrap.js",
   "private": true,

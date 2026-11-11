@@ -657,8 +657,12 @@ window.addEventListener('beforeunload', (event) => {
 
 $('btn-merge').onclick = async () => {
   try {
-    const { official, dev, pending } = await api('GET', '/api/versions');
-    $('current-official').textContent = official || 'aucune';
+    const { official, officialName, dev, pending } = await api('GET', '/api/versions');
+    $('current-official').textContent = official ? `${official}${officialName ? ` - ${officialName}` : ''}` : 'aucune';
+    $('merge-name').value = '';
+    $('merge-name-hint').textContent = officialName
+      ? `Vide : la nouvelle version garde le nom « ${officialName} ».`
+      : 'Vide : la nouvelle version garde le nom actuel.';
     $('current-dev').textContent = dev || 'aucune';
     $('merge-pending').textContent = pending
       ? `${pending} modification(s) de la branche admin-website seront fusionnées dans main.`
@@ -681,7 +685,7 @@ $('merge-form').onsubmit = async (event) => {
   $('btn-merge-confirm').disabled = true;
   $('merge-error').hidden = true;
   try {
-    const { number } = await api('POST', '/api/merge', { channel, version: $('merge-version').value });
+    const { number } = await api('POST', '/api/merge', { channel, version: $('merge-version').value, name: $('merge-name').value });
     $('merge-dialog').close();
     toast(`Pull request #${number} créée et fusionnée dans main`);
     refreshPending();

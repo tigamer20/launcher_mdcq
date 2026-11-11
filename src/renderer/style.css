@@ -635,3 +635,36 @@ dialog input[type='text'] {
   animation-play-state: paused;
   opacity: 0.5;
 }
+
+.danger-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.danger-zone h3 {
+  font-size: 15px;
+}
+
+.danger-button {
+  align-self: flex-start;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+  font-weight: 600;
+}
+
+.danger-button:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.danger-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

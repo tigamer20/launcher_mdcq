@@ -420,18 +420,18 @@ const api = {
 
   'GET /api/versions': async () => {
     if (!github.configured()) throw httpError(400, 'GITHUB_TOKEN n\'est pas configuré');
-    const { official, dev, pending } = await github.status().catch((err) => {
+    const { official, officialName, dev, pending } = await github.status().catch((err) => {
       throw httpError(502, err.message);
     });
-    return { official, dev, pending };
+    return { official, officialName, dev, pending };
   },
 
   // Opens a pull request admin-website -> main and merges it with "[off_update]" or "[dev_update]".
   'POST /api/merge': async (req) => {
     if (!github.configured()) throw httpError(400, 'GITHUB_TOKEN n\'est pas configuré');
-    const { channel, version } = await readJson(req);
+    const { channel, version, name } = await readJson(req);
     try {
-      return await github.mergeToMain(channel, String(version || '').trim().replace(/^v/, ''));
+      return await github.mergeToMain(channel, String(version || '').trim().replace(/^v/, ''), name);
     } catch (err) {
       throw httpError(400, err.message);
     }

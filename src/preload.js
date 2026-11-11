@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('launcher', {
   onInstallControl: (fn) => ipcRenderer.on('install-control', (_e, state) => fn(state)),
   saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
   openFolder: () => ipcRenderer.invoke('open-folder'),
+  deleteModpack: (options) => ipcRenderer.invoke('delete-modpack', options),
   minimize: () => ipcRenderer.send('window', 'minimize'),
   toggleMaximize: () => ipcRenderer.send('window', 'maximize'),
   onMaximized: (fn) => ipcRenderer.on('maximized', (_e, on) => fn(on)),

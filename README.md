@@ -173,6 +173,14 @@ git push origin main
 
 (On github.com, type the same thing in the **Commit message** box when you edit a file or merge a pull request.)
 
+**Version names:** versions are called `v1.0.0 - Sweet Minecraft Treat` (the launcher's title bar shows `v1.0.0 - SMT`). The name stays the same from one version to the next until you change it, by adding `[name: New Name]` to the release commit:
+
+```
+[off_update] [2.0.0] [name: Nether Party] Saison 4
+```
+
+In the admin website's **Fusionner** dialog, fill in **Nom de la version** (empty = keep the current name). The first name comes from `releaseName` in `package.json`.
+
 What happens next, automatically:
 1. GitHub builds `ATM-Setup.exe` with version **1.2.0** (about 5 minutes; follow it in the **Actions** tab), plus the list of the launcher's files with their fingerprint (`app-update.json`).
 2. It publishes release **v1.2.0** on the Releases page, with the rest of your commit message as release notes.

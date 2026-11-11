@@ -149,4 +149,10 @@ function confirmCurrentVersion(version) {
   }
 }
 
-module.exports = { checkForUpdates, installUpdate, confirmCurrentVersion, isNewer, versionOf };
+// "v1.0.0 - Sweet Minecraft Treat" (the GitHub release title), or "v1.0.0" for older releases.
+function labelOf(release) {
+  const title = String(release?.name || '').replace(/ \(dev\)$/, '');
+  return / - /.test(title) ? title : `v${versionOf(release)}`;
+}
+
+module.exports = { checkForUpdates, installUpdate, confirmCurrentVersion, isNewer, versionOf, labelOf };

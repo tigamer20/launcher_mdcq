@@ -16,7 +16,7 @@ const control = require('./control');
 
 const config = require('../../launcher.config.json');
 // Version of the files actually running (they can come from an update, see src/bootstrap.js).
-const VERSION = require('../../package.json').version;
+const { version: VERSION, releaseName: RELEASE_NAME } = require('../../package.json'); // "1.0.0", "Sweet Minecraft Treat"
 // ATM_SERVER_URL lets you test against a local admin panel without editing the config.
 const SERVER_URL = process.env.ATM_SERVER_URL || config.serverUrl;
 // Shared files (Java, Minecraft, NeoForge, assets) in ROOT; each season gets its own game folder
@@ -96,6 +96,7 @@ ipcMain.handle('init', () => {
     settings: loadSettings(),
     maxRamMb: Math.floor(os.totalmem() / 1024 / 1024),
     version: VERSION,
+    releaseName: RELEASE_NAME || null,
   };
 });
 
@@ -177,6 +178,24 @@ function saveSettings(settings) {
 }
 
 ipcMain.handle('save-settings', (_event, settings) => saveSettings(settings));
+
+// Settings > "Supprimer le modpack installé": empties this season's game folder, so the button becomes INSTALLER.
+// keepPersonal keeps the player's worlds, screenshots, settings and maps. Java, Minecraft and NeoForge (shared by
+// every season) stay, so installing again is quicker.
+const PERSONAL = new Set(['saves', 'screenshots', 'schematics', 'options.txt', 'optionsof.txt', 'optionsshaders.txt', 'servers.dat', 'journeymap', 'XaeroWaypoints', 'XaeroWorldMap', 'shaderpacks', 'resourcepacks']);
+ipcMain.handle('delete-modpack', async (_event, { keepPersonal = true } = {}) => {
+  if (playing) throw new Error("Attends la fin de l'installation ou ferme le jeu avant de supprimer le modpack.");
+  const pack = await files.fetchManifest(SERVER_URL).catch(() => ({}));
+  const dir = instanceDir(pack.season);
+  if (!fs.existsSync(dir)) return { deleted: 0 };
+  let deleted = 0;
+  for (const name of fs.readdirSync(dir)) {
+    if (keepPersonal && PERSONAL.has(name)) continue;
+    fs.rmSync(path.join(dir, name), { recursive: true, force: true, maxRetries: 3 });
+    deleted++;
+  }
+  return { deleted };
+});
 
 ipcMain.handle('open-folder', async () => {
   const pack = await files.fetchManifest(SERVER_URL).catch(() => ({}));
@@ -331,7 +350,7 @@ async function startupUpdate() {
     const found = await withTimeout(updater.checkForUpdates({ repo: config.updateRepo, current: VERSION, beta, force: legacy.isOldApp() }), 10_000);
     let target = null;
     if (found.beta && updater.versionOf(found.beta) !== settings.declinedBeta) {
-      send({ phase: 'beta-available', version: updater.versionOf(found.beta) });
+      send({ phase: 'beta-available', version: updater.versionOf(found.beta), label: updater.labelOf(found.beta) });
       const choice = await new Promise((resolve) => ipcMain.once('updater-choice', (_event, value) => resolve(value)));
       if (choice === 'beta') target = found.beta;
       else saveSettings({ declinedBeta: updater.versionOf(found.beta) });
@@ -342,8 +361,9 @@ async function startupUpdate() {
       return false;
     }
 
-    const result = await updater.installUpdate(target, send);
-    send({ phase: 'restarting', version: updater.versionOf(target) });
+    const label = updater.labelOf(target); // "v1.0.0 - Sweet Minecraft Treat"
+    const result = await updater.installUpdate(target, (state) => send({ ...state, label }));
+    send({ phase: 'restarting', version: updater.versionOf(target), label });
     await new Promise((resolve) => setTimeout(resolve, 800));
     if (result === 'restart') app.relaunch();
     app.exit(0);
