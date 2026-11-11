@@ -51,9 +51,8 @@ async function restore(dataDir) {
     const relative = item.path.slice(FOLDER.length + 1);
     const target = path.resolve(root, relative);
     if (!target.startsWith(root + path.sep)) continue;
-    const blob = await github.gh('GET', `/git/blobs/${item.sha}`);
     fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.writeFileSync(target, Buffer.from(blob.content, 'base64'));
+    fs.writeFileSync(target, await github.blob(item.sha));
     shas.set(relative, item.sha);
   }
   return 'restored';
