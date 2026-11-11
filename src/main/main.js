@@ -13,6 +13,7 @@ const updater = require('./updater');
 const legacy = require('./legacy');
 const presence = require('./presence');
 const control = require('./control');
+const discord = require('./discord');
 
 const config = require('../../launcher.config.json');
 // Version of the files actually running (they can come from an update, see src/bootstrap.js).
@@ -29,10 +30,23 @@ const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
 let win;
 let playing = false;
 
+// Discord status: what the player is doing, with the server's player count from the last check (every 15 s).
+const discordState = { season: null, players: null, game: null }; // game: { startedAt, noServer }
+function updateDiscord() {
+  const { season, players, game } = discordState;
+  if (!game) return discord.setStatus({ details: 'Dans le launcher', state: season, players });
+  discord.setStatus({
+    details: game.noServer ? 'En jeu' : `En jeu sur ${season || 'le serveur'}`,
+    state: game.noServer ? season : 'Sur le serveur',
+    startedAt: game.startedAt,
+    players: game.noServer ? null : players,
+  });
+}
+
 function loadSettings() {
   // All the Mods 10 needs a lot of memory: 8 Go when the PC has 16 Go or more, 6 Go otherwise.
   const ramMb = os.totalmem() >= 15 * 1024 ** 3 ? 8192 : 6144;
-  const defaults = { ramMb, hideOnLaunch: false, maximized: false, devTab: false, beta: { enabled: false, key: '' }, declinedBeta: null };
+  const defaults = { ramMb, hideOnLaunch: false, discordStatus: true, maximized: false, devTab: false, beta: { enabled: false, key: '' }, declinedBeta: null };
   try {
     return { ...defaults, ...JSON.parse(fs.readFileSync(settingsFile(), 'utf8')) };
   } catch {
@@ -58,8 +72,11 @@ function createWindow() {
   });
   win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
   win.once('ready-to-show', () => {
-    if (loadSettings().maximized) win.maximize(); // opens the way the player left it
+    const settings = loadSettings();
+    if (settings.maximized) win.maximize(); // opens the way the player left it
     win.show();
+    discord.setEnabled(settings.discordStatus);
+    updateDiscord();
     updater.confirmCurrentVersion(VERSION); // this version starts fine: keep it
     legacy.removeOldApp(); // the old ModdedQC app, replaced by ATM Launcher
     // A player already signed in shows up in the admin website's "Joueurs" tab when the launcher opens.
@@ -106,6 +123,9 @@ ipcMain.handle('pack', async () => {
     const pack = await files.fetchManifest(SERVER_URL);
     const server = pack.server?.host ? await pingServer(pack.server.host, pack.server.port, { minecraftVersion: pack.modpack?.minecraft || pack.versionId }) : null;
     const installed = modpack.installedState(instanceDir(pack.season));
+    discordState.season = pack.season || 'Saison 3';
+    discordState.players = server?.online ? server.players : null;
+    updateDiscord();
     return {
       name: pack.name,
       season: pack.season || 'Saison 3',
@@ -177,7 +197,13 @@ function saveSettings(settings) {
   fs.writeFileSync(settingsFile(), JSON.stringify({ ...loadSettings(), ...settings }));
 }
 
-ipcMain.handle('save-settings', (_event, settings) => saveSettings(settings));
+ipcMain.handle('save-settings', (_event, settings) => {
+  saveSettings(settings);
+  if ('discordStatus' in settings) {
+    discord.setEnabled(settings.discordStatus);
+    updateDiscord();
+  }
+});
 
 // Settings > "Supprimer le modpack installé": empties this season's game folder, so the button becomes INSTALLER.
 // keepPersonal keeps the player's worlds, screenshots, settings and maps. Java, Minecraft and NeoForge (shared by
@@ -282,6 +308,8 @@ ipcMain.handle('play', async (_event, options = {}) => {
     const child = minecraft.launch(ROOT, installed, { account, ramMb: settings.ramMb, server, gameDir });
 
     win.webContents.send('game-started');
+    discordState.game = { startedAt: Date.now(), noServer: !server };
+    updateDiscord();
     if (settings.hideOnLaunch) win.hide();
     else win.minimize();
 
@@ -298,6 +326,8 @@ ipcMain.handle('play', async (_event, options = {}) => {
 
 function finish(error) {
   playing = false;
+  discordState.game = null;
+  updateDiscord();
   if (!win) return;
   win.show();
   win.restore();
@@ -383,6 +413,7 @@ app.whenReady().then(async () => {
   createWindow();
   startingUp = false;
 });
+app.on('before-quit', () => discord.stop());
 app.on('window-all-closed', () => {
   if (!startingUp) app.quit();
 });

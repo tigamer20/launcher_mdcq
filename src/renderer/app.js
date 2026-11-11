@@ -222,6 +222,7 @@ async function init() {
   ram.max = Math.max(2048, Math.floor((data.maxRamMb - 2048) / 512) * 512);
   ram.value = Math.min(state.settings.ramMb, ram.max);
   $('hide-on-launch').checked = state.settings.hideOnLaunch;
+  $('discord-status').checked = state.settings.discordStatus !== false;
   updateRamLabel();
   refreshButtons();
 
@@ -357,6 +358,7 @@ $('btn-settings-close').onclick = async () => {
   await window.launcher.saveSettings({
     ramMb: Number($('ram').value),
     hideOnLaunch: $('hide-on-launch').checked,
+    discordStatus: $('discord-status').checked,
   });
   $('settings').close();
 };
