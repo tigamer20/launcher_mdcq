@@ -611,3 +611,27 @@ dialog input[type='text'] {
 .dev-section > button {
   align-self: flex-start;
 }
+
+.install-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.install-actions button {
+  padding: 8px 18px;
+}
+
+.install-actions .cancel:hover:not(:disabled) {
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.install-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.progress-bar.paused {
+  animation-play-state: paused;
+  opacity: 0.5;
+}
