@@ -980,3 +980,7 @@ input[type='file']:disabled + span {
 .perm-grid label:has(input:disabled) {
   opacity: 0.55;
 }
+
+.news-author {
+  font-size: 13px;
+}
