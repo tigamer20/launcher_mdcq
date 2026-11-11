@@ -182,12 +182,13 @@
 
             <section class="card" id="ed-mods">
               <p class="card offline-reason" id="ed-missing" hidden></p>
+              <p class="muted ed-drop-hint">Astuce : glisse un ou plusieurs fichiers .jar sur cette zone pour les ajouter.</p>
               <div class="row wrap ed-add">
                 <input id="ed-add-input" placeholder="Lien CurseForge du mod à ajouter (ex. https://www.curseforge.com/minecraft/mc-mods/jei)" />
                 <button class="primary" id="btn-ed-add" type="button">Ajouter</button>
                 <label class="ghost file-button">
-                  <input type="file" id="ed-jar-file" accept=".jar" hidden />
-                  <span>Téléverser un .jar</span>
+                  <input type="file" id="ed-jar-file" accept=".jar" multiple hidden />
+                  <span>Téléverser des .jar</span>
                 </label>
               </div>
               <div class="row between ed-filter">
