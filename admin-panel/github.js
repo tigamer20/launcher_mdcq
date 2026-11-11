@@ -12,6 +12,16 @@ const FOLDER = 'paper-server'; // where the Mac's server files are stored in the
 
 const configured = () => Boolean(TOKEN);
 
+/** A file's bytes by its blob sha (raw: no base64 copy in memory, works up to 100 MB). */
+async function blob(sha) {
+  const res = await fetch(`${API}/repos/${REPO}/git/blobs/${sha}`, {
+    headers: { Authorization: `Bearer ${TOKEN}`, Accept: 'application/vnd.github.raw', 'User-Agent': 'ATM-Admin' },
+    signal: AbortSignal.timeout(120_000),
+  });
+  if (!res.ok) throw new Error(`GitHub: ${res.status} en lisant un fichier`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
 async function gh(method, url, body) {
   const res = await fetch(`${API}/repos/${REPO}${url}`, {
     method,
@@ -22,6 +32,7 @@ async function gh(method, url, body) {
       ...(body ? { 'Content-Type': 'application/json' } : {}),
     },
     body: body && JSON.stringify(body),
+    signal: AbortSignal.timeout(60_000), // a stuck request must never block the website
   });
   if (res.status === 404) return null;
   const json = res.status === 204 ? {} : await res.json().catch(() => ({}));
@@ -168,4 +179,4 @@ async function listModpackVersions() {
   return versions.sort((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)));
 }
 
-module.exports = { configured, commitServerFile, status, mergeToMain, redact, isNewer, gh, REPO, listModpackVersions };
+module.exports = { configured, blob, commitServerFile, status, mergeToMain, redact, isNewer, gh, REPO, listModpackVersions };

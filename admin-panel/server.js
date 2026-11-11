@@ -575,10 +575,16 @@ async function handleApi(req, res, url) {
 // Router
 // ---------------------------------------------------------------------------
 
+// The website answers Render's health check right away, while its data is still coming back from GitHub.
+let ready = false;
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   try {
-    if (url.pathname === '/healthz') return sendJson(res, 200, { ok: true });
+    if (url.pathname === '/healthz') return sendJson(res, 200, { ok: true, ready });
+    if (!ready) {
+      return sendJson(res, 503, { error: 'Le site démarre (récupération des données), réessaie dans quelques secondes.' }, { 'Retry-After': '5' });
+    }
 
     // Launcher endpoints (public)
     if (req.method === 'GET' && url.pathname === '/manifest.json') {
@@ -608,7 +614,13 @@ const server = http.createServer(async (req, res) => {
 });
 
 // Startup: get the data back from GitHub (Render's free plan erased it), then start serving.
+// Never let one unexpected error stop the whole website (Render would restart it in a loop): log it instead.
+process.on('unhandledRejection', (err) => console.error('Erreur non gérée :', err));
+process.on('uncaughtException', (err) => console.error('Exception non gérée :', err));
+
 async function start() {
+  // Open the port first: Render restarts a website that doesn't answer its health check in time.
+  server.listen(PORT, () => console.log(`Port ${PORT} ouvert, récupération des données...`));
   // Default data first: on a first start (or Render's free plan wiping the disk) it is what goes into the new branch.
   // When the branch exists, GitHub's data replaces it.
   ensureDefaultPack();
@@ -641,11 +653,13 @@ async function start() {
     await savePack(pack).catch((err) => console.error(err.message));
   }
   buildManifest(DATA_DIR);
-  server.listen(PORT, () => {
-    console.log(`Données: ${DATA_DIR}`);
+  ready = true;
+  console.log(`Prêt. Données: ${DATA_DIR}`);
   console.log(`Site admin:      http://localhost:${PORT}/admin/`);
-    console.log(`URL du launcher: http://localhost:${PORT}/  (serverUrl dans launcher.config.json)`);
-  });
+  console.log(`URL du launcher: http://localhost:${PORT}/  (serverUrl dans launcher.config.json)`);
 }
 
-start();
+start().catch((err) => {
+  console.error('Démarrage impossible :', err);
+  process.exit(1);
+});

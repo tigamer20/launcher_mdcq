@@ -11,8 +11,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
+const { Readable } = require('stream');
+const { pipeline } = require('stream/promises');
 const release = require('../paper-agent/publish');
-const { createZip } = require('../paper-agent/zip');
+const { ZipWriter } = require('./zip-writer');
 const { openZip } = require('./zip-reader');
 const curseforge = require('./curseforge');
 
@@ -30,7 +32,6 @@ let draft = null;
 const job = { state: 'idle', kind: '', step: '', done: 0, total: 0, message: '', result: null };
 
 const bad = (message, status = 400) => Object.assign(new Error(message), { status });
-const sha1 = (data) => crypto.createHash('sha1').update(data).digest('hex');
 const assetName = (url) => decodeURIComponent(String(url).split('/').pop());
 
 // One change at a time (two admins clicking at once can't lose a change).
@@ -125,10 +126,19 @@ function startJob(kind, fn) {
   return { job };
 }
 
-// GitHub release "modpack": uploads `data` once (files are named by their SHA-1).
-async function store(rel, assets, name, data) {
-  if (!assets.has(name)) assets.set(name, await release.upload(rel, name, data));
+// GitHub release "modpack": uploads a file from disk once (files are named by their SHA-1).
+// Everything goes through the disk: Render's free plan has only 512 MB of memory.
+async function storeFile(rel, assets, name, file) {
+  if (!assets.has(name)) assets.set(name, await release.uploadFile(rel, name, file));
   return assets.get(name).browser_download_url;
+}
+
+const tmpFile = (label) => path.join(TMP, `${label}-${crypto.randomBytes(8).toString('hex')}.tmp`);
+
+async function sha1File(file) {
+  const hash = crypto.createHash('sha1');
+  for await (const chunk of fs.createReadStream(file)) hash.update(chunk);
+  return hash.digest('hex');
 }
 
 async function openRelease() {
@@ -185,7 +195,10 @@ async function importExport(uploadId) {
     const overrides = zip.entries.filter((e) => e.name.startsWith(prefix) && e.name.length > prefix.length);
     const { rel, assets } = await openRelease();
     const extras = [];
-    const small = [];
+    // Small files go one by one into a zip on disk (sorted, so the same files always give the same zip).
+    overrides.sort((a, b) => a.name.localeCompare(b.name));
+    const bundleFile = tmpFile('bundle');
+    const bundleZip = new ZipWriter(bundleFile);
     for (const [i, entry] of overrides.entries()) {
       step('Envoi des fichiers du modpack sur GitHub', i + 1, overrides.length);
       const relative = entry.name.slice(prefix.length);
@@ -195,32 +208,38 @@ async function importExport(uploadId) {
       const disabled = relative.endsWith('.disabled');
       if (disabled && parts[0] !== 'mods') continue;
       if (parts[0] === 'mods' || entry.size > release.BIG_FILE) {
-        const data = zip.read(entry);
-        const hash = sha1(data);
-        const ext = path.extname(disabled ? relative.slice(0, -9) : relative).toLowerCase().replace(/[^.a-z0-9]/g, '');
-        const url = await store(rel, assets, `editor-${hash}${ext}`, data);
-        if (parts[0] === 'mods') {
-          const fileName = parts.slice(1).join('/').replace(/\.disabled$/, '');
-          // The jar of a CurseForge mod that can't be downloaded automatically: fill it in.
-          const known = mods.find((m) => !m.url && m.fileName === fileName);
-          if (known) Object.assign(known, { url, sha1: hash, size: data.length });
-          else mods.push({ id: `file-${hash}`, source: 'file', name: fileName.replace(/\.jar$/i, ''), folder: 'mods', fileName, sha1: hash, size: data.length, url, enabled: !disabled });
-        } else {
-          extras.push({ path: relative, sha1: hash, size: data.length, url });
+        const temp = tmpFile('file');
+        try {
+          const { sha1: hash, size } = await zip.extract(entry, temp);
+          const ext = path.extname(disabled ? relative.slice(0, -9) : relative).toLowerCase().replace(/[^.a-z0-9]/g, '');
+          const url = await storeFile(rel, assets, `editor-${hash}${ext}`, temp);
+          if (parts[0] === 'mods') {
+            const fileName = parts.slice(1).join('/').replace(/\.disabled$/, '');
+            // The jar of a CurseForge mod that can't be downloaded automatically: fill it in.
+            const known = mods.find((m) => !m.url && m.fileName === fileName);
+            if (known) Object.assign(known, { url, sha1: hash, size });
+            else mods.push({ id: `file-${hash}`, source: 'file', name: fileName.replace(/\.jar$/i, ''), folder: 'mods', fileName, sha1: hash, size, url, enabled: !disabled });
+          } else {
+            extras.push({ path: relative, sha1: hash, size, url });
+          }
+        } finally {
+          fs.rmSync(temp, { force: true });
         }
       } else {
-        small.push({ name: relative, data: zip.read(entry) });
+        bundleZip.add(relative, zip.read(entry));
       }
     }
 
     let bundle = null;
-    if (small.length) {
-      step('Envoi des configurations');
-      small.sort((a, b) => a.name.localeCompare(b.name));
-      const data = createZip(small);
-      const hash = sha1(data);
-      const url = await store(rel, assets, `editor-bundle-${hash}.zip`, data);
-      bundle = { url, sha1: hash, size: data.length, files: small.map((f) => f.name) };
+    const written = bundleZip.close();
+    try {
+      if (written.files.length) {
+        step('Envoi des configurations');
+        const url = await storeFile(rel, assets, `editor-bundle-${written.sha1}.zip`, bundleFile);
+        bundle = { url, sha1: written.sha1, size: written.size, files: written.files };
+      }
+    } finally {
+      fs.rmSync(bundleFile, { force: true });
     }
 
     // 3. The new draft replaces the old one (and its unpublished changes)
@@ -334,17 +353,17 @@ const uploadMod = (uploadId, fileName, id) => locked(async () => {
   if (!/^[^/\\]+\.jar$/i.test(name)) throw bad('Envoie un fichier .jar');
   const file = takeUpload(uploadId);
   try {
-    const data = fs.readFileSync(file);
-    const hash = sha1(data);
+    const hash = await sha1File(file);
+    const size = fs.statSync(file).size;
     const { rel, assets } = await openRelease();
-    const url = await store(rel, assets, `editor-${hash}.jar`, data);
+    const url = await storeFile(rel, assets, `editor-${hash}.jar`, file);
     let mod = id ? findMod(id) : null;
     if (mod) {
-      Object.assign(mod, { url, sha1: hash, size: data.length, fileName: mod.source === 'curseforge' ? mod.fileName : name });
+      Object.assign(mod, { url, sha1: hash, size, fileName: mod.source === 'curseforge' ? mod.fileName : name });
     } else {
       mod = draft.mods.find((m) => m.sha1 === hash) || { id: `file-${hash}`, source: 'file', folder: 'mods', enabled: true };
       if (!draft.mods.includes(mod)) draft.mods.push(mod);
-      Object.assign(mod, { name: name.replace(/\.jar$/i, ''), fileName: name, sha1: hash, size: data.length, url });
+      Object.assign(mod, { name: name.replace(/\.jar$/i, ''), fileName: name, sha1: hash, size, url });
       draft.mods.sort((a, b) => a.name.localeCompare(b.name));
     }
     await changed();
@@ -365,9 +384,14 @@ async function baseBundle() {
   if (!fs.existsSync(file)) {
     const res = await fetch(draft.bundle.url);
     if (!res.ok) throw new Error(`Configurations introuvables sur GitHub (${res.status}) : réimporte le modpack`);
-    const data = Buffer.from(await res.arrayBuffer());
-    if (sha1(data) !== draft.bundle.sha1) throw new Error('Configurations corrompues sur GitHub : réimporte le modpack');
-    fs.writeFileSync(file, data);
+    const temp = tmpFile('download');
+    try {
+      await pipeline(Readable.fromWeb(res.body), fs.createWriteStream(temp));
+      if ((await sha1File(temp)) !== draft.bundle.sha1) throw new Error('Configurations corrompues sur GitHub : réimporte le modpack');
+      fs.renameSync(temp, file);
+    } finally {
+      fs.rmSync(temp, { force: true });
+    }
   }
   return file;
 }
@@ -407,21 +431,32 @@ async function readFile(input) {
   return isText(data) ? { path: relative, content: data.toString('utf8'), size: data.length } : { path: relative, binary: true, size: data.length };
 }
 
-/** Saves a file (typed in the editor or sent from the PC). Big files go on GitHub's release like mods. */
-const writeFile = (input, data) => locked(async () => {
+/**
+ * Saves a file (typed in the editor or sent from the PC). `source` is a Buffer, or { file } for a file on disk.
+ * Big files go on GitHub's release like mods (streamed from disk).
+ */
+const writeFile = (input, source) => locked(async () => {
   const relative = cleanPath(input);
   const d = needDraft();
+  const size = Buffer.isBuffer(source) ? source.length : fs.statSync(source.file).size;
   d.extras = d.extras.filter((e) => e.path !== relative);
   d.deleted = d.deleted.filter((p) => p !== relative);
-  if (data.length > release.BIG_FILE) {
-    const hash = sha1(data);
-    const { rel, assets } = await openRelease();
-    const ext = path.extname(relative).toLowerCase().replace(/[^.a-z0-9]/g, '');
-    d.extras.push({ path: relative, sha1: hash, size: data.length, url: await store(rel, assets, `editor-${hash}${ext}`, data) });
+  if (size > release.BIG_FILE) {
+    let file = source.file;
+    if (!file) fs.writeFileSync((file = tmpFile('write')), source);
+    try {
+      const hash = await sha1File(file);
+      const { rel, assets } = await openRelease();
+      const ext = path.extname(relative).toLowerCase().replace(/[^.a-z0-9]/g, '');
+      d.extras.push({ path: relative, sha1: hash, size, url: await storeFile(rel, assets, `editor-${hash}${ext}`, file) });
+    } finally {
+      if (!source.file) fs.rmSync(file, { force: true });
+    }
     if (d.edits.includes(relative)) await forgetEdit(relative);
     // the old small copy in the zip must not come back
     if ((d.bundle?.files || []).includes(relative)) d.deleted.push(relative);
   } else {
+    const data = Buffer.isBuffer(source) ? source : fs.readFileSync(source.file);
     const target = path.join(dataDir, EDITS, relative);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, data);
@@ -439,9 +474,7 @@ async function forgetEdit(relative) {
 
 const uploadAsFile = (uploadId, input) => {
   const file = takeUpload(uploadId);
-  const data = fs.readFileSync(file);
-  fs.rmSync(file, { force: true });
-  return writeFile(input, data);
+  return writeFile(input, { file }).finally(() => fs.rmSync(file, { force: true }));
 };
 
 const deleteFile = (input) => locked(async () => {
@@ -482,25 +515,28 @@ async function publish(version) {
   let bundle = d.bundle;
   const deleted = new Set(d.deleted);
   if (d.edits.length || d.deleted.length) {
+    // Rebuilt one file at a time on disk (sorted): the published zip + the website's changes - deleted files.
     const edits = new Set(d.edits);
-    const files = [];
     const base = await baseBundle();
-    if (base) {
-      const zip = openZip(base);
-      try {
-        for (const entry of zip.entries) if (!deleted.has(entry.name) && !edits.has(entry.name)) files.push({ name: entry.name, data: zip.read(entry) });
-      } finally {
-        zip.close();
+    const zip = base && openZip(base);
+    const bundleFile = tmpFile('bundle');
+    try {
+      const sources = [
+        ...(zip ? zip.entries.filter((e) => !deleted.has(e.name) && !edits.has(e.name)).map((entry) => ({ name: entry.name, entry })) : []),
+        ...d.edits.map((name) => ({ name, edit: path.join(dataDir, EDITS, name) })),
+      ].sort((a, b) => a.name.localeCompare(b.name));
+      const writer = new ZipWriter(bundleFile);
+      for (const src of sources) writer.add(src.name, src.entry ? zip.read(src.entry) : fs.readFileSync(src.edit));
+      const written = writer.close();
+      bundle = null;
+      if (written.files.length) {
+        step('Envoi des configurations sur GitHub');
+        const url = await storeFile(rel, assets, `editor-bundle-${written.sha1}.zip`, bundleFile);
+        bundle = { url, sha1: written.sha1, size: written.size, files: written.files };
       }
-    }
-    for (const relative of d.edits) files.push({ name: relative, data: fs.readFileSync(path.join(dataDir, EDITS, relative)) });
-    files.sort((a, b) => a.name.localeCompare(b.name));
-    bundle = null;
-    if (files.length) {
-      step('Envoi des configurations sur GitHub');
-      const data = createZip(files);
-      const hash = sha1(data);
-      bundle = { url: await store(rel, assets, `editor-bundle-${hash}.zip`, data), sha1: hash, size: data.length, files: files.map((f) => f.name) };
+    } finally {
+      zip?.close();
+      fs.rmSync(bundleFile, { force: true });
     }
   }
 

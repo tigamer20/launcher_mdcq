@@ -80,6 +80,25 @@ async function upload(release, name, data) {
   return json;
 }
 
+// Same as upload(), but streams a file from disk (big files never sit in memory).
+async function uploadFile(release, name, file) {
+  const { Readable } = require('stream');
+  const res = await fetch(`${UPLOADS}/repos/${REPO}/releases/${release.id}/assets?name=${encodeURIComponent(name)}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${TOKEN}`,
+      'Content-Type': 'application/octet-stream',
+      'Content-Length': String(fs.statSync(file).size),
+      'User-Agent': 'ATM-Agent',
+    },
+    body: Readable.toWeb(fs.createReadStream(file)),
+    duplex: 'half',
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(`Envoi de ${name} refusé par GitHub: ${json.message || res.status}`);
+  return json;
+}
+
 async function getRelease() {
   const existing = await gh('GET', `/releases/tags/${TAG}`);
   if (existing) return existing;
@@ -206,5 +225,5 @@ const status = () => ({ ...job });
 // Also used by the admin website's modpack editor (admin-panel/modpack-editor.js).
 module.exports = {
   start, status, configured, detectVersions, publish, job,
-  getRelease, listAssets, upload, gh, sha1, EXCLUDE, KEEP_PLAYER_CHANGES, MAX_ASSETS, BIG_FILE,
+  getRelease, listAssets, upload, uploadFile, gh, sha1, EXCLUDE, KEEP_PLAYER_CHANGES, MAX_ASSETS, BIG_FILE,
 };
