@@ -195,16 +195,49 @@ main {
 }
 
 .offline-notice {
-  max-width: 440px;
-  margin-top: 12px;
-  padding: 10px 14px 10px 36px;
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 12px);
+  width: 270px;
+  padding: 10px 12px 10px 36px;
   border-radius: 10px;
-  border: 1px solid rgba(251, 191, 36, 0.3);
-  background: rgba(251, 191, 36, 0.08) no-repeat 12px 11px / 16px
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  background: #241f14 no-repeat 12px 11px / 16px
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fbbf24' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4M12 8h.01'/%3E%3C/svg%3E");
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
   color: #fde68a;
+  font-size: 12.5px;
+  line-height: 1.45;
+  z-index: 5;
+  animation: notice-in 0.2s ease-out;
+}
+
+.offline-notice strong {
+  display: block;
+  color: #fcd34d;
   font-size: 13px;
-  line-height: 1.5;
+  margin-bottom: 2px;
+}
+
+/* little arrow pointing at the button */
+.offline-notice::after {
+  content: '';
+  position: absolute;
+  right: 95px;
+  bottom: -6px;
+  width: 10px;
+  height: 10px;
+  background: #241f14;
+  border-right: 1px solid rgba(251, 191, 36, 0.35);
+  border-bottom: 1px solid rgba(251, 191, 36, 0.35);
+  transform: rotate(45deg);
+}
+
+@keyframes notice-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
 }
 
 .server-line.offline .dot {
