@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld('launcher', {
   logout: () => ipcRenderer.invoke('logout'),
   play: (options) => ipcRenderer.invoke('play', options),
   install: () => ipcRenderer.invoke('install'),
+  installControl: (action) => ipcRenderer.invoke('install-control', action), // 'pause' | 'resume' | 'cancel'
+  onInstallControl: (fn) => ipcRenderer.on('install-control', (_e, state) => fn(state)),
   saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
   openFolder: () => ipcRenderer.invoke('open-folder'),
   minimize: () => ipcRenderer.send('window', 'minimize'),

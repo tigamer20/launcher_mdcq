@@ -12,6 +12,7 @@ const { describe } = require('./progress');
 const updater = require('./updater');
 const legacy = require('./legacy');
 const presence = require('./presence');
+const control = require('./control');
 
 const config = require('../../launcher.config.json');
 // Version of the files actually running (they can come from an update, see src/bootstrap.js).
@@ -224,13 +225,22 @@ async function loadPackForGame({ allowMaintenance = false } = {}) {
 ipcMain.handle('install', async () => {
   if (playing) return;
   playing = true;
+  control.begin(); // the Pause and Annuler buttons of the installation panel
   try {
     await prepare(await loadPackForGame());
     win.webContents.send('status', { step: 'done', text: 'Installation terminée!', progress: 1 });
   } finally {
+    control.end();
     playing = false;
   }
 });
+
+ipcMain.handle('install-control', (_event, action) => {
+  if (action === 'pause') control.pause();
+  if (action === 'resume') control.resume();
+  if (action === 'cancel') control.cancel();
+});
+control.onChange((state) => win?.webContents.send('install-control', state));
 
 // JOUER: apply updates if any, log in, start NeoForge and join the server.
 // { noServer: true } (developer section): same, but the game stays on its title screen.

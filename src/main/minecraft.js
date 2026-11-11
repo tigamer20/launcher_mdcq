@@ -4,6 +4,7 @@ const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
 const { downloadAll, fetchJson } = require('./download');
+const control = require('./control');
 const { progressTracker } = require('./progress');
 const { extractZip } = require('./unzip');
 
@@ -309,7 +310,7 @@ async function installNeoForge(root, { minecraftVersion, neoforgeVersion }, onSt
   // 3. Run it: it downloads NeoForge's libraries and patches Minecraft (1 to 3 minutes).
   const run = (flag) =>
     new Promise((resolve) => {
-      const child = spawn(java, ['-jar', installer, flag, root], { cwd: root });
+      const child = control.track(spawn(java, ['-jar', installer, flag, root], { cwd: root })); // stopped by Annuler
       let output = '';
       const onData = (chunk) => {
         output += chunk;
@@ -322,7 +323,9 @@ async function installNeoForge(root, { minecraftVersion, neoforgeVersion }, onSt
       child.on('exit', (code) => resolve({ code, output }));
     });
   onStatus({ step: 'neoforge', text: 'Installation de NeoForge (1 à 3 minutes)...', progress: null });
+  await control.checkpoint();
   let result = await run('--install-client');
+  await control.checkpoint(); // cancelled while the installer ran
   if (result.code !== 0 && /not a recognized option|UnrecognizedOption/i.test(result.output)) {
     result = await run('--installClient'); // older installers use this spelling
   }

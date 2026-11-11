@@ -4,6 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { Readable } = require('stream');
 const { pipeline } = require('stream/promises');
+const control = require('./control');
 
 const PARALLEL = 8;
 const RETRIES = 3;
@@ -42,23 +43,38 @@ async function downloadOne(task, onBytes) {
   let lastError;
   for (let attempt = 1; attempt <= RETRIES; attempt++) {
     let received = 0;
+    let pausedDuring = false;
     try {
-      const res = await fetch(task.url);
+      await control.checkpoint();
+      const res = await fetch(task.url, { signal: control.signal() });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const hash = crypto.createHash('sha1');
-      const body = Readable.fromWeb(res.body);
-      body.on('data', (chunk) => {
-        hash.update(chunk);
-        received += chunk.length;
-        onBytes(chunk.length);
-      });
-      await pipeline(body, fs.createWriteStream(tmp));
+      // Counts the bytes, and waits here while the installation is paused (Pause button).
+      const meter = async function* (source) {
+        for await (const chunk of source) {
+          hash.update(chunk);
+          received += chunk.length;
+          onBytes(chunk.length);
+          if (control.isCancelled()) throw new control.CancelledError();
+          const before = Date.now();
+          await control.checkpoint();
+          if (Date.now() - before > 1000) pausedDuring = true;
+          yield chunk;
+        }
+      };
+      await pipeline(Readable.fromWeb(res.body), meter, fs.createWriteStream(tmp));
       if (task.sha1 && hash.digest('hex') !== task.sha1) throw new Error('somme SHA-1 invalide');
       await fs.promises.rename(tmp, task.dest);
       if (task.executable) await fs.promises.chmod(task.dest, 0o755);
       return;
     } catch (err) {
       onBytes(-received); // roll back progress for the failed attempt
+      if (control.isCancelled()) {
+        await fs.promises.rm(tmp, { force: true });
+        throw new control.CancelledError();
+      }
+      // A long pause can make the server close the connection: that try doesn't count.
+      if (pausedDuring) attempt--;
       lastError = err;
     }
   }
@@ -74,6 +90,7 @@ async function downloadOne(task, onBytes) {
 async function downloadAll(tasks, onProgress = () => {}) {
   const needed = [];
   for (const task of tasks) {
+    await control.checkpoint();
     if (!(await isValid(task.dest, task))) needed.push(task);
   }
   if (needed.length === 0) return 0;
@@ -89,6 +106,8 @@ async function downloadAll(tasks, onProgress = () => {}) {
   const queue = [...needed];
   const workers = Array.from({ length: Math.min(PARALLEL, queue.length) }, async () => {
     while (queue.length) {
+      await control.checkpoint();
+      if (!queue.length) break;
       await downloadOne(queue.shift(), report);
       filesDone++;
       report(0);

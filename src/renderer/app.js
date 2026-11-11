@@ -263,7 +263,11 @@ async function install() {
     setTimeout(() => showInstallPanel(false), 2500);
   } catch (err) {
     showInstallPanel(false);
-    showError(cleanError(err));
+    if (/Installation annulée/.test(err.message)) {
+      showInfo("Installation annulée. Clique sur INSTALLER pour reprendre : ce qui est déjà téléchargé est gardé.");
+    } else {
+      showError(cleanError(err));
+    }
   } finally {
     state.busy = false;
     state.installing = false;
@@ -271,6 +275,29 @@ async function install() {
     resetStatus();
   }
 }
+
+// Pause / Reprendre and Annuler while installing
+let installPaused = false;
+$('btn-install-pause').onclick = () => window.launcher.installControl(installPaused ? 'resume' : 'pause');
+$('btn-install-cancel').onclick = () => {
+  if (confirm("Annuler l'installation ? Ce qui est déjà téléchargé est gardé pour la prochaine fois.")) {
+    window.launcher.installControl('cancel');
+  }
+};
+window.launcher.onInstallControl(({ active, paused, cancelled }) => {
+  installPaused = paused;
+  $('btn-install-pause').textContent = paused ? 'Reprendre' : 'Pause';
+  $('btn-install-pause').disabled = !active || cancelled;
+  $('btn-install-cancel').disabled = !active || cancelled;
+  $('install-bar').classList.toggle('paused', paused);
+  if (paused) {
+    $('install-text').textContent = 'En pause';
+    $('install-detail').textContent = 'Clique sur Reprendre pour continuer le téléchargement.';
+    setStatus('Installation en pause', null);
+  } else if (cancelled) {
+    $('install-text').textContent = 'Annulation...';
+  }
+});
 
 // JOUER: applies updates (only what changed), then starts the game and joins the server.
 // play({ noServer: true }) from the developer section: the game stays on its title screen.
