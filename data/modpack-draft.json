@@ -1,6 +1,6 @@
 {
  "name": "ATM 10 Client side",
- "version": "9.5",
+ "version": "9.2",
  "minecraft": "1.21.1",
  "neoforge": "21.1.265",
  "importedAt": "2026-11-12T01:23:23.606Z",
@@ -7023,6 +7023,7 @@
  "bundle": null,
  "deleted": [],
  "edits": [],
- "unpublished": true,
- "updatedAt": "2026-11-12T01:27:25.105Z"
+ "unpublished": false,
+ "updatedAt": "2026-11-12T01:28:01.787Z",
+ "publishedAt": "2026-11-12T01:27:58.965Z"
 }
