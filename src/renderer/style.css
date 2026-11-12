@@ -218,6 +218,19 @@ main {
   animation: notice-in 0.2s ease-out;
 }
 
+.offline-notice .link {
+  display: block;
+  margin-top: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #fcd34d;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .offline-notice strong {
   display: block;
   color: #fcd34d;
