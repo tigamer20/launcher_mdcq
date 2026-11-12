@@ -19,5 +19,11 @@ set MODPACK_DIR=C:\Users\YOUR_NAME\curseforge\minecraft\Instances\All the Mods 1
 rem Same kind of GitHub token as on Render (Contents: Read and write on tigamer20/launcher_mdcq)
 set GITHUB_TOKEN=github_pat_...
 
+rem Cloudflare tunnel without a domain (free, no router port to open). Optional.
+rem Install cloudflared once: winget install --id Cloudflare.cloudflared
+rem The agent starts it and sends its address (a new one at every start) to the website: AGENT_URL isn't needed on Render.
+set CLOUDFLARE_TUNNEL=1
+set WEBSITE_URL=https://your-site.onrender.com/
+
 node "%~dp0agent.js"
 pause
