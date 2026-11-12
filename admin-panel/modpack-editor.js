@@ -28,6 +28,7 @@ const VERSION = /^[0-9][0-9A-Za-z.+-]{0,40}$/;
 let dataDir = null;
 let storage = null; // { configured(), saveFile(relative, buffer), deleteFile(relative) }
 let activate = null; // (info) => makes a published version the one the launchers install
+let activeModpack = () => null; // the version the launchers install now ({ version, manifestUrl, ... } or null)
 let draft = null;
 const job = { state: 'idle', kind: '', step: '', done: 0, total: 0, message: '', result: null };
 
@@ -44,6 +45,7 @@ function locked(fn) {
 
 function init(options) {
   ({ dataDir, storage, activate } = options);
+  if (options.activeModpack) activeModpack = options.activeModpack;
   fs.mkdirSync(TMP, { recursive: true });
   try {
     draft = JSON.parse(fs.readFileSync(path.join(dataDir, DRAFT), 'utf8'));
@@ -618,8 +620,75 @@ async function download(url, file) {
   await pipeline(Readable.fromWeb(res.body), fs.createWriteStream(file));
 }
 
+const ZIP_LIMIT = 3.9 * 1024 ** 3; // the zip format used here can't go over 4 GB
+
+// Without an import in the editor (modpack published from the server's PC): the published version, from its list on
+// GitHub. CurseForge ids aren't known there, so every jar goes in overrides/mods (CurseForge imports that fine).
+async function exportPublished() {
+  const active = activeModpack();
+  if (!active?.manifestUrl) throw bad('Aucun modpack publié ni importé dans l\'éditeur : rien à exporter');
+  step('Lecture de la version publiée');
+  const res = await fetch(active.manifestUrl);
+  if (!res.ok) throw new Error(`Liste du modpack introuvable sur GitHub (${res.status})`);
+  const published = await res.json();
+  const total = (published.files || []).reduce((s, f) => s + (f.size || 0), 0) + (published.bundle?.size || 0);
+  if (total > ZIP_LIMIT) throw new Error('Modpack trop gros pour un seul .zip (plus de 4 Go)');
+
+  const out = tmpFile('export');
+  const writer = new ZipWriter(out);
+  const bundleFile = tmpFile('export-bundle');
+  try {
+    const manifest = {
+      minecraft: { version: published.minecraft, modLoaders: [{ id: `neoforge-${published.neoforge}`, primary: true }] },
+      manifestType: 'minecraftModpack',
+      manifestVersion: 1,
+      name: 'All the Mod',
+      version: published.version,
+      author: '',
+      files: [],
+      overrides: 'overrides',
+    };
+    writer.add('manifest.json', Buffer.from(JSON.stringify(manifest, null, 2)));
+    if (published.bundle?.url) {
+      step('Téléchargement des configurations');
+      await download(published.bundle.url, bundleFile);
+      const bundle = openZip(bundleFile);
+      try {
+        for (const [i, entry] of bundle.entries.entries()) {
+          step('Ajout des configurations', i + 1, bundle.entries.length);
+          writer.add(`overrides/${entry.name}`, bundle.read(entry));
+        }
+      } finally {
+        bundle.close();
+      }
+    }
+    const files = published.files || [];
+    for (const [i, f] of files.entries()) {
+      step('Téléchargement des mods et fichiers', i + 1, files.length);
+      const temp = tmpFile('export-file');
+      try {
+        await download(f.url, temp);
+        writer.add(`overrides/${f.path}`, fs.readFileSync(temp));
+      } finally {
+        fs.rmSync(temp, { force: true });
+      }
+    }
+  } catch (err) {
+    writer.close();
+    fs.rmSync(out, { force: true });
+    throw err;
+  } finally {
+    fs.rmSync(bundleFile, { force: true });
+  }
+  const { size } = writer.close();
+  fs.renameSync(out, EXPORT_FILE);
+  exported = { fileName: `All_the_Mod-${String(published.version).replace(/[^\w.-]+/g, '_')}.zip`, size, at: new Date().toISOString() };
+  return { export: exported, source: 'published' };
+}
+
 async function exportZip() {
-  const d = needDraft();
+  if (!draft) return exportPublished();
+  const d = draft;
   const hosted = (url) => String(url || '').startsWith('https://github.com/'); // on the "modpack" release, not CurseForge
   const curseforgeMods = d.mods.filter((m) => m.source === 'curseforge');
   // Jars that are not downloaded from CurseForge: added by hand, or CurseForge mods whose author forbids other apps
@@ -706,6 +775,7 @@ function status() {
     },
     job: { ...job },
     exported,
+    canExport: Boolean(draft || activeModpack()?.manifestUrl),
   };
 }
 
@@ -725,7 +795,7 @@ module.exports = {
     return startJob('publish', () => publish(v));
   },
   startExport: () => {
-    needDraft();
+    if (!draft && !activeModpack()?.manifestUrl) throw bad('Aucun modpack publié ni importé dans l\'éditeur : rien à exporter');
     return startJob('export', exportZip);
   },
   exportFile,

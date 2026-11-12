@@ -906,7 +906,11 @@ function renderEditor() {
   $('ed-setup').hidden = setup.length === 0;
   $('ed-setup-text').textContent = setup.length ? `Pour utiliser l'éditeur, ${setup.join(' et ')}, puis redéploie le site.` : '';
   $('ed-import-file').disabled = setup.length > 0 || job.state === 'running';
-  $('btn-ed-export').hidden = !draft;
+  // The editor's modpack, or else the published version (modpack published from the server's PC)
+  $('btn-ed-export').hidden = !ed.status.canExport;
+  $('btn-ed-export').title = draft
+    ? 'Télécharge le modpack de l\'éditeur au même format que l\'export CurseForge importé'
+    : 'Télécharge la version publiée du modpack au format export CurseForge (.zip)';
   $('btn-ed-export').disabled = job.state === 'running';
 
   $('ed-main').hidden = !draft;

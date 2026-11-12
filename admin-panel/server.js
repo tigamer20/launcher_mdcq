@@ -762,7 +762,7 @@ async function start() {
     secret: process.env.DATA_KEY || (PASSWORD_OK ? PASSWORD : null),
     save: storage.configured() ? (relative, buffer) => storage.saveFile(relative, buffer) : null,
   });
-  editor.init({ dataDir: DATA_DIR, storage, activate: activateModpack });
+  editor.init({ dataDir: DATA_DIR, storage, activate: activateModpack, activeModpack: () => readPack().modpack || null });
   accounts.init({
     dataDir: DATA_DIR,
     secret: process.env.DATA_KEY || (PASSWORD_OK ? PASSWORD : null),
