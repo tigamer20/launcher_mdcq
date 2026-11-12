@@ -13,6 +13,7 @@ const crypto = require('crypto');
 const { rcon } = require('./rcon');
 const { sha256, verify } = require('./signing');
 const modpack = require('./publish');
+const tunnel = require('./tunnel');
 
 const PORT = Number(process.env.AGENT_PORT) || 8765;
 const SECRET = process.env.AGENT_SECRET;
@@ -257,4 +258,9 @@ http
     console.log(`${ADDONS === 'mods' ? 'Mods' : 'Plugins'} : ${PLUGINS_DIR}`);
     console.log(`Console RCON: ${RCON ? `${RCON.host}:${RCON.port}` : 'désactivée (RCON_PASSWORD manquant)'}`);
     console.log(`Modpack: ${modpack.configured() ? process.env.MODPACK_DIR : 'désactivé (MODPACK_DIR ou GITHUB_TOKEN manquant)'}`);
+    // Cloudflare tunnel without a domain: its address changes at every start, the website is told automatically.
+    if (process.env.CLOUDFLARE_TUNNEL === '1') {
+      if (!process.env.WEBSITE_URL) console.error('CLOUDFLARE_TUNNEL=1 demande aussi WEBSITE_URL (l\'adresse du site admin sur Render).');
+      else tunnel.start({ port: PORT, website: process.env.WEBSITE_URL, secret: SECRET, command: process.env.CLOUDFLARED || 'cloudflared' });
+    }
   });

@@ -5,6 +5,7 @@
 //
 // Optional, to control the Minecraft server (mods or plugins, files, console, whitelist) through paper-agent/:
 //   AGENT_URL=http://my-pc:8765/   AGENT_SECRET=same-as-the-agent
+// Or only AGENT_SECRET: an agent started with CLOUDFLARE_TUNNEL=1 sends its own (changing) address, see agentUrl().
 // Behind a proxy like Render, also set TRUST_PROXY=1 (real visitor IPs for the login protection).
 // Server file editor history on GitHub: GITHUB_TOKEN=... (see admin-panel/github.js).
 //
@@ -17,7 +18,7 @@ const crypto = require('crypto');
 const { pipeline } = require('stream/promises');
 const { buildManifest } = require('../tools/build-manifest');
 const { pingServer } = require('../src/main/status');
-const { signHeaders } = require('../paper-agent/signing');
+const { signHeaders, verify: verifySignature, sha256 } = require('../paper-agent/signing');
 const github = require('./github');
 const storage = require('./storage');
 const players = require('./players');
@@ -31,7 +32,7 @@ const FILES_DIR = path.join(DATA_DIR, 'files');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const PASSWORD = process.env.ADMIN_PASSWORD;
 const SESSION_HOURS = 12;
-const AGENT_URL = process.env.AGENT_URL && process.env.AGENT_URL.replace(/\/?$/, '');
+const AGENT_URL_ENV = process.env.AGENT_URL && process.env.AGENT_URL.replace(/\/?$/, '');
 const AGENT_SECRET = process.env.AGENT_SECRET;
 const TRUST_PROXY = process.env.TRUST_PROXY === '1';
 const MAX_UPLOAD = 200 * 1024 * 1024;
@@ -176,7 +177,41 @@ function listFiles(dir = FILES_DIR) {
 // Server agent (runs on the Minecraft machine, NeoForge or Paper, see paper-agent/)
 // ---------------------------------------------------------------------------
 
+// The agent's address: the one it sent itself (Cloudflare tunnel without a domain, which changes at every start),
+// or else AGENT_URL from Render.
+const agentUrlFile = () => path.join(DATA_DIR, 'agent-url.json');
+let reportedAgentUrl = null;
+const agentUrl = () => reportedAgentUrl || AGENT_URL_ENV || null;
+
+function loadReportedAgentUrl() {
+  try {
+    reportedAgentUrl = JSON.parse(fs.readFileSync(agentUrlFile(), 'utf8')).url || null;
+  } catch {
+    reportedAgentUrl = null;
+  }
+}
+
+// POST /api/agent/url from the agent, signed with AGENT_SECRET like the website's requests to the agent.
+async function receiveAgentUrl(req) {
+  if (!AGENT_SECRET) throw httpError(400, 'AGENT_SECRET n\'est pas configuré sur Render');
+  const bodyHash = verifySignature(AGENT_SECRET, req);
+  if (!bodyHash) throw httpError(401, 'Signature invalide (vérifie AGENT_SECRET et l\'heure du PC)');
+  const body = await readBuffer(req, 4096);
+  if (sha256(body) !== bodyHash) throw httpError(400, 'Contenu modifié');
+  const url = String(JSON.parse(body.toString('utf8') || '{}').url || '').replace(/\/?$/, '');
+  if (!/^https?:\/\/[A-Za-z0-9.-]+(:\d+)?$/.test(url)) throw httpError(400, 'Adresse invalide');
+  if (url !== reportedAgentUrl) {
+    reportedAgentUrl = url;
+    const json = JSON.stringify({ url, at: new Date().toISOString() });
+    fs.writeFileSync(agentUrlFile(), json);
+    console.log(`Nouvelle adresse de l'agent : ${url}`);
+    await keepOnGitHub(() => storage.saveFile('agent-url.json', Buffer.from(json))).catch((err) => console.error(err.message));
+  }
+  return { ok: true };
+}
+
 async function agent(method, pathWithQuery, body, timeoutMs = 60_000) {
+  const AGENT_URL = agentUrl();
   if (!AGENT_URL || !AGENT_SECRET) throw httpError(400, 'Agent non configuré (AGENT_URL et AGENT_SECRET)');
   const data = body === undefined ? Buffer.alloc(0) : Buffer.isBuffer(body) ? body : Buffer.from(JSON.stringify(body));
   let res;
@@ -197,7 +232,7 @@ async function agent(method, pathWithQuery, body, timeoutMs = 60_000) {
 
 // What the agent can do. Never throws: an unreachable agent just disables the tabs.
 async function agentFeatures() {
-  if (!AGENT_URL) return { plugins: false, rcon: false, modpack: false, error: null };
+  if (!agentUrl()) return { plugins: false, rcon: false, modpack: false, error: null };
   try {
     const info = await agent('GET', '/info', undefined, 8000);
     // Older agents (Paper only) don't send serverType.
@@ -314,7 +349,7 @@ const api = {
     pack: publicPack(readPack()),
     files: listFiles(),
     plugins: [],
-    features: { plugins: false, rcon: false, modpack: false, agent: Boolean(AGENT_URL), github: github.configured() },
+    features: { plugins: false, rcon: false, modpack: false, agent: Boolean(agentUrl()), github: github.configured() },
     me: user,
     permissions: accounts.PERMISSIONS,
   }),
@@ -322,7 +357,7 @@ const api = {
   'GET /api/agent': async () => {
     const features = await agentFeatures();
     const plugins = features.plugins ? (await agent('GET', '/plugins').catch(() => ({ plugins: [] }))).plugins : [];
-    return { features: { ...features, agent: Boolean(AGENT_URL), github: github.configured() }, plugins };
+    return { features: { ...features, agent: Boolean(agentUrl()), github: github.configured() }, plugins };
   },
 
   // Accounts tab: create accounts and choose what each one can do.
@@ -538,7 +573,7 @@ const api = {
     // Also close the Paper server itself, so players using another launcher can't join either.
     // Staff on the whitelist can still connect. With enforce-whitelist=true, others online get kicked.
     let warning = null;
-    if (AGENT_URL) {
+    if (agentUrl()) {
       await agent('POST', '/rcon', { command: pack.maintenance.enabled ? 'whitelist on' : 'whitelist off' }).catch((err) => {
         warning = pack.maintenance.enabled
           ? `Launchers bloqués, mais la whitelist n'a pas pu être activée: ${err.message}`
@@ -617,6 +652,9 @@ async function handleApi(req, res, url) {
     await players.record(await readJson(req));
     return sendJson(res, 200, { ok: true });
   }
+
+  // The agent sends its address (signed with AGENT_SECRET): see receiveAgentUrl().
+  if (req.method === 'POST' && url.pathname === '/api/agent/url') return sendJson(res, 200, await receiveAgentUrl(req));
 
   // Public: launchers ask regularly whether an admin logged their account out (✕ in the Joueurs tab).
   if (req.method === 'POST' && url.pathname === '/api/players/session') {
@@ -762,6 +800,7 @@ async function start() {
     secret: process.env.DATA_KEY || (PASSWORD_OK ? PASSWORD : null),
     save: storage.configured() ? (relative, buffer) => storage.saveFile(relative, buffer) : null,
   });
+  loadReportedAgentUrl();
   editor.init({ dataDir: DATA_DIR, storage, activate: activateModpack, activeModpack: () => readPack().modpack || null });
   accounts.init({
     dataDir: DATA_DIR,
