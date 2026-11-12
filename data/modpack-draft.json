@@ -5913,7 +5913,7 @@
    "fileName": "Structory_Towers_26.1_v1.0.16.jar",
    "sha1": "ed22fe659cb3020f2e86b7619ce721714b9546be",
    "size": 491545,
-   "url": null,
+   "url": "https://github.com/tigamer20/launcher_mdcq/releases/download/modpack/editor-ed22fe659cb3020f2e86b7619ce721714b9546be.jar",
    "enabled": true
   },
   {
@@ -7024,5 +7024,5 @@
  "deleted": [],
  "edits": [],
  "unpublished": true,
- "updatedAt": "2026-11-12T01:27:12.442Z"
+ "updatedAt": "2026-11-12T01:27:25.105Z"
 }
