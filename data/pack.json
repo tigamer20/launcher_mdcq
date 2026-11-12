@@ -26,12 +26,12 @@
   ],
   "betaKeyHash": "f93f260586a52c0e68b0520968308ad41d3f2b6d7dabda69f4b35d74e14c9989",
   "modpack": {
-    "version": "9.1.2",
+    "version": "9.2",
     "minecraft": "1.21.1",
-    "neoforge": "21.1.247",
-    "manifestUrl": "https://github.com/tigamer20/launcher_mdcq/releases/download/modpack/modpack-9.1.2.json",
-    "files": 4151,
-    "size": 1608427659,
-    "publishedAt": "2026-11-11T23:22:03.732Z"
+    "neoforge": "21.1.265",
+    "manifestUrl": "https://github.com/tigamer20/launcher_mdcq/releases/download/modpack/modpack-9.2.json",
+    "files": 507,
+    "size": 1563894527,
+    "publishedAt": "2026-11-12T01:28:00.464Z"
   }
 }
