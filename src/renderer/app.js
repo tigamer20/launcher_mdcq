@@ -360,6 +360,8 @@ $('btn-play-menu').onclick = (event) => {
   $('play-menu').hidden = !open;
   $('btn-play-menu').classList.toggle('open', open);
 };
+// The status check can be wrong (slow tunnel, DNS...): the player can still try to join the server.
+$('btn-join-anyway').onclick = () => play();
 $('btn-play-solo').onclick = () => {
   closePlayMenu();
   play({ noServer: true });

@@ -121,10 +121,18 @@ ipcMain.handle('init', () => {
 // The Minecraft server's address from the last pack read: its status is checked on its own every 10 seconds
 // (server-status below), straight from this PC, even when the website is slow or asleep.
 let lastServer = null;
+let lastOnline = null; // last "online" answer, kept through one failed check (a slow answer isn't a stopped server)
+let failedChecks = 0;
 
 async function serverStatus() {
   if (!lastServer?.host) return null;
-  const status = await pingServer(lastServer.host, lastServer.port, { minecraftVersion: lastServer.minecraftVersion });
+  let status = await pingServer(lastServer.host, lastServer.port, { minecraftVersion: lastServer.minecraftVersion });
+  if (status.online) {
+    lastOnline = status;
+    failedChecks = 0;
+  } else if (lastOnline && ++failedChecks < 2) {
+    status = lastOnline; // offline only after two checks in a row (about 10 seconds)
+  }
   discordState.players = status?.online ? status.players : null;
   updateDiscord();
   return status;

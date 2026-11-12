@@ -39,13 +39,19 @@ function text(component) {
 
 // Like Minecraft: an address without a custom port can point to the real host/port with a DNS "SRV" record
 // (_minecraft._tcp.<address>). playit.gg addresses (xxx.joinmc.link) work this way.
+// Some home routers' DNS don't answer SRV questions: then ask public DNS servers too.
+const publicDns = new dns.Resolver({ timeout: 3000, tries: 1 });
+publicDns.setServers(['1.1.1.1', '8.8.8.8']);
+
 async function resolveAddress(host, port) {
   if (port !== 25565 || net.isIP(host)) return { host, port, srv: false };
-  try {
-    const [record] = await dns.resolveSrv(`_minecraft._tcp.${host}`);
-    if (record) return { host: record.name, port: record.port, srv: true };
-  } catch {
-    // no SRV record: use the address as typed
+  for (const resolver of [dns, publicDns]) {
+    try {
+      const [record] = await resolver.resolveSrv(`_minecraft._tcp.${host}`);
+      if (record) return { host: record.name, port: record.port, srv: true };
+    } catch {
+      // no answer from this DNS: try the next one, then the address as typed
+    }
   }
   return { host, port, srv: false };
 }
@@ -74,15 +80,17 @@ const protocolFor = (minecraftVersion) => PROTOCOLS[minecraftVersion] || 769;
 /**
  * Returns { online, players: { online, max, list }, version, motd, tried }.
  * When offline: { online: false, reason, tried } where tried is the "host:port" actually contacted.
- * options: { minecraftVersion: '1.21.4', timeoutMs: 3000 }
+ * options: { minecraftVersion: '1.21.4', timeoutMs: 6000 }
+ * A modded server (hundreds of mods) behind a tunnel can be slow to answer: a failed try is tried once more.
  */
-async function pingServer(host, port = 25565, { minecraftVersion, timeoutMs = 3000 } = {}) {
+async function pingServer(host, port = 25565, { minecraftVersion, timeoutMs = 6000 } = {}) {
   port = Number(port) || 25565;
   const target = await resolveAddress(host, port);
   const tried = `${target.host}:${target.port}${target.srv ? ' (via SRV)' : ''}`;
   // Like the game's server list: connect to the SRV target, but announce the address as the player typed it.
   const handshake = { host, port, protocol: protocolFor(minecraftVersion) };
-  const result = await pingAddress(target.host, target.port, timeoutMs, handshake);
+  let result = await pingAddress(target.host, target.port, timeoutMs, handshake);
+  if (!result.online && result.code !== 'ENOTFOUND') result = await pingAddress(target.host, target.port, timeoutMs, handshake);
   if (!result.online) result.reason = REASONS[result.code] || `erreur ${result.code}`;
   return { ...result, tried };
 }
@@ -97,6 +105,11 @@ function pingAddress(host, port, timeoutMs, handshake) {
     };
     socket.setTimeout(timeoutMs, () => done({ online: false, code: 'timeout' }));
     socket.on('error', (err) => done({ online: false, code: err.code || 'unknown' }));
+    // Closed without an answer (a tunnel or proxy dropping the connection): without this the check never ended.
+    socket.on('close', () => done({ online: false, code: 'ECONNRESET' }));
+    // Never waits longer than that, even if the server sends a few bytes now and then.
+    const limit = setTimeout(() => done({ online: false, code: 'timeout' }), timeoutMs * 2);
+    socket.on('close', () => clearTimeout(limit));
 
     socket.on('connect', () => {
       const address = Buffer.from(handshake.host, 'utf8');
