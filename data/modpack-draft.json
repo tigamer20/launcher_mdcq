@@ -2771,7 +2771,7 @@
    "fileName": "imfast-NEOFORGE-1.21.1-1.0.3.jar",
    "sha1": "f8e92ef61de3751f619238eed5ae9952b5a049d0",
    "size": 4193,
-   "url": null,
+   "url": "https://github.com/tigamer20/launcher_mdcq/releases/download/modpack/editor-f8e92ef61de3751f619238eed5ae9952b5a049d0.jar",
    "enabled": true
   },
   {
@@ -7024,5 +7024,5 @@
  "deleted": [],
  "edits": [],
  "unpublished": true,
- "updatedAt": "2026-11-12T01:26:31.766Z"
+ "updatedAt": "2026-11-12T01:26:50.031Z"
 }
