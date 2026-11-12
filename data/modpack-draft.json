@@ -5899,7 +5899,7 @@
    "fileName": "Structory_26.2_v1.3.7.jar",
    "sha1": "8a9a1a1b3f74398310420b6fbe2c26ef142bed42",
    "size": 1261346,
-   "url": null,
+   "url": "https://github.com/tigamer20/launcher_mdcq/releases/download/modpack/editor-8a9a1a1b3f74398310420b6fbe2c26ef142bed42.jar",
    "enabled": true
   },
   {
@@ -7024,5 +7024,5 @@
  "deleted": [],
  "edits": [],
  "unpublished": true,
- "updatedAt": "2026-11-12T01:26:50.031Z"
+ "updatedAt": "2026-11-12T01:27:12.442Z"
 }
