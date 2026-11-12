@@ -3027,6 +3027,20 @@
    "enabled": true
   },
   {
+   "id": "cf-455508",
+   "source": "curseforge",
+   "projectId": 455508,
+   "enabled": true,
+   "name": "Iris Shaders",
+   "link": "https://www.curseforge.com/minecraft/mc-mods/irisshaders",
+   "folder": "mods",
+   "fileId": 8242804,
+   "fileName": "iris-neoforge-1.8.14-beta.1+mc1.21.1.jar",
+   "sha1": "1bd129cf7bce65d6b1c0543045f0620c98a0f885",
+   "size": 2540723,
+   "url": "https://edge.forgecdn.net/files/8242/804/iris-neoforge-1.8.14-beta.1%2Bmc1.21.1.jar"
+  },
+  {
    "id": "cf-237664",
    "source": "curseforge",
    "projectId": 237664,
@@ -7023,7 +7037,7 @@
  "bundle": null,
  "deleted": [],
  "edits": [],
- "unpublished": false,
- "updatedAt": "2026-11-12T01:28:01.787Z",
+ "unpublished": true,
+ "updatedAt": "2026-11-12T01:31:53.536Z",
  "publishedAt": "2026-11-12T01:27:58.965Z"
 }
