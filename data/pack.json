@@ -9,7 +9,7 @@
   },
   "autoConnect": true,
   "maintenance": {
-    "enabled": true,
+    "enabled": false,
     "message": "Testing du serveur en cours! De retour sous peu!"
   },
   "syncDirs": [],
