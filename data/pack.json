@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "versionId": "1.21.1",
   "server": {
-    "host": "exemple.gl.joinmc.link",
+    "host": "dentistry-chassis.tun.ply.gg",
     "port": 25565
   },
   "autoConnect": true,
