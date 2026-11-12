@@ -373,6 +373,8 @@ const api = {
     editor.uploadChunk(url.searchParams.get('id'), url.searchParams.get('offset'), await readBuffer(req, 16 * 1024 * 1024)),
   'POST /api/editor/import': async (req) => editor.startImport((await readJson(req)).uploadId),
   'POST /api/editor/publish': async (req) => editor.startPublish((await readJson(req)).version),
+  // The current modpack as a CurseForge export (.zip): built in the background, then downloaded (see handleApi).
+  'POST /api/editor/export': () => editor.startExport(),
   'POST /api/editor/mods/toggle': async (req) => ({ mod: await editorCall(editor.toggleMod, (await readJson(req)).id) }),
   'POST /api/editor/mods/remove': async (req) => editorCall(editor.removeMod, (await readJson(req)).id).then(() => ({ ok: true })),
   'GET /api/editor/mods/versions': (req, url) => editorCall(editor.modVersions, url.searchParams.get('id')),
@@ -657,6 +659,18 @@ async function handleApi(req, res, url) {
   const needed = permissionFor(url.pathname);
   if (needed && !user.permissions.includes(needed)) {
     throw httpError(403, `Ton compte n'a pas la permission « ${accounts.PERMISSIONS[needed]} »`);
+  }
+
+  // Download of the modpack export made with POST /api/editor/export
+  if (req.method === 'GET' && url.pathname === '/api/editor/export') {
+    const { file, fileName, size } = editor.exportFile();
+    res.writeHead(200, {
+      'Content-Type': 'application/zip',
+      'Content-Length': size,
+      'Content-Disposition': `attachment; filename="${fileName}"`,
+      'Cache-Control': 'no-store',
+    });
+    return fs.createReadStream(file).pipe(res);
   }
 
   // Players who used the launcher

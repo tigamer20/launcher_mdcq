@@ -906,6 +906,8 @@ function renderEditor() {
   $('ed-setup').hidden = setup.length === 0;
   $('ed-setup-text').textContent = setup.length ? `Pour utiliser l'éditeur, ${setup.join(' et ')}, puis redéploie le site.` : '';
   $('ed-import-file').disabled = setup.length > 0 || job.state === 'running';
+  $('btn-ed-export').hidden = !draft;
+  $('btn-ed-export').disabled = job.state === 'running';
 
   $('ed-main').hidden = !draft;
   if (!draft) return;
@@ -1089,7 +1091,18 @@ $('ed-jar-file').onchange = (event) => {
 setupDropZone($('ed-mods'), (files) => uploadJars([...files]));
 $('ed-mod-filter').oninput = renderMods;
 
-// Import and publish run in the background on the website: follow them.
+// "Exporter le .zip": the website builds the CurseForge export in the background, then the browser downloads it.
+$('btn-ed-export').onclick = async () => {
+  try {
+    await api('POST', '/api/editor/export');
+    ed.lastJob = 'running';
+    followEditorJob();
+  } catch (err) {
+    toast(err.message, true);
+  }
+};
+
+// Import, publish and export run in the background on the website: follow them.
 async function followEditorJob() {
   clearTimeout(ed.timer);
   try {
@@ -1110,6 +1123,11 @@ async function followEditorJob() {
       const r = job.result;
       toast(`Modpack importé : ${r.mods} mods, ${r.files} fichiers${r.missing ? ` (${r.missing} à téléverser)` : ''}`);
       ed.files = [];
+    }
+    if (finished && job.state === 'done' && job.kind === 'export') {
+      const { size } = job.result.export;
+      toast(`Export prêt (${formatSize(size)}) : téléchargement...`);
+      window.location.href = '/api/editor/export'; // the browser saves the .zip
     }
     if (finished && job.state === 'done' && job.kind === 'publish') {
       toast(`Modpack ${job.result.version} publié : les joueurs l'auront au prochain JOUER`);

@@ -114,8 +114,10 @@ function takeUpload(id) {
 
 const step = (text, done = 0, total = 0) => Object.assign(job, { step: text, done, total });
 
+const JOB_NAMES = { import: 'un import', publish: 'une publication', export: 'un export' };
+
 function startJob(kind, fn) {
-  if (job.state === 'running') throw bad(`Patiente : ${job.kind === 'import' ? 'un import' : 'une publication'} est en cours`, 409);
+  if (job.state === 'running') throw bad(`Patiente : ${JOB_NAMES[job.kind] || 'une opération'} est en cours`, 409);
   Object.assign(job, { state: 'running', kind, step: 'Démarrage', done: 0, total: 0, message: '', result: null });
   locked(fn)
     .then((result) => Object.assign(job, { state: 'done', step: 'Terminé', result: result || null }))
@@ -603,6 +605,96 @@ async function cleanup(rel, assets) {
 }
 
 // ---------------------------------------------------------------------------
+// Export: the current modpack as a CurseForge export (.zip), the same format as the one imported
+// (manifest.json + overrides/). It can be imported again here or in the CurseForge app (Import → .zip).
+// ---------------------------------------------------------------------------
+
+const EXPORT_FILE = path.join(TMP, 'export.zip');
+let exported = null; // { fileName, size, at } of the last export, downloaded with exportFile()
+
+async function download(url, file) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Téléchargement impossible (${res.status}) : ${url}`);
+  await pipeline(Readable.fromWeb(res.body), fs.createWriteStream(file));
+}
+
+async function exportZip() {
+  const d = needDraft();
+  const hosted = (url) => String(url || '').startsWith('https://github.com/'); // on the "modpack" release, not CurseForge
+  const curseforgeMods = d.mods.filter((m) => m.source === 'curseforge');
+  // Jars that are not downloaded from CurseForge: added by hand, or CurseForge mods whose author forbids other apps
+  // (the original export had those in overrides/mods too).
+  const jars = d.mods.filter((m) => m.url && (m.source !== 'curseforge' || hosted(m.url)));
+
+  // Configuration files: the published zip + the website's changes - deleted files (like a publish)
+  const deleted = new Set(d.deleted);
+  const edits = new Set(d.edits);
+  const base = await baseBundle();
+  const bundle = base && openZip(base);
+  const out = tmpFile('export');
+  const writer = new ZipWriter(out);
+  try {
+    step('Préparation du manifest');
+    const manifest = {
+      minecraft: { version: d.minecraft, modLoaders: [{ id: `neoforge-${d.neoforge}`, primary: true }] },
+      manifestType: 'minecraftModpack',
+      manifestVersion: 1,
+      name: d.name,
+      version: d.version,
+      author: '',
+      files: curseforgeMods.map((m) => ({ projectID: m.projectId, fileID: m.fileId, required: m.enabled })),
+      overrides: 'overrides',
+    };
+    writer.add('manifest.json', Buffer.from(JSON.stringify(manifest, null, 2)));
+
+    const sources = [
+      ...(bundle ? bundle.entries.filter((e) => !deleted.has(e.name) && !edits.has(e.name)).map((entry) => ({ name: entry.name, entry })) : []),
+      ...d.edits.map((name) => ({ name, edit: path.join(dataDir, EDITS, name) })),
+    ].sort((a, b) => a.name.localeCompare(b.name));
+    for (const [i, src] of sources.entries()) {
+      step('Ajout des configurations', i + 1, sources.length);
+      writer.add(`overrides/${src.name}`, src.entry ? bundle.read(src.entry) : fs.readFileSync(src.edit));
+    }
+
+    // Big files and jars: downloaded one at a time from GitHub (through the disk, like everything else)
+    const downloads = [
+      ...d.extras.map((e) => ({ name: e.path, url: e.url })),
+      ...jars.map((m) => ({ name: `${m.folder}/${m.fileName}${m.enabled ? '' : '.disabled'}`, url: m.url })),
+    ];
+    for (const [i, item] of downloads.entries()) {
+      step('Téléchargement des fichiers', i + 1, downloads.length);
+      const temp = tmpFile('export-file');
+      try {
+        await download(item.url, temp);
+        writer.add(`overrides/${item.name}`, fs.readFileSync(temp));
+      } finally {
+        fs.rmSync(temp, { force: true });
+      }
+    }
+  } catch (err) {
+    writer.close();
+    fs.rmSync(out, { force: true });
+    throw err;
+  } finally {
+    bundle?.close();
+  }
+  const { size } = writer.close();
+  fs.renameSync(out, EXPORT_FILE);
+  const safeName = `${d.name}-${d.version}`.replace(/[^\w.-]+/g, '_');
+  exported = { fileName: `${safeName}.zip`, size, at: new Date().toISOString() };
+  return { export: exported, mods: d.mods.length, files: fileCount(d) };
+}
+
+const fileCount = (d) =>
+  (d.bundle?.files.filter((p) => !d.deleted.includes(p)).length || 0) + d.extras.length + d.edits.filter((p) => !(d.bundle?.files || []).includes(p)).length;
+
+/** The last export, for the download: { file, fileName, size } or an error. */
+function exportFile() {
+  if (!exported || !fs.existsSync(EXPORT_FILE)) throw bad('Aucun export prêt : clique d\'abord sur « Exporter le .zip »', 404);
+  return { file: EXPORT_FILE, ...exported };
+}
+
+// ---------------------------------------------------------------------------
 
 function status() {
   return {
@@ -613,6 +705,7 @@ function status() {
       missing: draft.mods.filter((m) => m.enabled && !m.url).length,
     },
     job: { ...job },
+    exported,
   };
 }
 
@@ -631,6 +724,11 @@ module.exports = {
     needDraft();
     return startJob('publish', () => publish(v));
   },
+  startExport: () => {
+    needDraft();
+    return startJob('export', exportZip);
+  },
+  exportFile,
   toggleMod,
   removeMod,
   modVersions,

@@ -159,10 +159,15 @@
                   <code>mods</code>) : tu pourras ensuite changer les mods et les configurations ici, puis publier.
                 </p>
               </div>
-              <label class="primary file-button">
-                <input type="file" id="ed-import-file" accept=".zip" hidden />
-                <span id="ed-import-label">Importer un export CurseForge (.zip)</span>
-              </label>
+              <div class="row">
+                <button type="button" class="ghost" id="btn-ed-export" hidden title="Télécharge le modpack actuel au même format que l'export CurseForge importé">
+                  Exporter le .zip
+                </button>
+                <label class="primary file-button">
+                  <input type="file" id="ed-import-file" accept=".zip" hidden />
+                  <span id="ed-import-label">Importer un export CurseForge (.zip)</span>
+                </label>
+              </div>
             </div>
             <div class="publish-progress" id="ed-progress" hidden>
               <strong id="ed-step"></strong>
