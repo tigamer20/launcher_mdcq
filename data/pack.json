@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "versionId": "1.21.1",
   "server": {
-    "host": "dentistry-chassis.tun.ply.gg",
+    "host": "192.168.0.17",
     "port": 25565
   },
   "autoConnect": true,
