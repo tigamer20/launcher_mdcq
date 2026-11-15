@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "versionId": "1.21.1",
   "server": {
-    "host": "192.168.0.17",
+    "host": "108.171.81.132",
     "port": 25565
   },
   "autoConnect": true,
