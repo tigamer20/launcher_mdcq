@@ -585,14 +585,17 @@ const api = {
   },
 
   // Live / YouTube recording: the launchers warn the players to watch what they do and say.
-  'PUT /api/live': async (req) => {
-    const { enabled, kind, message } = await readJson(req);
+  // by: the name shown to the players (typed on the website, or else the account that turns it on)
+  'PUT /api/live': async (req, url, user) => {
+    const { enabled, kind, message, by } = await readJson(req);
     const pack = readPack();
-    const type = kind === 'youtube' ? 'youtube' : 'live';
+    const type = kind === 'record' || kind === 'youtube' ? 'record' : 'live';
     const was = pack.live?.enabled ? pack.live : null;
+    const name = String(by || '').trim().slice(0, 40) || user.name;
     pack.live = {
       enabled: Boolean(enabled),
       kind: type,
+      by: name,
       message: String(message || '').slice(0, 300),
       // A new "since" makes the launchers show the warning again (not when only the message changes)
       since: enabled ? (was && was.kind === type ? was.since : new Date().toISOString()) : null,
@@ -601,8 +604,9 @@ const api = {
     // Players already in the game: a message in the chat too (when the server agent and RCON are set up).
     let warning = null;
     if (pack.live.enabled && !was && agentUrl()) {
-      const what = type === 'youtube' ? 'Un enregistrement YouTube' : 'Un live';
-      const text = JSON.stringify(['', { text: '[EN DIRECT] ', color: 'red', bold: true }, { text: `${what} est en cours : faites attention à vos gestes et à vos paroles!`, color: 'yellow' }]);
+      const label = type === 'record' ? '[ENREGISTREMENT] ' : '[EN DIRECT] ';
+      const what = type === 'record' ? `${name} enregistre` : `${name} est en live`;
+      const text = JSON.stringify(['', { text: label, color: 'red', bold: true }, { text: `${what}, attention à ce que vous dites et faites.`, color: 'yellow' }]);
       await agent('POST', '/rcon', { command: `tellraw @a ${text}` }).catch((err) => {
         warning = `Launchers prévenus, mais le message en jeu n'a pas pu être envoyé : ${err.message}`;
       });

@@ -147,7 +147,9 @@ function renderDashboard() {
   $('maintenance-message').value = pack.maintenance?.message || '';
   $('maintenance-card').classList.toggle('on', Boolean(maintenance));
   $('live-enabled').checked = Boolean(pack.live?.enabled);
-  $('live-kind').value = pack.live?.kind || 'live';
+  $('live-kind').value = pack.live?.kind === 'live' || !pack.live?.kind ? 'live' : 'record';
+  $('live-by').value = pack.live?.by || '';
+  $('live-by').placeholder = me.name; // empty: the account that turns it on
   $('live-message').value = pack.live?.message || '';
   $('live-card').classList.toggle('on', Boolean(pack.live?.enabled));
 }
@@ -283,10 +285,11 @@ $('btn-live').onclick = async () => {
     ({ pack, warning } = await api('PUT', '/api/live', {
       enabled: $('live-enabled').checked,
       kind: $('live-kind').value,
+      by: $('live-by').value,
       message: $('live-message').value,
     }));
     renderDashboard();
-    toast(pack.live.enabled ? 'Mode live activé : les launchers affichent l\'avertissement' : 'Mode live désactivé');
+    toast(pack.live.enabled ? 'Activé' : 'Désactivé');
     if (warning) toast(warning, true);
   } catch (err) {
     toast(err.message, true);

@@ -217,8 +217,8 @@ window.addEventListener('resize', updateNewsMore);
 // Live / YouTube recording turned on from the admin website: a red band while it lasts, and a warning shown
 // once each time it's turned on (remembered with its start time).
 const LIVE_TEXTS = {
-  live: { icon: '🔴', band: 'EN DIRECT', title: 'Un live est en cours', what: 'diffusé en direct' },
-  youtube: { icon: '🎥', band: 'ENREGISTREMENT', title: 'Un enregistrement YouTube est en cours', what: 'enregistré pour YouTube' },
+  live: { tag: 'EN DIRECT', title: 'Live en cours', doing: 'est en live', filmed: 'diffusé en direct' },
+  record: { tag: 'ENREGISTREMENT', title: 'Enregistrement en cours', doing: 'enregistre', filmed: 'enregistré' },
 };
 
 function showLive(live) {
@@ -227,12 +227,13 @@ function showLive(live) {
     if ($('live-warning').open) $('live-warning').close();
     return;
   }
-  const texts = LIVE_TEXTS[live.kind] || LIVE_TEXTS.live;
-  $('live-band-title').textContent = texts.band;
-  $('live-band-text').textContent = `${texts.title} : attention à tes gestes et à tes paroles.`;
-  $('live-icon').textContent = texts.icon;
-  $('live-title').textContent = texts.title;
-  $('live-what').textContent = texts.what;
+  const texts = live.kind === 'live' ? LIVE_TEXTS.live : LIVE_TEXTS.record; // "youtube" from 1.1.0-dev = recording
+  const who = live.by ? `${live.by} ${texts.doing}` : texts.title;
+  $('live-band-title').textContent = texts.tag;
+  $('live-band-text').textContent = `${who}, attention à ce que tu dis et fais en jeu.`;
+  $('live-tag').textContent = texts.tag;
+  $('live-title').textContent = live.by ? `${texts.title} par ${live.by}` : texts.title;
+  $('live-text').textContent = `Le serveur est ${texts.filmed} en ce moment. Fais attention à ce que tu dis et fais en jeu.`;
   $('live-extra').textContent = live.message || '';
   $('live-extra').hidden = !live.message;
   if (live.since && state.settings.liveSeen !== live.since && !$('live-warning').open) $('live-warning').showModal();

@@ -170,7 +170,7 @@ ipcMain.handle('pack', async () => {
       minecraft: pack.versionId,
       serverStatus: server,
       maintenance: pack.maintenance?.enabled ? pack.maintenance : null,
-      live: pack.live?.enabled ? { kind: pack.live.kind, message: pack.live.message || '', since: pack.live.since } : null,
+      live: pack.live?.enabled ? { kind: pack.live.kind, by: pack.live.by || '', message: pack.live.message || '', since: pack.live.since } : null,
       modpackHidden: Boolean(pack.modpackHidden), // hidden from the admin website
       modpack: pack.modpack
         ? { version: pack.modpack.version, minecraft: pack.modpack.minecraft, neoforge: pack.modpack.neoforge, size: pack.modpack.size }
