@@ -311,6 +311,7 @@ async function loadPack() {
   $('maintenance').hidden = !pack.maintenance;
   $('maintenance-message').textContent = pack.maintenance?.message || '';
   renderNews(pack.news);
+  setGallery(pack.gallery || []);
   if (!state.busy) resetStatus();
   refreshButtons();
 }
@@ -342,6 +343,7 @@ async function init() {
   $('discord-status').checked = state.settings.discordStatus !== false;
   applyTheme(state.settings.theme);
   renderThemes();
+  renderBackgroundChoice();
   updateRamLabel();
   refreshButtons();
 
@@ -673,5 +675,83 @@ $('theme-color').oninput = (event) => {
   applyTheme(state.settings.theme);
 };
 $('theme-color').onchange = (event) => setTheme({ palette: 'custom', color: event.target.value });
+
+// ---------- Background carousel (Paramètres > Fond du launcher) ----------
+
+const carousel = { photos: [], index: -1, timer: null, front: 'a', key: '' };
+const SLIDE_MS = 9000;
+
+// The photos chosen on the admin website (pack.gallery), checked every 15 seconds with the rest.
+function setGallery(files) {
+  const key = files.join(',');
+  if (key === carousel.key) return;
+  carousel.key = key;
+  carousel.photos = files;
+  window.launcher.galleryClean(files);
+  startCarousel();
+}
+
+function startCarousel() {
+  clearInterval(carousel.timer);
+  const on = state.settings.background === 'carousel' && carousel.photos.length > 0;
+  $('carousel').hidden = !on;
+  renderBackgroundChoice();
+  if (!on) return;
+  carousel.index = -1;
+  nextSlide();
+  if (carousel.photos.length > 1) carousel.timer = setInterval(nextSlide, SLIDE_MS);
+}
+
+async function nextSlide() {
+  if (!carousel.photos.length) return;
+  carousel.index = (carousel.index + 1) % carousel.photos.length;
+  const url = await window.launcher.galleryImage(carousel.photos[carousel.index]);
+  if (!url) return; // not downloadable right now: the next one will show
+  const back = carousel.front === 'a' ? 'b' : 'a';
+  const incoming = $(`slide-${back}`);
+  incoming.style.backgroundImage = `url("${url}")`;
+  incoming.classList.add('shown');
+  $(`slide-${carousel.front}`).classList.remove('shown');
+  carousel.front = back;
+}
+
+function renderBackgroundChoice() {
+  const current = state.settings.background === 'carousel' ? 'carousel' : 'default';
+  document.querySelectorAll('#background-choice button').forEach((b) => b.classList.toggle('active', b.dataset.background === current));
+  $('background-hint').textContent =
+    current === 'carousel' && !carousel.photos.length ? "Aucune photo pour l'instant : le fond actuel est affiché en attendant." : '';
+}
+
+document.querySelectorAll('#background-choice button').forEach((button) => {
+  button.onclick = () => {
+    state.settings.background = button.dataset.background;
+    window.launcher.saveSettings({ background: state.settings.background });
+    startCarousel();
+  };
+});
+
+// "Proposer une photo": sent to the website, where an admin approves or refuses it.
+$('btn-submit-photo').onclick = () => {
+  if (!state.account) return showError('Connecte-toi avec ton compte Microsoft pour proposer une photo.');
+  $('photo-file').click();
+};
+$('photo-file').onchange = async (event) => {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) return showError('Photo trop grosse (10 Mo maximum).');
+  const button = $('btn-submit-photo');
+  button.disabled = true;
+  button.textContent = 'Envoi...';
+  try {
+    await window.launcher.submitPhoto({ name: file.name.replace(/\.[^.]+$/, ''), bytes: new Uint8Array(await file.arrayBuffer()) });
+    showInfo("Photo envoyée! Elle apparaîtra dans le carrousel quand un admin l'aura acceptée.");
+  } catch (err) {
+    showError(cleanError(err));
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Proposer une photo';
+  }
+};
 
 init().catch((err) => showError(cleanError(err)));

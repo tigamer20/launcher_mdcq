@@ -36,6 +36,7 @@
           <button class="nav" data-tab="editor" data-perm="serverFiles">Fichiers du serveur</button>
           <button class="nav" data-tab="console" data-perm="console">Console</button>
           <button class="nav" data-tab="news" data-perm="news">Nouvelles</button>
+          <button class="nav" data-tab="gallery" data-perm="gallery">Photos</button>
           <button class="nav" data-tab="files" data-perm="files">Fichiers joueurs</button>
           <button class="nav" data-tab="accounts" data-perm="accounts">Comptes</button>
         </nav>
@@ -408,6 +409,30 @@
             <div class="row end"><button class="primary" type="submit">Créer le compte</button></div>
           </form>
           <div id="account-list" class="account-list"></div>
+        </section>
+
+        <!-- Photos of the launcher's background carousel -->
+        <section class="tab" id="tab-gallery" hidden>
+          <h1>Photos du launcher</h1>
+          <p class="muted">Les joueurs qui choisissent « Carrousel de photos » dans les paramètres du launcher voient les photos visibles, dans cet ordre.</p>
+
+          <label class="card dropzone" id="gallery-drop">
+            <input type="file" id="gallery-file" accept="image/jpeg,image/png,image/webp" multiple hidden />
+            <strong>Glisse tes photos ici</strong>
+            <span class="muted">ou clique pour les choisir · JPG, PNG ou WEBP, 10 Mo max · idéalement en paysage (16:9)</span>
+            <span class="muted" id="gallery-progress"></span>
+          </label>
+
+          <div class="card" id="gallery-requests-card" hidden>
+            <h2>Demandes des joueurs <span class="badge warn" id="gallery-requests-count"></span></h2>
+            <div class="photo-grid" id="gallery-requests"></div>
+          </div>
+
+          <div class="card">
+            <h2>Photos <span class="muted" id="gallery-summary"></span></h2>
+            <p class="muted" id="gallery-empty">Aucune photo pour l'instant.</p>
+            <div class="photo-grid" id="gallery-photos"></div>
+          </div>
         </section>
 
         <!-- News -->

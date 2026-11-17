@@ -1143,3 +1143,59 @@ dialog.live-warning[open] {
   color: var(--text);
   white-space: pre-wrap;
 }
+
+/* ---------- Background carousel ---------- */
+.carousel {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.carousel .slide {
+  position: absolute;
+  inset: 0;
+  background: center / cover no-repeat;
+  opacity: 0;
+  transform: scale(1.04);
+  transition: opacity 1.5s ease, transform 10s linear;
+}
+
+.carousel .slide.shown {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* darker on the left (text) and at the bottom (buttons), so everything stays readable */
+.carousel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(10, 12, 18, 0.85) 0%, rgba(10, 12, 18, 0.45) 55%, rgba(10, 12, 18, 0.6) 100%),
+    linear-gradient(0deg, rgba(10, 12, 18, 0.85) 0%, transparent 35%);
+}
+
+.choice {
+  display: flex;
+  gap: 6px;
+}
+
+.choice button {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 13px;
+}
+
+.choice button.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.row-buttons {
+  display: flex;
+  gap: 8px;
+}

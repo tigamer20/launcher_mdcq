@@ -24,6 +24,7 @@ const storage = require('./storage');
 const players = require('./players');
 const editor = require('./modpack-editor');
 const accounts = require('./accounts');
+const gallery = require('./gallery');
 
 const PORT = Number(process.env.PORT) || 8080;
 const LOCAL_DATA_DIR = path.join(__dirname, 'data');
@@ -287,6 +288,7 @@ const PERMISSION_RULES = [
   [/^\/api\/news$/, 'news'],
   [/^\/api\/maintenance$/, 'maintenance'],
   [/^\/api\/live$/, 'live'],
+  [/^\/api\/gallery(\/|$)/, 'gallery'],
   [/^\/api\/files$/, 'files'],
   [/^\/api\/players(\/|$)/, 'players'],
   [/^\/api\/accounts$/, 'accounts'],
@@ -326,6 +328,22 @@ const TYPES = {
   '.svg': 'image/svg+xml',
   '.json': 'application/json; charset=utf-8',
 };
+
+function sendImage(res, image, cache) {
+  fs.stat(image.path, (err, stat) => {
+    if (err) return sendJson(res, 404, { error: 'Introuvable' });
+    res.writeHead(200, { 'Content-Type': image.type, 'Content-Length': stat.size, 'Cache-Control': cache, 'X-Content-Type-Options': 'nosniff' });
+    fs.createReadStream(image.path).pipe(res);
+  });
+}
+
+// The visible photos go in the public manifest (pack.gallery), which the launchers read.
+async function syncGallery(result) {
+  const pack = readPack();
+  pack.gallery = gallery.publicList();
+  await savePack(pack);
+  return result;
+}
 
 function sendFile(res, file, cache = 'no-cache') {
   fs.stat(file, (err, stat) => {
@@ -584,6 +602,22 @@ const api = {
     return { pack: publicPack(pack), warning };
   },
 
+  // Photos of the launcher's background carousel (admin-panel/gallery.js)
+  'GET /api/gallery': () => gallery.list(),
+  'PUT /api/gallery/upload': async (req, url, user) =>
+    syncGallery(await gallery.addPhoto(await readBuffer(req, gallery.MAX_SIZE + 1), { name: url.searchParams.get('name'), by: user.name })),
+  'POST /api/gallery/visible': async (req) => {
+    const { id, visible } = await readJson(req);
+    return syncGallery(await gallery.setVisible(String(id), visible));
+  },
+  'POST /api/gallery/move': async (req) => {
+    const { id, direction } = await readJson(req);
+    return syncGallery(await gallery.move(String(id), Number(direction)));
+  },
+  'DELETE /api/gallery': async (req, url) => syncGallery(await gallery.removePhoto(String(url.searchParams.get('id')))),
+  'POST /api/gallery/approve': async (req, url, user) => syncGallery(await gallery.approve(String((await readJson(req)).id), user.name)),
+  'POST /api/gallery/deny': async (req) => gallery.deny(String((await readJson(req)).id)),
+
   // Live / YouTube recording: the launchers warn the players to watch what they do and say.
   // by: the name shown to the players (typed on the website, or else the account that turns it on)
   'PUT /api/live': async (req, url, user) => {
@@ -687,6 +721,24 @@ async function handleApi(req, res, url) {
   // The agent sends its address (signed with AGENT_SECRET): see receiveAgentUrl().
   if (req.method === 'POST' && url.pathname === '/api/agent/url') return sendJson(res, 200, await receiveAgentUrl(req));
 
+  // Public: a player sends a photo for the carousel from the launcher. Checked with Mojang like /api/players/seen
+  // (the launcher "joins" a random session id), so it can't be sent in someone else's name.
+  if (req.method === 'POST' && url.pathname === '/api/gallery/request') {
+    const limit = failures.get(`gallery:${ip}`);
+    const now = Date.now();
+    const count = limit && limit.until > now ? limit.count + 1 : 1;
+    failures.set(`gallery:${ip}`, { count, until: limit && limit.until > now ? limit.until : now + 3600_000 });
+    if (count > 10) throw httpError(429, 'Trop de photos envoyées, réessaie dans une heure');
+    const name = String(req.headers['x-player-name'] || '');
+    const serverId = String(req.headers['x-server-id'] || '');
+    if (!/^[A-Za-z0-9_]{1,16}$/.test(name) || !/^[0-9a-f]{40}$/.test(serverId)) throw httpError(400, 'Données invalides');
+    const buffer = await readBuffer(req, gallery.MAX_SIZE + 1);
+    const profile = await players.verify(name, serverId).catch(() => null);
+    if (!profile) throw httpError(403, 'Compte Minecraft non vérifié');
+    await gallery.addRequest(buffer, { name: url.searchParams.get('name'), player: profile.name, uuid: profile.id });
+    return sendJson(res, 200, { ok: true });
+  }
+
   // Public: launchers ask regularly whether an admin logged their account out (✕ in the Joueurs tab).
   if (req.method === 'POST' && url.pathname === '/api/players/session') {
     const limit = failures.get(`session:${ip}`);
@@ -742,6 +794,12 @@ async function handleApi(req, res, url) {
     return fs.createReadStream(file).pipe(res);
   }
 
+  // A photo or a player's request, for the Photos tab
+  if (req.method === 'GET' && url.pathname === '/api/gallery/image') {
+    const image = gallery.imageFile({ id: url.searchParams.get('id'), pending: url.searchParams.get('pending') === '1' });
+    return sendImage(res, image, 'private, max-age=300');
+  }
+
   // Players who used the launcher
   if (req.method === 'GET' && url.pathname === '/api/players') return sendJson(res, 200, players.list());
   // "Effacer l'historique": the recent activity only, the players stay.
@@ -778,6 +836,11 @@ const server = http.createServer(async (req, res) => {
     // Launcher endpoints (public)
     if (req.method === 'GET' && url.pathname === '/manifest.json') {
       return sendFile(res, path.join(DATA_DIR, 'manifest.json'), 'no-store');
+    }
+    // Carousel photos (only the visible ones), for the launchers
+    if (req.method === 'GET' && url.pathname.startsWith('/gallery/')) {
+      const image = gallery.imageFile({ file: decodeURIComponent(url.pathname.slice('/gallery/'.length)), onlyVisible: true });
+      return sendImage(res, image, 'public, max-age=86400');
     }
     if (req.method === 'GET' && url.pathname.startsWith('/files/')) {
       return sendFile(res, filePath(decodeURIComponent(url.pathname.slice('/files/'.length))));
@@ -832,6 +895,12 @@ async function start() {
     save: storage.configured() ? (relative, buffer) => storage.saveFile(relative, buffer) : null,
   });
   loadReportedAgentUrl();
+  gallery.init({
+    dataDir: DATA_DIR,
+    persist: storage.configured()
+      ? { save: (relative, buffer) => storage.saveFile(relative, buffer), remove: (relative) => storage.deleteFile(relative) }
+      : null,
+  });
   editor.init({ dataDir: DATA_DIR, storage, activate: activateModpack, activeModpack: () => readPack().modpack || null });
   accounts.init({
     dataDir: DATA_DIR,

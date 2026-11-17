@@ -251,6 +251,7 @@ document.querySelectorAll('.nav').forEach((button) => {
     document.querySelectorAll('.tab').forEach((tab) => (tab.hidden = tab.id !== `tab-${button.dataset.tab}`));
     if (button.dataset.tab === 'players') loadPlayers();
     if (button.dataset.tab === 'accounts') loadAccounts();
+    if (button.dataset.tab === 'gallery') loadGallery();
     if (button.dataset.tab === 'modpack') {
       loadEditor();
       if (features.modpack) followPublish();
@@ -1444,3 +1445,106 @@ $('btn-my-password').onclick = async () => {
     toast(err.message, true);
   }
 };
+
+// ---------- Photos of the launcher's background carousel ----------
+
+const galleryImage = (id, pending = false) => `/api/gallery/image?id=${encodeURIComponent(id)}${pending ? '&pending=1' : ''}`;
+
+function renderGallery({ photos, requests }) {
+  const visible = photos.filter((p) => p.visible).length;
+  $('gallery-summary').textContent = photos.length ? `· ${visible} visible(s) sur ${photos.length}` : '';
+  $('gallery-empty').hidden = photos.length > 0;
+  $('gallery-photos').replaceChildren(
+    ...photos.map((photo, i) =>
+      el('div', { className: `photo${photo.visible ? '' : ' hidden-photo'}` }, [
+        el('img', { src: galleryImage(photo.id), alt: photo.name, loading: 'lazy' }),
+        el('div', { className: 'photo-info' }, [
+          el('strong', { textContent: photo.name }),
+          el('small', { className: 'muted', textContent: photo.player ? `Proposée par ${photo.player}` : `Ajoutée par ${photo.addedBy}` }),
+        ]),
+        el('div', { className: 'photo-actions' }, [
+          el('button', { className: 'ghost small', textContent: '←', title: 'Plus tôt dans le carrousel', disabled: i === 0, onclick: () => galleryAction('POST', '/api/gallery/move', { id: photo.id, direction: -1 }) }),
+          el('button', { className: 'ghost small', textContent: '→', title: 'Plus tard dans le carrousel', disabled: i === photos.length - 1, onclick: () => galleryAction('POST', '/api/gallery/move', { id: photo.id, direction: 1 }) }),
+          el('button', {
+            className: 'ghost small',
+            textContent: photo.visible ? 'Cacher' : 'Afficher',
+            onclick: () => galleryAction('POST', '/api/gallery/visible', { id: photo.id, visible: !photo.visible }),
+          }),
+          el('button', {
+            className: 'danger',
+            textContent: 'Supprimer',
+            onclick: () => confirm(`Supprimer « ${photo.name} » ?`) && galleryAction('DELETE', `/api/gallery?id=${encodeURIComponent(photo.id)}`),
+          }),
+        ]),
+      ]),
+    ),
+  );
+  $('gallery-requests-card').hidden = requests.length === 0;
+  $('gallery-requests-count').textContent = String(requests.length);
+  $('gallery-requests').replaceChildren(
+    ...requests.map((request) =>
+      el('div', { className: 'photo' }, [
+        el('a', { href: galleryImage(request.id, true), target: '_blank' }, [el('img', { src: galleryImage(request.id, true), alt: request.name, loading: 'lazy' })]),
+        el('div', { className: 'photo-info' }, [
+          el('strong', { textContent: request.player }),
+          el('small', { className: 'muted', textContent: `${request.name} · ${when(request.sentAt)}` }),
+        ]),
+        el('div', { className: 'photo-actions' }, [
+          el('button', { className: 'primary small', textContent: 'Approuver', onclick: () => galleryAction('POST', '/api/gallery/approve', { id: request.id }, `Photo de ${request.player} ajoutée au carrousel`) }),
+          el('button', { className: 'danger', textContent: 'Refuser', onclick: () => galleryAction('POST', '/api/gallery/deny', { id: request.id }, 'Demande refusée') }),
+        ]),
+      ]),
+    ),
+  );
+}
+
+async function loadGallery() {
+  try {
+    renderGallery(await api('GET', '/api/gallery'));
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+async function galleryAction(method, url, body, done) {
+  try {
+    renderGallery(await api(method, url, body));
+    if (done) toast(done);
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+// Drag and drop (or click): the photos are sent one after the other.
+async function uploadPhotos(fileList) {
+  const images = [...fileList].filter((f) => /^image\/(jpeg|png|webp)$/.test(f.type));
+  if (images.length < fileList.length) toast('Seules les photos JPG, PNG ou WEBP sont acceptées', true);
+  let added = 0;
+  for (const [i, file] of images.entries()) {
+    $('gallery-progress').textContent = `Envoi ${i + 1} / ${images.length} : ${file.name}`;
+    try {
+      renderGallery(await api('PUT', `/api/gallery/upload?name=${encodeURIComponent(file.name.replace(/\.[^.]+$/, ''))}`, file, true));
+      added++;
+    } catch (err) {
+      toast(`${file.name} : ${err.message}`, true);
+    }
+  }
+  $('gallery-progress').textContent = '';
+  if (added) toast(`${added} photo(s) ajoutée(s)`);
+}
+
+$('gallery-file').onchange = (event) => {
+  uploadPhotos(event.target.files);
+  event.target.value = '';
+};
+const drop = $('gallery-drop');
+drop.addEventListener('dragover', (event) => {
+  event.preventDefault();
+  drop.classList.add('over');
+});
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', (event) => {
+  event.preventDefault();
+  drop.classList.remove('over');
+  uploadPhotos(event.dataTransfer.files);
+});

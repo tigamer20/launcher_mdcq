@@ -46,7 +46,7 @@ function updateDiscord() {
 function loadSettings() {
   // All the Mods 10 needs a lot of memory: 8 Go when the PC has 16 Go or more, 6 Go otherwise.
   const ramMb = os.totalmem() >= 15 * 1024 ** 3 ? 8192 : 6144;
-  const defaults = { ramMb, hideOnLaunch: false, discordStatus: true, maximized: false, devTab: false, beta: { enabled: false, key: '' }, declinedBeta: null, liveSeen: null };
+  const defaults = { ramMb, hideOnLaunch: false, discordStatus: true, maximized: false, devTab: false, beta: { enabled: false, key: '' }, declinedBeta: null, liveSeen: null, background: 'default' };
   try {
     return { ...defaults, ...JSON.parse(fs.readFileSync(settingsFile(), 'utf8')) };
   } catch {
@@ -140,6 +140,49 @@ async function serverStatus() {
 
 ipcMain.handle('server-status', () => serverStatus().catch(() => null));
 
+// ---------------------------------------------------------------------------
+// Background carousel: photos chosen on the admin website (pack.gallery), kept on disk so they show at once
+// ---------------------------------------------------------------------------
+
+const PHOTO_FILE = /^[0-9a-f]{16}\.(jpg|png|webp)$/;
+const PHOTO_TYPES = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+const photoCache = () => path.join(app.getPath('userData'), 'photos');
+
+// Returns the photo as a data: URL (the window only shows local images), downloading it once.
+ipcMain.handle('gallery-image', async (_event, file) => {
+  if (!PHOTO_FILE.test(String(file))) return null;
+  const local = path.join(photoCache(), file);
+  try {
+    if (!fs.existsSync(local)) {
+      const res = await fetch(new URL(`gallery/${file}`, SERVER_URL), { signal: AbortSignal.timeout(60_000) });
+      if (!res.ok) return null;
+      fs.mkdirSync(photoCache(), { recursive: true });
+      fs.writeFileSync(local, Buffer.from(await res.arrayBuffer()));
+    }
+    return `data:${PHOTO_TYPES[file.split('.').pop()]};base64,${fs.readFileSync(local).toString('base64')}`;
+  } catch {
+    return null;
+  }
+});
+
+// Photos removed on the website are removed from the disk too.
+ipcMain.handle('gallery-clean', (_event, keep) => {
+  const wanted = new Set(Array.isArray(keep) ? keep : []);
+  try {
+    for (const name of fs.readdirSync(photoCache())) if (!wanted.has(name)) fs.rmSync(path.join(photoCache(), name), { force: true });
+  } catch {
+    // no photos yet
+  }
+});
+
+// "Proposer une photo": sent to the website, an admin approves or refuses it there.
+ipcMain.handle('gallery-submit', async (_event, { name, bytes }) => {
+  const data = Buffer.from(bytes || []);
+  if (!data.length || data.length > 10 * 1024 * 1024) throw new Error('Photo trop grosse (10 Mo maximum)');
+  const account = await auth.refresh(config.azureClientId);
+  await presence.submitPhoto(SERVER_URL, account, String(name || 'Photo').slice(0, 80), data);
+});
+
 // An admin can log a player's account out from the website (✕ in the "Joueurs" tab): checked every minute.
 let lastKickCheck = 0;
 async function checkLoggedOut() {
@@ -170,6 +213,7 @@ ipcMain.handle('pack', async () => {
       minecraft: pack.versionId,
       serverStatus: server,
       maintenance: pack.maintenance?.enabled ? pack.maintenance : null,
+      gallery: Array.isArray(pack.gallery) ? pack.gallery.filter((p) => PHOTO_FILE.test(p.file)).map((p) => p.file) : [],
       live: pack.live?.enabled ? { kind: pack.live.kind, by: pack.live.by || '', message: pack.live.message || '', since: pack.live.since } : null,
       modpackHidden: Boolean(pack.modpackHidden), // hidden from the admin website
       modpack: pack.modpack

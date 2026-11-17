@@ -10,6 +10,11 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
+    <!-- Background carousel (Paramètres > Fond du launcher): two layers that fade into each other -->
+    <div class="carousel" id="carousel" hidden>
+      <div class="slide" id="slide-a"></div>
+      <div class="slide" id="slide-b"></div>
+    </div>
     <!-- Title bar (the window has no native frame) -->
     <header class="titlebar">
       <div class="brand">
@@ -170,6 +175,19 @@
         <input type="checkbox" id="discord-status" />
         Afficher mon activité sur Discord
       </label>
+      <div class="field">
+        <span>Fond du launcher</span>
+        <div class="choice" id="background-choice">
+          <button type="button" data-background="default">Fond actuel</button>
+          <button type="button" data-background="carousel">Carrousel de photos</button>
+        </div>
+        <small class="muted-text" id="background-hint"></small>
+        <div class="row-buttons">
+          <button type="button" id="btn-submit-photo" class="secondary">Proposer une photo</button>
+          <input type="file" id="photo-file" accept="image/jpeg,image/png,image/webp" hidden />
+        </div>
+        <small class="muted-text">Un admin la regarde avant qu'elle apparaisse dans le carrousel.</small>
+      </div>
       <div class="field">
         <span>Couleurs du launcher</span>
         <div class="theme-list" id="theme-list"></div>

@@ -142,4 +142,4 @@ function sessionStatus(uuid, since) {
   return { loggedOut: Boolean(revokedAt && Date.parse(revokedAt) > (Number(since) || 0)) };
 }
 
-module.exports = { init, record, list, clearHistory, remove, sessionStatus, flush, FILE };
+module.exports = { init, record, list, clearHistory, remove, sessionStatus, flush, verify, FILE };

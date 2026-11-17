@@ -17,6 +17,7 @@ const OWNER = 'admin';
 const PERMISSIONS = {
   maintenance: 'Mode maintenance',
   live: 'Mode live / enregistrement',
+  gallery: 'Photos du launcher',
   server: 'Réglages du serveur',
   players: 'Joueurs',
   modpack: 'Modpack',

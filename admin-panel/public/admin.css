@@ -1004,3 +1004,79 @@ input[type='file']:disabled + span {
   color: inherit;
   font: inherit;
 }
+
+/* ---------- Photos of the launcher ---------- */
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 32px 16px;
+  border: 2px dashed var(--border);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.dropzone:hover,
+.dropzone.over {
+  border-color: rgba(59, 130, 246, 0.7);
+  background: rgba(59, 130, 246, 0.06);
+}
+
+#gallery-requests-card,
+#tab-gallery > .card:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.photo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.photo img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.photo.hidden-photo img {
+  opacity: 0.35;
+}
+
+.photo-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.photo-info strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
