@@ -1,5 +1,14 @@
 # Notes de version
 
+## v1.3.0-dev (bêta)
+
+### Launcher
+- **Carrousel de photos** : dans Paramètres → Fond du launcher, choisis entre le fond actuel et un carrousel des photos du serveur. Les photos changent toutes les 9 secondes.
+- **Proposer une photo** : envoie une de tes captures d'écran. Elle apparaît dans le carrousel une fois acceptée par un admin.
+
+### Site admin
+- Nouvel onglet **Photos** : glisser-déposer des photos, les afficher ou les cacher, changer leur ordre, les supprimer. Les photos proposées par les joueurs arrivent dans « Demandes des joueurs », à approuver ou refuser. Nouvelle permission « Photos du launcher » dans Comptes.
+
 ## v1.2.0
 
 ### Launcher
