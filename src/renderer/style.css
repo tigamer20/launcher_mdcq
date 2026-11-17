@@ -1059,3 +1059,85 @@ dialog input[type='text'] {
 .update-banner .close-banner:hover {
   color: var(--text);
 }
+
+/* ---------- Live / YouTube recording (admin website) ---------- */
+.live-band {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 32px 8px;
+  padding: 10px 18px;
+  border-radius: var(--radius);
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.55);
+  color: #fecaca;
+  font-size: 14px;
+}
+
+.live-band strong {
+  color: #f87171;
+  letter-spacing: 1px;
+}
+
+.live-band .link {
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #fca5a5;
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.live-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  animation: live-pulse 1.6s infinite;
+}
+
+@keyframes live-pulse {
+  70% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+dialog.live-warning {
+  width: 440px;
+  border-color: rgba(239, 68, 68, 0.6);
+  text-align: center;
+}
+
+dialog.live-warning[open] {
+  align-items: center;
+  gap: 14px;
+}
+
+.live-warning .live-icon {
+  font-size: 40px;
+  line-height: 1;
+}
+
+.live-warning h2 {
+  color: #f87171;
+}
+
+.live-warning p {
+  color: #d5dae4;
+  line-height: 1.55;
+}
+
+.live-warning .live-extra {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font-size: 14px;
+  white-space: pre-wrap;
+}

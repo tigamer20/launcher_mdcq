@@ -214,6 +214,42 @@ window.addEventListener('resize', updateNewsMore);
 
 // ---------- Startup ----------
 
+// Live / YouTube recording turned on from the admin website: a red band while it lasts, and a warning shown
+// once each time it's turned on (remembered with its start time).
+const LIVE_TEXTS = {
+  live: { icon: '🔴', band: 'EN DIRECT', title: 'Un live est en cours', what: 'diffusé en direct' },
+  youtube: { icon: '🎥', band: 'ENREGISTREMENT', title: 'Un enregistrement YouTube est en cours', what: 'enregistré pour YouTube' },
+};
+
+function showLive(live) {
+  $('live-band').hidden = !live;
+  if (!live) {
+    if ($('live-warning').open) $('live-warning').close();
+    return;
+  }
+  const texts = LIVE_TEXTS[live.kind] || LIVE_TEXTS.live;
+  $('live-band-title').textContent = texts.band;
+  $('live-band-text').textContent = `${texts.title} : attention à tes gestes et à tes paroles.`;
+  $('live-icon').textContent = texts.icon;
+  $('live-title').textContent = texts.title;
+  $('live-what').textContent = texts.what;
+  $('live-extra').textContent = live.message || '';
+  $('live-extra').hidden = !live.message;
+  if (live.since && state.settings.liveSeen !== live.since && !$('live-warning').open) $('live-warning').showModal();
+}
+
+$('btn-live-ok').onclick = () => {
+  $('live-warning').close();
+};
+$('live-warning').addEventListener('close', () => {
+  const since = state.livesince;
+  if (since && state.settings.liveSeen !== since) {
+    state.settings.liveSeen = since;
+    window.launcher.saveSettings({ liveSeen: since });
+  }
+});
+$('btn-live-more').onclick = () => $('live-warning').showModal();
+
 // The Minecraft server's status (online, players). Only "offline" when it could be checked and answered so
 // (no address configured: never blocked).
 function showServerStatus(status) {
@@ -269,6 +305,8 @@ async function loadPack() {
   $('server-address').hidden = !state.settings?.devTab;
   $('server-line').hidden = !pack.server?.host;
   showServerStatus(pack.serverStatus);
+  state.livesince = pack.live?.since || null;
+  showLive(pack.live);
   $('maintenance').hidden = !pack.maintenance;
   $('maintenance-message').textContent = pack.maintenance?.message || '';
   renderNews(pack.news);

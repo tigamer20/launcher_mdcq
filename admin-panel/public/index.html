@@ -94,6 +94,38 @@
               <button id="btn-maintenance" class="primary">Appliquer</button>
             </div>
           </div>
+
+          <div class="card maintenance-card live-card" id="live-card">
+            <div class="row between">
+              <div>
+                <h2>Mode live / enregistrement</h2>
+                <p class="muted">
+                  Les launchers affichent un avertissement : un live ou un enregistrement YouTube est en cours, attention aux
+                  gestes et aux paroles. Les joueurs déjà en jeu le voient aussi dans le chat (si la console est configurée).
+                </p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="live-enabled" />
+                <span></span>
+              </label>
+            </div>
+            <div class="row wrap">
+              <label class="field">
+                <span>Type</span>
+                <select id="live-kind">
+                  <option value="live">Live (Twitch, YouTube, TikTok...)</option>
+                  <option value="youtube">Enregistrement YouTube</option>
+                </select>
+              </label>
+              <label class="field grow">
+                <span>Message en plus (optionnel)</span>
+                <input id="live-message" maxlength="300" placeholder="Ex.: Live sur twitch.tv/... jusqu'à 22h" />
+              </label>
+            </div>
+            <div class="row end">
+              <button id="btn-live" class="primary">Appliquer</button>
+            </div>
+          </div>
         </section>
 
         <!-- Server settings -->

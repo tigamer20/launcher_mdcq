@@ -16,6 +16,7 @@ const OWNER = 'admin';
 // What an account can be allowed to do (one per tab of the website). The dashboard is open to every account.
 const PERMISSIONS = {
   maintenance: 'Mode maintenance',
+  live: 'Mode live / enregistrement',
   server: 'Réglages du serveur',
   players: 'Joueurs',
   modpack: 'Modpack',
