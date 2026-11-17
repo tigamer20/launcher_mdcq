@@ -1,6 +1,6 @@
 # Notes de version
 
-## v1.3.0-dev (bêta)
+## v1.3.0 · My sweat sweat Minecraft
 
 ### Launcher
 - **Carrousel de photos** : dans Paramètres → Fond du launcher, choisis entre le fond actuel et un carrousel des photos du serveur. Les photos changent toutes les 9 secondes.
