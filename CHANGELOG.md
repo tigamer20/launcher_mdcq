@@ -1,0 +1,10 @@
+# Notes de version
+
+## v1.2.0
+
+### Launcher
+- **Live / enregistrement** : quand quelqu'un est en live ou enregistre sur le serveur, le launcher l'affiche avec une bande rouge en haut de la fenêtre (EN DIRECT ou ENREGISTREMENT) et le nom de la personne. Une fenêtre d'avertissement s'ouvre aussi, une seule fois par live, pour rappeler de faire attention à ce qu'on dit et fait en jeu. « Détails » la rouvre.
+
+### Site admin
+- Nouvelle carte **Live / enregistrement** dans le tableau de bord : type (live ou enregistrement), nom affiché, message optionnel. Elle a sa propre permission dans l'onglet Comptes. Si la console est configurée, les joueurs déjà en jeu sont aussi prévenus dans le chat.
+- **Agent du serveur sans port à ouvrir** : avec `CLOUDFLARE_TUNNEL=1` et `WEBSITE_URL=...` dans `start-agent.bat`, l'agent lance lui-même un tunnel Cloudflare gratuit et envoie sa nouvelle adresse au site à chaque démarrage. Plus besoin de toucher à `AGENT_URL` sur Render.
