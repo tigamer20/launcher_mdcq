@@ -1109,35 +1109,37 @@ dialog input[type='text'] {
 }
 
 dialog.live-warning {
-  width: 440px;
-  border-color: rgba(239, 68, 68, 0.6);
-  text-align: center;
+  width: 400px;
+  border-color: rgba(239, 68, 68, 0.45);
 }
 
 dialog.live-warning[open] {
-  align-items: center;
-  gap: 14px;
+  gap: 10px;
 }
 
-.live-warning .live-icon {
-  font-size: 40px;
-  line-height: 1;
+.live-tag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #f87171;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
 }
 
 .live-warning h2 {
-  color: #f87171;
+  font-size: 20px;
 }
 
 .live-warning p {
-  color: #d5dae4;
-  line-height: 1.55;
+  color: #c3c9d6;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .live-warning .live-extra {
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
+  padding-left: 10px;
+  border-left: 2px solid rgba(239, 68, 68, 0.5);
   color: var(--text);
-  font-size: 14px;
   white-space: pre-wrap;
 }
