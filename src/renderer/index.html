@@ -36,6 +36,14 @@
       <button id="btn-update-later" class="close-banner" title="Masquer">✕</button>
     </div>
 
+    <!-- Live / YouTube recording in progress (admin website): a red band while it lasts -->
+    <div id="live-band" class="live-band" hidden>
+      <span class="live-dot"></span>
+      <strong id="live-band-title">EN DIRECT</strong>
+      <span id="live-band-text">Attention à tes gestes et à tes paroles.</span>
+      <button id="btn-live-more" class="link">Détails</button>
+    </div>
+
     <!-- Shown when maintenance mode is turned on from the admin website -->
     <div id="maintenance" class="maintenance" hidden>
       <strong>Maintenance en cours</strong>
@@ -137,6 +145,20 @@
     </footer>
 
     <!-- Settings dialog -->
+    <!-- Live / recording warning: shown once each time the mode is turned on -->
+    <dialog id="live-warning" class="live-warning">
+      <div class="live-icon" id="live-icon">🔴</div>
+      <h2 id="live-title">Un live est en cours</h2>
+      <p>
+        Le serveur est <strong id="live-what">diffusé en direct</strong> en ce moment. Fais attention à tes gestes et à tes
+        paroles : tout ce que tu fais et dis en jeu peut être vu et entendu.
+      </p>
+      <p class="live-extra" id="live-extra" hidden></p>
+      <div class="dialog-buttons">
+        <button id="btn-live-ok" class="primary">J'ai compris</button>
+      </div>
+    </dialog>
+
     <dialog id="settings">
       <h2>Paramètres</h2>
       <label class="field">

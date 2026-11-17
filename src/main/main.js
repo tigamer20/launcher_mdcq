@@ -46,7 +46,7 @@ function updateDiscord() {
 function loadSettings() {
   // All the Mods 10 needs a lot of memory: 8 Go when the PC has 16 Go or more, 6 Go otherwise.
   const ramMb = os.totalmem() >= 15 * 1024 ** 3 ? 8192 : 6144;
-  const defaults = { ramMb, hideOnLaunch: false, discordStatus: true, maximized: false, devTab: false, beta: { enabled: false, key: '' }, declinedBeta: null };
+  const defaults = { ramMb, hideOnLaunch: false, discordStatus: true, maximized: false, devTab: false, beta: { enabled: false, key: '' }, declinedBeta: null, liveSeen: null };
   try {
     return { ...defaults, ...JSON.parse(fs.readFileSync(settingsFile(), 'utf8')) };
   } catch {
@@ -170,6 +170,7 @@ ipcMain.handle('pack', async () => {
       minecraft: pack.versionId,
       serverStatus: server,
       maintenance: pack.maintenance?.enabled ? pack.maintenance : null,
+      live: pack.live?.enabled ? { kind: pack.live.kind, message: pack.live.message || '', since: pack.live.since } : null,
       modpackHidden: Boolean(pack.modpackHidden), // hidden from the admin website
       modpack: pack.modpack
         ? { version: pack.modpack.version, minecraft: pack.modpack.minecraft, neoforge: pack.modpack.neoforge, size: pack.modpack.size }

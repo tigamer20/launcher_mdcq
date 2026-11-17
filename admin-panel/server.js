@@ -286,6 +286,7 @@ const PERMISSION_RULES = [
   [/^\/api\/pack$/, 'server'],
   [/^\/api\/news$/, 'news'],
   [/^\/api\/maintenance$/, 'maintenance'],
+  [/^\/api\/live$/, 'live'],
   [/^\/api\/files$/, 'files'],
   [/^\/api\/players(\/|$)/, 'players'],
   [/^\/api\/accounts$/, 'accounts'],
@@ -578,6 +579,32 @@ const api = {
         warning = pack.maintenance.enabled
           ? `Launchers bloqués, mais la whitelist n'a pas pu être activée: ${err.message}`
           : `Launchers débloqués, mais la whitelist n'a pas pu être désactivée: ${err.message}`;
+      });
+    }
+    return { pack: publicPack(pack), warning };
+  },
+
+  // Live / YouTube recording: the launchers warn the players to watch what they do and say.
+  'PUT /api/live': async (req) => {
+    const { enabled, kind, message } = await readJson(req);
+    const pack = readPack();
+    const type = kind === 'youtube' ? 'youtube' : 'live';
+    const was = pack.live?.enabled ? pack.live : null;
+    pack.live = {
+      enabled: Boolean(enabled),
+      kind: type,
+      message: String(message || '').slice(0, 300),
+      // A new "since" makes the launchers show the warning again (not when only the message changes)
+      since: enabled ? (was && was.kind === type ? was.since : new Date().toISOString()) : null,
+    };
+    await savePack(pack);
+    // Players already in the game: a message in the chat too (when the server agent and RCON are set up).
+    let warning = null;
+    if (pack.live.enabled && !was && agentUrl()) {
+      const what = type === 'youtube' ? 'Un enregistrement YouTube' : 'Un live';
+      const text = JSON.stringify(['', { text: '[EN DIRECT] ', color: 'red', bold: true }, { text: `${what} est en cours : faites attention à vos gestes et à vos paroles!`, color: 'yellow' }]);
+      await agent('POST', '/rcon', { command: `tellraw @a ${text}` }).catch((err) => {
+        warning = `Launchers prévenus, mais le message en jeu n'a pas pu être envoyé : ${err.message}`;
       });
     }
     return { pack: publicPack(pack), warning };

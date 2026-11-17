@@ -90,6 +90,7 @@ function applyPermissions() {
   $('btn-my-password').hidden = me.owner;
   document.querySelectorAll('.nav[data-perm]').forEach((button) => (button.hidden = !can(button.dataset.perm)));
   $('maintenance-card').hidden = !can('maintenance');
+  $('live-card').hidden = !can('live');
   const active = document.querySelector('.nav.active');
   if (active?.hidden) document.querySelector('.nav[data-tab="dashboard"]').click();
 }
@@ -145,6 +146,10 @@ function renderDashboard() {
   $('maintenance-enabled').checked = Boolean(maintenance);
   $('maintenance-message').value = pack.maintenance?.message || '';
   $('maintenance-card').classList.toggle('on', Boolean(maintenance));
+  $('live-enabled').checked = Boolean(pack.live?.enabled);
+  $('live-kind').value = pack.live?.kind || 'live';
+  $('live-message').value = pack.live?.message || '';
+  $('live-card').classList.toggle('on', Boolean(pack.live?.enabled));
 }
 
 function renderServerForm() {
@@ -266,6 +271,22 @@ $('btn-maintenance').onclick = async () => {
     }));
     renderDashboard();
     toast(pack.maintenance.enabled ? 'Mode maintenance activé' : 'Serveur de nouveau ouvert');
+    if (warning) toast(warning, true);
+  } catch (err) {
+    toast(err.message, true);
+  }
+};
+
+$('btn-live').onclick = async () => {
+  try {
+    let warning;
+    ({ pack, warning } = await api('PUT', '/api/live', {
+      enabled: $('live-enabled').checked,
+      kind: $('live-kind').value,
+      message: $('live-message').value,
+    }));
+    renderDashboard();
+    toast(pack.live.enabled ? 'Mode live activé : les launchers affichent l\'avertissement' : 'Mode live désactivé');
     if (warning) toast(warning, true);
   } catch (err) {
     toast(err.message, true);

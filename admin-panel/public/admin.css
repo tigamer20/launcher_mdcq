@@ -984,3 +984,23 @@ input[type='file']:disabled + span {
 .news-author {
   font-size: 13px;
 }
+
+/* Mode live / enregistrement (dashboard) */
+.live-card.on {
+  border-color: rgba(239, 68, 68, 0.6);
+  background: linear-gradient(rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.02)), var(--panel);
+}
+
+.live-card .field.grow {
+  flex: 1;
+  min-width: 220px;
+}
+
+.live-card select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.25);
+  color: inherit;
+  font: inherit;
+}
