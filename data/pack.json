@@ -33,5 +33,11 @@
     "files": 4835,
     "size": 1838504454,
     "publishedAt": "2026-11-12T23:49:08.948Z"
+  },
+  "live": {
+    "enabled": true,
+    "kind": "live",
+    "message": "test",
+    "since": "2026-11-17T15:22:09.606Z"
   }
 }
