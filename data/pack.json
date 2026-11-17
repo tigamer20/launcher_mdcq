@@ -18,6 +18,13 @@
   ],
   "news": [
     {
+      "id": "0c10e7f5637f",
+      "title": "V1.2.0",
+      "date": "2026-11-17",
+      "body": "Launcher:\nLive / enregistrement : quand quelqu’un est en live ou enregistre sur le serveur, le launcher l’affiche avec une bande rouge en haut de la fenêtre (EN DIRECT ou ENREGISTREMENT) et le nom de la personne. Une fenêtre d’avertissement s’ouvre aussi, une seule fois par live, pour rappeler de faire attention à ce qu’on dit et fait en jeu. « Détails » la rouvre.",
+      "author": "Tony_quebec"
+    },
+    {
       "id": "1a6bbedb56ed",
       "title": "Sortie officielle du launcher de All The Mods 10",
       "date": "2026-11-11",
