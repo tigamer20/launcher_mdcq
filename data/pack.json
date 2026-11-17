@@ -36,8 +36,8 @@
   },
   "live": {
     "enabled": true,
-    "kind": "live",
+    "kind": "youtube",
     "message": "test",
-    "since": "2026-11-17T15:22:09.606Z"
+    "since": "2026-11-17T15:22:28.766Z"
   }
 }
