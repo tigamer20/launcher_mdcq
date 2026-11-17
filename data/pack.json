@@ -35,9 +35,10 @@
     "publishedAt": "2026-11-12T23:49:08.948Z"
   },
   "live": {
-    "enabled": false,
-    "kind": "youtube",
+    "enabled": true,
+    "kind": "live",
+    "by": "Tony_quebec",
     "message": "test",
-    "since": null
+    "since": "2026-11-17T15:27:50.685Z"
   }
 }
