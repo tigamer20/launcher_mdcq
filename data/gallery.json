@@ -73,14 +73,5 @@
    "addedAt": "2026-11-17T15:54:11.596Z"
   }
  ],
- "requests": [
-  {
-   "id": "080b11293bb9b304",
-   "file": "080b11293bb9b304.png",
-   "name": "2026-03-07_11.21.01",
-   "player": "Tony_quebec",
-   "uuid": "a7e0514173224b63a136cde4d6d7e736",
-   "sentAt": "2026-11-17T15:54:50.959Z"
-  }
- ]
+ "requests": []
 }
