@@ -42,10 +42,10 @@
     "publishedAt": "2026-11-12T23:49:08.948Z"
   },
   "live": {
-    "enabled": true,
+    "enabled": false,
     "kind": "live",
     "by": "Tony_quebec",
     "message": "",
-    "since": "2026-11-17T15:27:50.685Z"
+    "since": null
   }
 }
