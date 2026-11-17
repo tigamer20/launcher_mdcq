@@ -35,9 +35,9 @@
     "publishedAt": "2026-11-12T23:49:08.948Z"
   },
   "live": {
-    "enabled": true,
+    "enabled": false,
     "kind": "youtube",
     "message": "test",
-    "since": "2026-11-17T15:22:28.766Z"
+    "since": null
   }
 }
