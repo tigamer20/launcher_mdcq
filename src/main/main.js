@@ -46,9 +46,13 @@ function updateDiscord() {
 function loadSettings() {
   // All the Mods 10 needs a lot of memory: 8 Go when the PC has 16 Go or more, 6 Go otherwise.
   const ramMb = os.totalmem() >= 15 * 1024 ** 3 ? 8192 : 6144;
-  const defaults = { ramMb, hideOnLaunch: false, discordStatus: true, maximized: false, devTab: false, beta: { enabled: false, key: '' }, declinedBeta: null, liveSeen: null, background: 'default' };
+  const defaults = { ramMb, hideOnLaunch: false, discordStatus: true, maximized: false, devTab: false, beta: { enabled: false, key: '' }, declinedBeta: null, liveSeen: null, background: 'carousel', backgroundChosen: false };
   try {
-    return { ...defaults, ...JSON.parse(fs.readFileSync(settingsFile(), 'utf8')) };
+    const saved = { ...defaults, ...JSON.parse(fs.readFileSync(settingsFile(), 'utf8')) };
+    // The photo carousel is the default background. Before 1.3.1 every save also wrote background: 'default', so
+    // only a background the player picked in Paramètres (backgroundChosen) is kept.
+    if (!saved.backgroundChosen) saved.background = 'carousel';
+    return saved;
   } catch {
     return defaults;
   }

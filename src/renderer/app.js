@@ -725,7 +725,7 @@ function renderBackgroundChoice() {
 document.querySelectorAll('#background-choice button').forEach((button) => {
   button.onclick = () => {
     state.settings.background = button.dataset.background;
-    window.launcher.saveSettings({ background: state.settings.background });
+    window.launcher.saveSettings({ background: state.settings.background, backgroundChosen: true });
     startCarousel();
   };
 });
