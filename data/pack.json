@@ -49,11 +49,11 @@
     "publishedAt": "2026-11-12T23:49:08.948Z"
   },
   "live": {
-    "enabled": false,
-    "kind": "live",
+    "enabled": true,
+    "kind": "record",
     "by": "Tony_quebec",
     "message": "En live sur twitch.tv/tony_quebec jusqu'à 21h20",
-    "since": null
+    "since": "2026-11-18T00:11:26.385Z"
   },
   "gallery": [
     {
