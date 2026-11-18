@@ -1,5 +1,10 @@
 # Notes de version
 
+## v1.3.1
+
+### Launcher
+- Le **carrousel de photos** est maintenant le fond par défaut. Si tu préfères l'ancien fond : Paramètres → Fond du launcher → « Fond actuel ». Ton choix est gardé.
+
 ## v1.3.0 · My sweat sweat Minecraft
 
 ### Launcher
