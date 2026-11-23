@@ -749,7 +749,9 @@ function renderBackgroundChoice() {
   const current = state.settings.background === 'carousel' ? 'carousel' : 'default';
   document.querySelectorAll('#background-choice button').forEach((b) => b.classList.toggle('active', b.dataset.background === current));
   $('background-hint').textContent =
-    current === 'carousel' && !carousel.photos.length ? "Aucune photo pour l'instant : le fond actuel est affiché en attendant." : '';
+    current === 'carousel' && !carousel.photos.length ? "Aucune photo pour l'instant : le gradient de couleur est affiché en attendant." : '';
+  // The colours only show with the gradient background: hidden while the carousel is on screen.
+  $('theme-field').hidden = current === 'carousel' && carousel.photos.length > 0;
 }
 
 document.querySelectorAll('#background-choice button').forEach((button) => {
