@@ -11,6 +11,18 @@
   </head>
   <body>
     <!-- Background carousel (Paramètres > Fond du launcher): two layers that fade into each other -->
+    <!-- Style spécial hiver (winter.js): night sky with an aurora and snowy hills behind everything, frost in the
+         corners, and one canvas over the window for the snow (it never takes clicks) -->
+    <div class="winter-sky" aria-hidden="true">
+      <div class="winter-aurora"><i></i><i></i><i></i></div>
+      <svg class="winter-hills" viewBox="0 0 1000 150" preserveAspectRatio="none">
+        <path d="M0 95 Q 160 50 330 88 T 680 70 T 1000 80 V150 H0Z" fill="#0f1d33" />
+        <path d="M0 120 Q 220 85 450 115 T 1000 105 V150 H0Z" fill="#132640" />
+      </svg>
+    </div>
+    <div class="winter-frost" aria-hidden="true"></div>
+    <canvas id="winter-snow" class="winter-snow" hidden></canvas>
+
     <div class="carousel" id="carousel" hidden>
       <div class="slide" id="slide-a"></div>
       <div class="slide" id="slide-b"></div>
@@ -163,6 +175,17 @@
       </div>
     </dialog>
 
+    <!-- 5 gold flakes caught (Style spécial hiver) -->
+    <dialog id="gold-unlocked" class="gold-unlocked">
+      <span class="gold-star" aria-hidden="true"></span>
+      <h2>Palette Aurore débloquée!</h2>
+      <p>Tu as attrapé 5 flocons dorés. La palette Aurore est maintenant dans Paramètres, Couleurs du launcher.</p>
+      <div class="dialog-buttons">
+        <button id="btn-gold-later" class="secondary">Plus tard</button>
+        <button id="btn-gold-try" class="primary">L'essayer</button>
+      </div>
+    </dialog>
+
     <dialog id="settings">
       <h2>Paramètres</h2>
       <label class="field">
@@ -187,6 +210,26 @@
         <div class="row-buttons">
           <button type="button" id="btn-submit-photo" class="secondary">Proposer une photo</button>
           <input type="file" id="photo-file" accept="image/jpeg,image/png,image/webp" hidden />
+        </div>
+      </div>
+      <div class="field">
+        <span>Style du launcher</span>
+        <div class="choice" id="style-choice">
+          <button type="button" data-style="base">Style de base</button>
+          <button type="button" data-style="winter">Style spécial hiver</button>
+        </div>
+        <div class="winter-effects" id="winter-effects">
+          <label class="check"><input type="checkbox" data-effect="snow" /> Neige qui tombe</label>
+          <label class="check"><input type="checkbox" data-effect="physics" /> Physique de la neige</label>
+          <label class="check"><input type="checkbox" data-effect="pile" /> Accumulation</label>
+          <label class="check"><input type="checkbox" data-effect="wind" /> Souffle de la souris</label>
+          <label class="check"><input type="checkbox" data-effect="aurora" /> Aurore boréale</label>
+          <label class="check"><input type="checkbox" data-effect="frost" /> Givre sur les bords</label>
+          <label class="check"><input type="checkbox" data-effect="gold" /> Flocons dorés</label>
+          <label class="winter-amount">Quantité de neige
+            <input type="range" id="snow-amount" min="0" max="2" step="1" />
+            <output id="snow-amount-label">Normale</output>
+          </label>
         </div>
       </div>
       <div class="field" id="theme-field">
@@ -266,6 +309,7 @@
 
     <div id="toast" class="toast" hidden></div>
 
+    <script src="winter.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

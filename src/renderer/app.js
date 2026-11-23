@@ -277,6 +277,9 @@ function showOnlinePlayers(status) {
     ...names.map((name) => {
       const chip = document.createElement('span');
       chip.className = 'online-player';
+      // the same tuque colour for a player every time (Style spécial hiver)
+      const hue = [...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
+      chip.style.setProperty('--tuque', `hsl(${hue}, 75%, 58%)`);
       const head = document.createElement('img');
       head.src = `https://mc-heads.net/avatar/${encodeURIComponent(name)}/18`;
       head.alt = '';
@@ -374,9 +377,11 @@ async function init() {
   ram.value = Math.min(state.settings.ramMb, ram.max);
   $('hide-on-launch').checked = state.settings.hideOnLaunch;
   $('discord-status').checked = state.settings.discordStatus !== false;
+  if ((state.settings.winter?.gold || 0) >= 5) THEMES.aurore = AURORE;
   applyTheme(state.settings.theme);
   renderThemes();
   renderBackgroundChoice();
+  renderWinter();
   updateRamLabel();
   refreshButtons();
 
@@ -609,7 +614,10 @@ $('btn-leave-beta').onclick = async () => {
   if (!started) showError('Impossible pendant que le jeu ou une installation tourne.');
 };
 
-window.launcher.onGameStarted(() => setStatus('Bon jeu! Minecraft est lancé.', 1));
+window.launcher.onGameStarted(() => {
+  setStatus('Bon jeu! Minecraft est lancé.', 1);
+  window.winter.pause(true); // the snow stops while the game runs
+});
 
 // An admin logged this account out (✕ in the website's "Joueurs" tab).
 window.launcher.onLoggedOut((message) => {
@@ -638,6 +646,7 @@ $('btn-update-later').onclick = () => {
 };
 
 window.launcher.onGameClosed((error) => {
+  window.winter.pause(false);
   state.busy = false;
   refreshButtons();
   resetStatus();
@@ -795,6 +804,63 @@ $('photo-file').onchange = async (event) => {
     button.disabled = false;
     button.textContent = 'Proposer une photo';
   }
+};
+
+// ---------- Style spécial hiver (winter.js) ----------
+
+const AURORE = { name: 'Aurore', accent: '#4fe3c1', accent2: '#9b8cff' }; // unlocked with 5 gold flakes
+const SNOW_AMOUNTS = ['Faible', 'Normale', 'Beaucoup'];
+
+function winterSettings() {
+  const w = state.settings.winter || {};
+  return {
+    style: w.style === 'base' ? 'base' : 'winter',
+    effects: { snow: true, physics: true, pile: true, wind: true, aurora: true, frost: true, gold: true, ...w.effects },
+    amount: Number.isInteger(w.amount) ? w.amount : 1,
+    gold: w.gold || 0,
+  };
+}
+
+function saveWinter(changes) {
+  state.settings.winter = { ...winterSettings(), ...changes };
+  window.launcher.saveSettings({ winter: state.settings.winter });
+  renderWinter();
+}
+
+function renderWinter() {
+  const w = winterSettings();
+  window.winter.configure(w);
+  document.querySelectorAll('#style-choice button').forEach((b) => b.classList.toggle('active', b.dataset.style === w.style));
+  $('winter-effects').hidden = w.style !== 'winter';
+  document.querySelectorAll('#winter-effects [data-effect]').forEach((box) => (box.checked = w.effects[box.dataset.effect]));
+  $('snow-amount').value = String(w.amount);
+  $('snow-amount-label').textContent = SNOW_AMOUNTS[w.amount] || SNOW_AMOUNTS[1];
+}
+
+document.querySelectorAll('#style-choice button').forEach((button) => {
+  button.onclick = () => saveWinter({ style: button.dataset.style });
+});
+document.querySelectorAll('#winter-effects [data-effect]').forEach((box) => {
+  box.onchange = () => saveWinter({ effects: { ...winterSettings().effects, [box.dataset.effect]: box.checked } });
+});
+$('snow-amount').oninput = (event) => saveWinter({ amount: Number(event.target.value) });
+
+// Gold flakes: each one counts, the 5th unlocks the Aurore palette and a window tells the player.
+window.winter.onGold = () => {
+  const gold = winterSettings().gold + 1;
+  saveWinter({ gold });
+  if (gold < 5) return showInfo(`Flocon doré attrapé! ${gold} / 5`);
+  if (gold === 5) {
+    THEMES.aurore = AURORE;
+    renderThemes();
+    $('gold-unlocked').showModal();
+  }
+};
+$('btn-gold-later').onclick = () => $('gold-unlocked').close();
+$('btn-gold-try').onclick = () => {
+  $('gold-unlocked').close();
+  setTheme({ palette: 'aurore' });
+  showInfo('Palette Aurore appliquée. Tu peux la changer dans Paramètres.');
 };
 
 init().catch((err) => showError(cleanError(err)));
