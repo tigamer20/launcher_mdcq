@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('launcher', {
   betaCheckKey: (key) => ipcRenderer.invoke('beta-check-key', key),
   betaSet: (beta) => ipcRenderer.invoke('beta-set', beta),
   checkUpdatesNow: () => ipcRenderer.invoke('check-updates-now'),
+  leaveBeta: () => ipcRenderer.invoke('leave-beta'),
   login: () => ipcRenderer.invoke('login'),
   logout: () => ipcRenderer.invoke('logout'),
   play: (options) => ipcRenderer.invoke('play', options),

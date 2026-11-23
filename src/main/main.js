@@ -263,6 +263,17 @@ ipcMain.handle('beta-set', (_event, beta) => {
   saveSettings(settings);
 });
 
+// "Revenir à la version publique" (developer section, on a beta version): beta updates off, then the update window
+// reinstalls the latest official version at the restart, even though it is older than the beta.
+ipcMain.handle('leave-beta', () => {
+  if (playing) return false;
+  const settings = loadSettings();
+  saveSettings({ beta: { ...settings.beta, enabled: false }, reinstallOfficial: true });
+  app.relaunch();
+  app.exit(0);
+  return true;
+});
+
 // "Vérifier les mises à jour": restart through the update window.
 ipcMain.handle('check-updates-now', () => {
   if (playing) return; // never close the launcher while the game or an installation runs
@@ -481,7 +492,13 @@ async function startupUpdate() {
     let beta = settings.beta.enabled && Boolean(settings.beta.key);
     if (beta) beta = await checkBetaKey(settings.beta.key).catch(() => true); // website down: keep the player's choice
 
-    const found = await withTimeout(updater.checkForUpdates({ repo: config.updateRepo, current: VERSION, beta, force: legacy.isOldApp() }), 10_000);
+    // Leaving the beta: the latest official version, even if it's older than this one (asked once).
+    const leaving = Boolean(settings.reinstallOfficial);
+    if (leaving) {
+      saveSettings({ reinstallOfficial: false });
+      beta = false;
+    }
+    const found = await withTimeout(updater.checkForUpdates({ repo: config.updateRepo, current: VERSION, beta, force: legacy.isOldApp() || leaving }), 10_000);
     let target = null;
     if (found.beta && updater.versionOf(found.beta) !== settings.declinedBeta) {
       send({ phase: 'beta-available', version: updater.versionOf(found.beta), label: updater.labelOf(found.beta) });

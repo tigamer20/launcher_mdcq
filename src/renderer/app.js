@@ -361,6 +361,9 @@ async function init() {
   $('dev-version').textContent = `${fullName}${data.version.includes('-') ? ' (bêta)' : ''}`;
   $('beta-key').value = state.settings.beta?.key || '';
   $('beta-enabled').checked = Boolean(state.settings.beta?.enabled);
+  // Beta builds are named "1.3.2-dev"
+  $('leave-beta').hidden = !String(data.version).includes('-dev');
+  $('beta-current').textContent = `v${data.version}`;
   $('beta-enabled').disabled = !state.settings.beta?.key;
 
   await loadPack();
@@ -597,6 +600,14 @@ $('beta-enabled').onchange = async () => {
 };
 
 $('btn-check-updates').onclick = () => window.launcher.checkUpdatesNow();
+
+// On a beta version: turn the beta off and reinstall the latest official version.
+$('btn-leave-beta').onclick = async () => {
+  if (state.busy) return showError('Patiente, une opération est en cours.');
+  if (!confirm('Désactiver la bêta et réinstaller la dernière version publique ? Le launcher va redémarrer.')) return;
+  const started = await window.launcher.leaveBeta();
+  if (!started) showError('Impossible pendant que le jeu ou une installation tourne.');
+};
 
 window.launcher.onGameStarted(() => setStatus('Bon jeu! Minecraft est lancé.', 1));
 

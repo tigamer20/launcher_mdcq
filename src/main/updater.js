@@ -128,12 +128,23 @@ async function installerUpdate(release, onProgress, { fresh = false } = {}) {
   return 'quit';
 }
 
+// Version of the launcher installed with the installer (src/bootstrap.js only starts downloaded versions newer than it).
+function bundledVersion() {
+  try {
+    return require(path.join(app.getAppPath(), 'package.json')).version;
+  } catch {
+    return '0.0.0';
+  }
+}
+
 /** Installs `release`. Returns 'restart' (relaunch on the new files) or 'quit' (the installer takes over). */
 async function installUpdate(release, onProgress) {
   onProgress({ phase: 'preparing', version: versionOf(release) });
   const manifest = await readAssetJson(release, 'app-update.json');
   // The old ModdedQC app needs the ATM installer once to get the new name, logo and shortcuts.
   if (legacy.isOldApp()) return installerUpdate(release, onProgress, { fresh: true });
+  // Going back to an older version than the installed one (leaving the beta): only the full installer can do it.
+  if (!isNewer(versionOf(release), bundledVersion())) return installerUpdate(release, onProgress);
   if (manifest && manifest.electron === process.versions.electron) return fileUpdate(release, manifest, onProgress);
   return installerUpdate(release, onProgress);
 }
