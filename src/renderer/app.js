@@ -260,6 +260,36 @@ function showServerStatus(status) {
     ? `En ligne · ${status.players.online}/${status.players.max} joueurs`
     : 'Hors ligne';
   $('server-players').title = status?.online ? '' : status?.reason || '';
+  showOnlinePlayers(status);
+}
+
+// The players in the game, from the server's answer (Minecraft sends 12 names at most; players who turned off
+// "Allow Server Listings" show up as "Anonymous Player" and are only counted).
+function showOnlinePlayers(status) {
+  const box = $('online-players');
+  const names = status?.online ? (status.players.list || []).filter((n) => /^[A-Za-z0-9_]{1,16}$/.test(n)) : [];
+  const others = status?.online ? Math.max(0, status.players.online - names.length) : 0;
+  const key = `${names.join(',')}|${others}`;
+  if (box.dataset.key === key) return; // unchanged: no flicker every 10 seconds
+  box.dataset.key = key;
+  box.hidden = names.length === 0;
+  box.replaceChildren(
+    ...names.map((name) => {
+      const chip = document.createElement('span');
+      chip.className = 'online-player';
+      const head = document.createElement('img');
+      head.src = `https://mc-heads.net/avatar/${encodeURIComponent(name)}/18`;
+      head.alt = '';
+      chip.append(head, name);
+      return chip;
+    }),
+  );
+  if (others > 0 && names.length) {
+    const more = document.createElement('span');
+    more.className = 'online-more';
+    more.textContent = `+ ${others} autre${others > 1 ? 's' : ''}`;
+    box.append(more);
+  }
 }
 
 // Every 10 seconds, between the full checks: the launcher pings the Minecraft server itself.
