@@ -112,6 +112,19 @@
     letterCache.set(el, { key, top: rel, solid: Uint8Array.from(solid) });
   }
 
+  // Cards and buttons: snow stays inside the box, and follows its rounded corners (where it slides off).
+  function boxTops(s, top, solid) {
+    const cs = getComputedStyle(s.el);
+    const rl = Math.min(parseFloat(cs.borderTopLeftRadius) || 0, s.w / 2);
+    const rr = Math.min(parseFloat(cs.borderTopRightRadius) || 0, s.w / 2);
+    for (let i = 0; i < top.length; i++) {
+      const d = i * CELL + 2; // centre of the column, from the left edge
+      if (d >= s.w) { solid[i] = 0; continue; } // the last column can stick out past the box
+      if (d < rl) top[i] = s.y + rl - Math.sqrt(rl * rl - (rl - d) ** 2);
+      else if (s.w - d < rr) { const e = s.w - d; top[i] = s.y + rr - Math.sqrt(rr * rr - (rr - e) ** 2); }
+    }
+  }
+
   function visible(el) {
     if (!el.isConnected) return false;
     const r = el.getBoundingClientRect();
@@ -137,6 +150,7 @@
       const top = new Float32Array(n).fill(s.y);
       const solid = new Uint8Array(n).fill(1);
       if (s.text) letterTops(s, top, solid);
+      else if (s.el !== 'ground') boxTops(s, top, solid);
       // moved or resized: keep the snow it held, stretched to the new width
       const pile = new Float32Array(n);
       if (old) for (let i = 0; i < n; i++) pile[i] = solid[i] ? old.pile[Math.min(old.n - 1, Math.floor((i / n) * old.n))] : 0;
@@ -324,7 +338,7 @@
         const grad = ctx.createLinearGradient(0, s.y - 20, 0, s.y + (s.text ? s.h * 0.4 : 0));
         grad.addColorStop(0, '#f4faff');
         grad.addColorStop(1, '#cfe3f7');
-        const lip = s.el === 'ground' ? 0 : s.text ? 1 : 2;
+        const left = s.el === 'ground' ? -Infinity : s.x, right = s.el === 'ground' ? Infinity : s.x + s.w;
         for (let a = 0; a < s.n; a++) {
           if (!s.solid[a]) continue;
           let b = a;
@@ -339,16 +353,17 @@
           const X = (i) => s.x + i * CELL + 2;
           ctx.fillStyle = grad;
           ctx.beginPath();
-          ctx.moveTo(X(a) - 2 - lip, s.top[a] + 1);
-          let px = X(a) - 2 - lip, py = s.top[a] + 1 - shown(a) * 0.5;
+          const x0 = Math.max(left, X(a) - 2), x1 = Math.min(right, X(b) + 2); // never past the edges of the box
+          ctx.moveTo(x0, s.top[a] + 1);
+          let px = x0, py = s.top[a] + 1 - shown(a) * 0.5;
           ctx.lineTo(px, py);
           for (let i = a; i <= b; i++) {
             const x = X(i), y = s.top[i] + 1 - shown(i);
             ctx.quadraticCurveTo(px, py, (px + x) / 2, (py + y) / 2);
             px = x; py = y;
           }
-          ctx.quadraticCurveTo(px, py, X(b) + 2 + lip, s.top[b] + 1 - shown(b) * 0.5);
-          ctx.lineTo(X(b) + 2 + lip, s.top[b] + 1);
+          ctx.quadraticCurveTo(px, py, x1, s.top[b] + 1 - shown(b) * 0.5);
+          ctx.lineTo(x1, s.top[b] + 1);
           for (let i = b; i >= a; i--) ctx.lineTo(X(i), s.top[i] + 1.5);
           ctx.closePath();
           ctx.fill();
