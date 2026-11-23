@@ -1,5 +1,10 @@
 # Notes de version
 
+## v1.3.4-dev (bêta)
+
+### Launcher
+- Paramètres et section développeur plus épurés : les textes qui expliquaient les boutons sont retirés.
+
 ## v1.3.3-dev (bêta)
 
 ### Launcher
