@@ -1,5 +1,10 @@
 # Notes de version
 
+## v1.3.2-dev (bêta)
+
+### Launcher
+- **Joueurs en ligne** : sous « En ligne · X/Y joueurs », le launcher affiche qui est en jeu, avec sa tête Minecraft. La liste se met à jour toutes les 10 secondes (12 noms maximum, les autres sont comptés en « + N autres »).
+
 ## v1.3.1
 
 ### Launcher
