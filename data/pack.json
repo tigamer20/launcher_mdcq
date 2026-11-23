@@ -18,6 +18,13 @@
   ],
   "news": [
     {
+      "id": "558462d09f40",
+      "title": "Wintercraft update",
+      "date": "2026-11-23",
+      "body": "❄️ WinterCraft est arrivé! (v1.4.0)\n\nL'hiver s'installe sur le launcher! Mets-le à jour pour découvrir le nouveau style spécial hiver :\n\nDe la vraie neige : elle tombe, s'accumule sur les nouvelles, sur le titre (en prenant la forme des lettres), sur le bouton JOUER et au sol.\nJoue avec elle : passe ta souris dedans pour la pousser et la creuser, les flocons rebondissent dessus et la neige glisse des bords. Clique dans le vide pour faire une rafale!\nAurore boréale, givre dans les coins de la fenêtre et un bouton JOUER en glace qui craque quand tu cliques dessus.\nFlocons dorés : de temps en temps, un flocon doré tombe. Attrapes-en 5 pour débloquer la palette secrète Aurore! ✨\nTuques : les joueurs en ligne affichés dans le launcher ont maintenant leur tuque.\n\nAussi dans cette version\n\nTu vois maintenant qui est en ligne sur le serveur, avec sa tête Minecraft.\nLes Paramètres sont plus épurés, et le fond « Fond actuel » s'appelle maintenant « Gradient de couleur ».\n\nTu préfères l'ancien look? Va dans Paramètres → Style du launcher. Tu peux revenir au style de base ou activer et désactiver chaque effet un par un : neige, physique, aurore, givre, flocons dorés… Tu peux aussi régler la quantité de neige.\n\nLa neige s'arrête toute seule pendant que tu joues.\n\nBon hiver sur le serveur! ⛄",
+      "author": "Tony_quebec"
+    },
+    {
       "id": "ec9793ee1b19",
       "title": "Launcher 1.3 : My sweat sweat Minecraft",
       "date": "2026-11-17",
