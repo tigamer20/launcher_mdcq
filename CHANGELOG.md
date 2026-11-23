@@ -1,5 +1,14 @@
 # Notes de version
 
+## v1.4.0-dev (bêta)
+
+### Launcher
+- **Style spécial hiver** : ciel de nuit avec aurore boréale, neige qui tombe et s'accumule sur les nouvelles, le titre (en suivant la forme des lettres), le bouton JOUER et le sol.
+- **Vraie physique de la neige** : la souris pousse et creuse la neige dans toutes les directions, les flocons rebondissent dessus, la neige glisse et déborde des bords.
+- Bouton JOUER en glace qui craque au clic, givre dans les coins, tuques sur les joueurs en ligne.
+- **Flocons dorés** : attrapes-en 5 pour débloquer la palette Aurore.
+- Dans Paramètres → Style du launcher : style de base ou style spécial hiver, chaque effet activable, et la quantité de neige. La neige s'arrête pendant que le jeu tourne.
+
 ## v1.3.4-dev (bêta)
 
 ### Launcher
