@@ -1,5 +1,11 @@
 # Notes de version
 
+## v1.3.3-dev (bêta)
+
+### Launcher
+- **Revenir à la version publique** : sur une version bêta, la section développeur (Ctrl+Maj+D) affiche un bouton qui désactive la bêta, redémarre le launcher et réinstalle la dernière version publique.
+- Le fond « Fond actuel » s'appelle maintenant **Gradient de couleur**. Quand le carrousel de photos est affiché, les couleurs du launcher sont cachées dans les Paramètres.
+
 ## v1.3.2-dev (bêta)
 
 ### Launcher
