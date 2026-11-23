@@ -1,5 +1,10 @@
 # Notes de version
 
+## v1.4.1-dev (bêta)
+
+### Launcher
+- Style spécial hiver : la neige ne dépasse plus des cartes et des boutons, et elle suit leurs coins arrondis.
+
 ## v1.4.0-dev (bêta)
 
 ### Launcher
