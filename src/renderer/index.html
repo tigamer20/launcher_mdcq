@@ -188,7 +188,6 @@
           <button type="button" id="btn-submit-photo" class="secondary">Proposer une photo</button>
           <input type="file" id="photo-file" accept="image/jpeg,image/png,image/webp" hidden />
         </div>
-        <small class="muted-text">Un admin la regarde avant qu'elle apparaisse dans le carrousel.</small>
       </div>
       <div class="field" id="theme-field">
         <span>Couleurs du launcher</span>
@@ -201,10 +200,6 @@
       <button id="btn-folder" class="secondary">Ouvrir le dossier du jeu</button>
       <section class="danger-zone">
         <h3>Modpack installé</h3>
-        <p class="muted-text">
-          Supprime le modpack de cet ordinateur (pour libérer de la place ou repartir de zéro). Tu pourras le réinstaller
-          avec le bouton INSTALLER.
-        </p>
         <label class="check">
           <input type="checkbox" id="delete-keep" checked />
           Garder mes mondes, captures d'écran et réglages
@@ -223,10 +218,6 @@
       <p class="muted-text">Adresse du serveur : <strong id="dev-server-address">-</strong></p>
       <section class="dev-section">
         <h3>Jeu</h3>
-        <p class="muted-text">
-          Lance le jeu sans se connecter au serveur : il s'ouvre sur l'écran titre (utile pour tester le modpack, même
-          pendant une maintenance).
-        </p>
         <button id="btn-play-offline" class="secondary">Lancer le jeu sans le serveur</button>
         <p id="play-offline-hint" class="muted-text"></p>
       </section>
@@ -249,10 +240,7 @@
           Activer les mises à jour bêta
         </label>
         <div class="leave-beta" id="leave-beta" hidden>
-          <p class="muted-text">
-            Tu utilises la version bêta <strong id="beta-current"></strong>. Pour revenir à la dernière version publique, le
-            launcher désactive la bêta, redémarre et la réinstalle.
-          </p>
+          <p class="muted-text">Tu utilises la version bêta <strong id="beta-current"></strong>.</p>
           <button id="btn-leave-beta" class="secondary">Revenir à la version publique</button>
         </div>
       </section>
