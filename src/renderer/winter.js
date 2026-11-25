@@ -23,9 +23,8 @@
   const R = 26; // the cursor
   const GRAVITY = 0.16;
   const AMOUNTS = [70, 200, 380];
-  // Where snow settles. A "text" surface follows the shape of its letters.
+  // Where snow settles (never on the All the Mods title). A "text" surface would follow the shape of its letters.
   const SURFACES = [
-    { selector: '#pack-name', text: true },
     { selector: '.news-card' },
     { selector: '#btn-play' },
     { selector: '#btn-settings' },
