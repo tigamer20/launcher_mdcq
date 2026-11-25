@@ -1,5 +1,10 @@
 # Notes de version
 
+## v1.4.1
+
+### Launcher
+- Style spécial hiver : la neige ne s'accumule plus sur le titre « All the Mods ».
+
 ## v1.4.0 · WinterCraft
 
 ### Launcher
