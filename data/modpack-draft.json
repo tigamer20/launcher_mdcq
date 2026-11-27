@@ -2355,6 +2355,17 @@
    "enabled": true
   },
   {
+   "id": "file-d27eec1a3b72520ec096a2c0e35adce65031d36e",
+   "source": "file",
+   "folder": "mods",
+   "enabled": true,
+   "name": "forgematica-0.4.3+mc1.21.1",
+   "fileName": "forgematica-0.4.3+mc1.21.1.jar",
+   "sha1": "d27eec1a3b72520ec096a2c0e35adce65031d36e",
+   "size": 1646167,
+   "url": "https://github.com/tigamer20/launcher_mdcq/releases/download/modpack/editor-d27eec1a3b72520ec096a2c0e35adce65031d36e.jar"
+  },
+  {
    "id": "cf-915115",
    "source": "curseforge",
    "projectId": 915115,
@@ -11616,6 +11627,6 @@
  "deleted": [],
  "edits": [],
  "unpublished": true,
- "updatedAt": "2026-11-27T18:55:20.246Z",
+ "updatedAt": "2026-11-27T18:55:38.147Z",
  "publishedAt": "2026-11-12T23:49:07.698Z"
 }
