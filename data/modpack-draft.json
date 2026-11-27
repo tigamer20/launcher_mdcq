@@ -1,6 +1,6 @@
 {
  "name": "All the Mods 10 - Saison 3 VVVVVV",
- "version": "9.3.3",
+ "version": "9.3.4",
  "minecraft": "1.21.1",
  "neoforge": "21.1.265",
  "importedAt": "2026-11-12T23:47:04.614Z",
@@ -11648,7 +11648,7 @@
  },
  "deleted": [],
  "edits": [],
- "unpublished": true,
- "updatedAt": "2026-11-27T18:59:39.458Z",
- "publishedAt": "2026-11-12T23:49:07.698Z"
+ "unpublished": false,
+ "updatedAt": "2026-11-27T19:00:24.847Z",
+ "publishedAt": "2026-11-27T19:00:22.545Z"
 }
