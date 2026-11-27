@@ -1109,6 +1109,17 @@
    "enabled": true
   },
   {
+   "id": "file-536b2af675229d2a33eb4cf5afbe7148a62d5f3f",
+   "source": "file",
+   "folder": "mods",
+   "enabled": true,
+   "name": "chat_heads-0.15.7-neoforge-1.21",
+   "fileName": "chat_heads-0.15.7-neoforge-1.21.jar",
+   "sha1": "536b2af675229d2a33eb4cf5afbe7148a62d5f3f",
+   "size": 91948,
+   "url": "https://github.com/tigamer20/launcher_mdcq/releases/download/modpack/editor-536b2af675229d2a33eb4cf5afbe7148a62d5f3f.jar"
+  },
+  {
    "id": "cf-456956",
    "source": "curseforge",
    "projectId": 456956,
@@ -11627,6 +11638,6 @@
  "deleted": [],
  "edits": [],
  "unpublished": true,
- "updatedAt": "2026-11-27T18:55:38.147Z",
+ "updatedAt": "2026-11-27T18:59:32.794Z",
  "publishedAt": "2026-11-12T23:49:07.698Z"
 }
