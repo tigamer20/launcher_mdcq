@@ -3704,6 +3704,17 @@
    "enabled": true
   },
   {
+   "id": "file-043e9c2dc77620c32da268f6e631d664e7582255",
+   "source": "file",
+   "folder": "mods",
+   "enabled": true,
+   "name": "mafglib-0.4.1+mc1.21.1",
+   "fileName": "mafglib-0.4.1+mc1.21.1.jar",
+   "sha1": "043e9c2dc77620c32da268f6e631d664e7582255",
+   "size": 1113481,
+   "url": "https://github.com/tigamer20/launcher_mdcq/releases/download/modpack/editor-043e9c2dc77620c32da268f6e631d664e7582255.jar"
+  },
+  {
    "id": "cf-342543",
    "source": "curseforge",
    "projectId": 342543,
@@ -11648,7 +11659,7 @@
  },
  "deleted": [],
  "edits": [],
- "unpublished": false,
- "updatedAt": "2026-11-27T19:00:24.847Z",
+ "unpublished": true,
+ "updatedAt": "2026-11-27T19:03:57.605Z",
  "publishedAt": "2026-11-27T19:00:22.545Z"
 }
