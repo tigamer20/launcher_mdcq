@@ -25,20 +25,6 @@
       "author": "Tony_quebec"
     },
     {
-      "id": "ec9793ee1b19",
-      "title": "Launcher 1.3 : My sweat sweat Minecraft",
-      "date": "2026-11-17",
-      "body": "Nouvelle version du launcher! \n\nCarrousel de photos\nTu peux maintenant remplacer le fond du launcher par un carrousel de photos du serveur. Va dans Paramètres (la roue dentée), puis Fond du launcher, et choisis « Carrousel de photos ».\n\nPropose tes photos\nT'as une belle base, un build dont t'es fier ou un screenshot drôle? Clique sur « Proposer une photo » dans les Paramètres. Une fois acceptée par un admin, elle s'ajoute au carrousel de tout le monde.\n\nAussi dans les dernières versions\n- Le statut du serveur est plus fiable : fini les « hors ligne » alors que le serveur roule.\n- Si le serveur est vraiment hors ligne, tu peux jouer en solo en attendant, ou essayer de le rejoindre quand même.\n- Quand le modpack a une mise à jour, le bouton devient INSTALLER pour la télécharger.\n- Couleurs du launcher : 6 palettes ou ta propre couleur, dans les Paramètres.\n- Clique sur une nouvelle pour la lire en plein écran.\n\nBon jeu!",
-      "author": "Tony_quebec"
-    },
-    {
-      "id": "0c10e7f5637f",
-      "title": "V1.2.0",
-      "date": "2026-11-17",
-      "body": "Launcher:\nLive / enregistrement : quand quelqu’un est en live ou enregistre sur le serveur, le launcher l’affiche avec une bande rouge en haut de la fenêtre (EN DIRECT ou ENREGISTREMENT) et le nom de la personne. Une fenêtre d’avertissement s’ouvre aussi, une seule fois par live, pour rappeler de faire attention à ce qu’on dit et fait en jeu. « Détails » la rouvre.",
-      "author": "Tony_quebec"
-    },
-    {
       "id": "1a6bbedb56ed",
       "title": "Sortie officielle du launcher de All The Mods 10",
       "date": "2026-11-11",
