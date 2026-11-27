@@ -5853,6 +5853,17 @@
    "enabled": true
   },
   {
+   "id": "file-31cf754f9e5f62d1ca257f297e5dce394024696c",
+   "source": "file",
+   "folder": "mods",
+   "enabled": true,
+   "name": "sound-physics-remastered-neoforge-1.21.1-1.5.1",
+   "fileName": "sound-physics-remastered-neoforge-1.21.1-1.5.1.jar",
+   "sha1": "31cf754f9e5f62d1ca257f297e5dce394024696c",
+   "size": 202454,
+   "url": "https://github.com/tigamer20/launcher_mdcq/releases/download/modpack/editor-31cf754f9e5f62d1ca257f297e5dce394024696c.jar"
+  },
+  {
    "id": "cf-361579",
    "source": "curseforge",
    "projectId": 361579,
@@ -11604,7 +11615,7 @@
  },
  "deleted": [],
  "edits": [],
- "unpublished": false,
- "updatedAt": "2026-11-12T23:49:09.960Z",
+ "unpublished": true,
+ "updatedAt": "2026-11-27T18:55:20.246Z",
  "publishedAt": "2026-11-12T23:49:07.698Z"
 }
