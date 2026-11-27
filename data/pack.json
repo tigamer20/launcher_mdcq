@@ -18,6 +18,13 @@
   ],
   "news": [
     {
+      "id": "d77d7b7aa5f5",
+      "title": "Mise à jour - ajouts de mods",
+      "date": "2026-11-27",
+      "body": "-Ajout du mod Forgematica\n-Ajout du mod Sounds physics remastered",
+      "author": "Wipss"
+    },
+    {
       "id": "558462d09f40",
       "title": "WinterCraft update",
       "date": "2026-11-23",
